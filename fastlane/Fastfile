@@ -1,0 +1,20 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build a white-label APK for a specific tenant"
+  lane :build_tenant_app do |options|
+    tenant_code = options[:tenant_code]
+    
+    # 1. Fetch Tenant Config
+    # sh "curl http://localhost:8000/api/mobile/config/#{tenant_code} > branding.json"
+    
+    # 2. Update Assets (Icons, Splash)
+    # sh "node scripts/generate-assets.js branding.json"
+    
+    # 3. Build
+    gradle(task: "assembleRelease")
+    
+    # 4. Upload to Play Store (Optional)
+    # upload_to_play_store
+  end
+end
