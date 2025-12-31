@@ -48,6 +48,8 @@ const menuItems: MenuItem[] = [
             { path: '/timetable/builder', icon: '📅', labelKey: 'nav.timetable', label: 'Timetable' },
             { path: '/assignments', icon: '📝', labelKey: 'nav.assignments', label: 'Assignments' },
             { path: '/exams', icon: '✍️', labelKey: 'nav.exams', label: 'Exams' },
+            { path: '/exams/results/entry', icon: '📊', labelKey: 'nav.result_entry', label: 'Result Entry' },
+            { path: '/exams/results/analytics', icon: '📈', labelKey: 'nav.result_analytics', label: 'Result Analytics' },
             { path: '/lms/classes', icon: '📹', labelKey: 'nav.live_classes', label: 'Live Classes' },
             { path: '/lms/digital', icon: '📚', labelKey: 'nav.digital_lms', label: 'Digital Library' },
         ]
@@ -68,7 +70,9 @@ const menuItems: MenuItem[] = [
         children: [
             { path: '/fees/collect', icon: '💵', labelKey: 'nav.collect_fees', label: 'Collect Fees' },
             { path: '/fees/configure', icon: '⚙️', labelKey: 'nav.fee_config', label: 'Configure' },
+            { path: '/fees/defaulters', icon: '⚠️', labelKey: 'nav.fee_defaulters', label: 'Defaulters' },
             { path: '/finance', icon: '📊', labelKey: 'nav.finance', label: 'Finance' },
+            { path: '/finance/reports', icon: '📈', labelKey: 'nav.financial_reports', label: 'Financial Reports' },
         ]
     },
     {
@@ -76,13 +80,11 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.operations',
         label: 'Operations',
         children: [
-            { path: '/library/catalog', icon: '📖', labelKey: 'nav.library', label: 'Library' },
-            { path: '/library/books', icon: '📚', labelKey: 'nav.library_books', label: 'Books' },
-            { path: '/inventory/stock', icon: '📦', labelKey: 'nav.inventory', label: 'Inventory' },
+            { path: '/inventory', icon: '📦', labelKey: 'nav.inventory', label: 'Inventory' },
             { path: '/transport', icon: '🚌', labelKey: 'nav.transport', label: 'Transport' },
-            { path: '/transport/allocations', icon: '📌', labelKey: 'nav.transport_allocations', label: 'Allocations' },
-            { path: '/hostel', icon: '🏢', labelKey: 'nav.hostel', label: 'Hostel' },
-            { path: '/communication', icon: '📢', labelKey: 'nav.communication', label: 'Notice Board' },
+            { path: '/hostel', icon: '🏠', labelKey: 'nav.hostel', label: 'Hostel' },
+            { path: '/library', icon: '📚', labelKey: 'nav.library', label: 'Library' },
+            { path: '/store', icon: '🛒', labelKey: 'nav.store', label: 'Store' },
         ]
     },
     {

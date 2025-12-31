@@ -33,6 +33,9 @@ import HostelDashboard from './pages/hostel/HostelDashboard';
 import SalahTracker from './pages/trackers/SalahTracker';
 import HabitBoard from './pages/trackers/HabitBoard';
 import TransportFleet from './pages/transport/TransportFleet';
+import FeeDefaulters from './pages/fees/FeeDefaulters';
+import FinancialReports from './pages/finance/FinancialReports';
+import LibraryManagement from './pages/library/LibraryManagement';
 
 // Phase 5 Imports
 import AlumniPortal from './pages/alumni/AlumniPortal';
@@ -52,7 +55,35 @@ import PayslipView from './pages/payroll/PayslipView';
 import LeadKanbanBoard from './pages/crm/LeadKanbanBoard';
 import WebsiteBuilder from './pages/cms/WebsiteBuilder';
 import ExamScheduler from './pages/exams/ExamScheduler';
+import ResultEntry from './pages/exams/ResultEntry';
+import ResultAnalytics from './pages/exams/ResultAnalytics';
 import NoticeBoard from './pages/communication/NoticeBoard';
+import MessageComposer from './pages/communication/MessageComposer';
+import LeadConversion from './pages/crm/LeadConversion';
+import PlacementApplication from './pages/placement/PlacementApplication';
+import PayrollDashboard from './pages/payroll/PayrollDashboard';
+import RouteOptimization from './pages/transport/RouteOptimization';
+import RoomAllocation from './pages/hostel/RoomAllocation';
+import AssignmentSubmission from './pages/academics/AssignmentSubmission';
+import AssignmentGrading from './pages/academics/AssignmentGrading';
+import LeaveApproval from './pages/hr/LeaveApproval';
+import SalaryStructure from './pages/payroll/SalaryStructure';
+import LibraryMembers from './pages/library/LibraryMembers';
+import VehicleMaintenance from './pages/transport/VehicleMaintenance';
+import HostelFees from './pages/hostel/HostelFees';
+import PurchaseOrders from './pages/inventory/PurchaseOrders';
+import StockAdjustment from './pages/inventory/StockAdjustment';
+import VendorManagement from './pages/inventory/VendorManagement';
+import TemplateManager from './pages/communication/TemplateManager';
+import DeliveryReports from './pages/communication/DeliveryReports';
+import FollowupScheduler from './pages/crm/FollowupScheduler';
+import JobBoard from './pages/alumni/JobBoard';
+import EventRegistration from './pages/alumni/EventRegistration';
+import DonationPortal from './pages/alumni/DonationPortal';
+import CertificateRequest from './pages/certificates/CertificateRequest';
+import PassRequest from './pages/security/PassRequest';
+import PassApproval from './pages/security/PassApproval';
+import CreateTicket from './pages/helpdesk/CreateTicket';
 
 // New pages added
 import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
@@ -117,10 +148,12 @@ function App() {
                                     {/* Fees routes - specific routes before general */}
                                     <Route path="/fees/configure" element={<Layout><FeeConfiguration /></Layout>} />
                                     <Route path="/fees/collect" element={<Layout><CollectFees /></Layout>} />
+                                    <Route path="/fees/defaulters" element={<Layout><FeeDefaulters /></Layout>} />
                                     {/* Other routes */}
                                     <Route path="/attendance" element={<Layout><MarkAttendance /></Layout>} />
                                     <Route path="/attendance/aggregates" element={<Layout><AttendanceAggregates /></Layout>} />
                                     <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
+                                    <Route path="/finance/reports" element={<Layout><FinancialReports /></Layout>} />
                                     <Route path="/reports" element={<Layout><ReportsDashboard /></Layout>} />
                                     {/* Settings routes - specific routes before general */}
                                     <Route path="/settings/academic" element={<Layout><AcademicSetup /></Layout>} />
@@ -135,26 +168,49 @@ function App() {
 
                                     {/* Academics & LMS */}
                                     <Route path="/assignments" element={<Layout><AssignmentList /></Layout>} />
+                                    <Route path="/assignments/submit" element={<Layout><AssignmentSubmission /></Layout>} />
+                                    <Route path="/assignments/grade" element={<Layout><AssignmentGrading /></Layout>} />
                                     <Route path="/exams" element={<Layout><ExamScheduler /></Layout>} />
+                                    <Route path="/exams/results/entry" element={<Layout><ResultEntry /></Layout>} />
+                                    <Route path="/exams/results/analytics" element={<Layout><ResultAnalytics /></Layout>} />
                                     <Route path="/lms/classes" element={<Layout><LiveClassJoin /></Layout>} />
                                     <Route path="/lms/digital" element={<Layout><DigitalResources /></Layout>} />
 
                                     {/* Operations */}
                                     <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
                                     <Route path="/library/books" element={<Layout><LibraryBooks /></Layout>} />
+                                    <Route path="/library/members" element={<Layout><LibraryMembers /></Layout>} />
                                     <Route path="/inventory/stock" element={<Layout><StockManager /></Layout>} />
+                                    <Route path="/inventory/purchase-orders" element={<Layout><PurchaseOrders /></Layout>} />
+                                    <Route path="/inventory/stock-adjustment" element={<Layout><StockAdjustment /></Layout>} />
+                                    <Route path="/inventory/vendors" element={<Layout><VendorManagement /></Layout>} />
                                     <Route path="/hostel" element={<Layout><HostelDashboard /></Layout>} />
+                                    <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
+                                    <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />
                                     <Route path="/transport" element={<Layout><TransportFleet /></Layout>} />
                                     <Route path="/transport/allocations" element={<Layout><TransportAllocations /></Layout>} />
+                                    <Route path="/transport/routes" element={<Layout><RouteOptimization /></Layout>} />
+                                    <Route path="/transport/maintenance" element={<Layout><VehicleMaintenance /></Layout>} />
                                     <Route path="/communication" element={<Layout><NoticeBoard /></Layout>} />
+                                    <Route path="/communication/messages" element={<Layout><MessageComposer /></Layout>} />
+                                    <Route path="/communication/templates" element={<Layout><TemplateManager /></Layout>} />
+                                    <Route path="/communication/delivery-reports" element={<Layout><DeliveryReports /></Layout>} />
 
                                     {/* Finance & HR */}
                                     <Route path="/hr/leaves" element={<Layout><LeaveManage /></Layout>} />
+                                    <Route path="/hr/leave-approval" element={<Layout><LeaveApproval /></Layout>} />
                                     <Route path="/payroll/payslips" element={<Layout><PayslipView /></Layout>} />
+                                    <Route path="/payroll/salary-structure" element={<Layout><SalaryStructure /></Layout>} />
+                                    <Route path="/payroll/dashboard" element={<Layout><PayrollDashboard /></Layout>} />
 
                                     {/* Business & Growth */}
-                                    <Route path="/crm/leads" element={<Layout><LeadKanbanBoard /></Layout>} />
+                                    <Route path="/crm" element={<Layout><LeadKanbanBoard /></Layout>} />
+                                    <Route path="/crm/conversion" element={<Layout><LeadConversion /></Layout>} />
+                                    <Route path="/crm/followups" element={<Layout><FollowupScheduler /></Layout>} />
                                     <Route path="/alumni" element={<Layout><AlumniPortal /></Layout>} />
+                                    <Route path="/alumni/jobs" element={<Layout><JobBoard /></Layout>} />
+                                    <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
+                                    <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
                                     <Route path="/cms/builder" element={<Layout><WebsiteBuilder /></Layout>} />
 
                                     {/* Character Trackers */}
@@ -165,11 +221,17 @@ function App() {
                                     <Route path="/admin/certificates" element={<Layout><CertificateTemplates /></Layout>} />
                                     <Route path="/security/scanner" element={<Layout><GuardScanner /></Layout>} />
                                     <Route path="/placement" element={<Layout><DriveDashboard /></Layout>} />
+                                    <Route path="/placement/apply" element={<Layout><PlacementApplication /></Layout>} />
+                                    <Route path="/certificates/request" element={<Layout><CertificateRequest /></Layout>} />
+                                    <Route path="/security/pass-request" element={<Layout><PassRequest /></Layout>} />
+                                    <Route path="/security/pass-approval" element={<Layout><PassApproval /></Layout>} />
+                                    <Route path="/helpdesk/create-ticket" element={<Layout><CreateTicket /></Layout>} />
                                     <Route path="/helpdesk" element={<Layout><TicketBoard /></Layout>} />
                                     <Route path="/helpdesk/tickets" element={<Layout><HelpdeskTickets /></Layout>} />
 
                                     {/* Analytics & Billing */}
                                     <Route path="/analytics" element={<Layout><AnalyticsDashboard /></Layout>} />
+                                    <Route path="/library" element={<Layout><LibraryManagement /></Layout>} />
                                     <Route path="/billing" element={<Layout><BillingManagement /></Layout>} />
 
                                     {/* enterprise */}

@@ -605,3 +605,271 @@ class QuestionBank(TenantAwareModel):
                 current_marks += sum(q.marks for q in selected)
         
         return selected_questions
+
+
+class GradeConfiguration(TenantAwareModel):
+    """
+    Grade Configuration - Define grading scale (A+, A, B+, etc.)
+    """
+    
+    name = models.CharField(
+        max_length=100,
+        help_text=_('Configuration name (e.g., "Standard Grading")')
+    )
+    
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.CASCADE,
+        related_name='grade_configurations',
+        help_text=_('Academic year for this configuration')
+    )
+    
+    is_default = models.BooleanField(
+        default=False,
+        help_text=_('Whether this is the default configuration')
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text=_('Configuration description')
+    )
+    
+    class Meta:
+        db_table = 'grade_configurations'
+        verbose_name = _('Grade Configuration')
+        verbose_name_plural = _('Grade Configurations')
+        ordering = ['-is_default', 'name']
+        indexes = [
+            models.Index(fields=['tenant', 'academic_year', 'is_default']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.academic_year})"
+
+
+class GradeScale(TenantAwareModel):
+    """
+    Individual grade scale entry (e.g., A+ = 90-100)
+    """
+    
+    configuration = models.ForeignKey(
+        GradeConfiguration,
+        on_delete=models.CASCADE,
+        related_name='scales',
+        help_text=_('Grade configuration this belongs to')
+    )
+    
+    grade = models.CharField(
+        max_length=10,
+        help_text=_('Grade (e.g., A+, A, B+)')
+    )
+    
+    min_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text=_('Minimum percentage for this grade')
+    )
+    
+    max_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text=_('Maximum percentage for this grade')
+    )
+    
+    grade_point = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        help_text=_('Grade point (e.g., 4.0 for A+)')
+    )
+    
+    remarks = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_('Remarks (e.g., "Excellent", "Good")')
+    )
+    
+    class Meta:
+        db_table = 'grade_scales'
+        verbose_name = _('Grade Scale')
+        verbose_name_plural = _('Grade Scales')
+        ordering = ['-min_percentage']
+        indexes = [
+            models.Index(fields=['tenant', 'configuration']),
+        ]
+    
+    def __str__(self):
+        return f"{self.grade} ({self.min_percentage}% - {self.max_percentage}%)"
+    
+    def clean(self):
+        """Validate grade scale."""
+        super().clean()
+        
+        if self.max_percentage and self.min_percentage:
+            if self.max_percentage <= self.min_percentage:
+                raise ValidationError({
+                    'max_percentage': _('Max percentage must be greater than min percentage')
+                })
+
+
+class ExamResult(TenantAwareModel):
+    """
+    Student Exam Result
+    """
+    
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('PUBLISHED', 'Published'),
+        ('WITHHELD', 'Withheld'),
+    ]
+    
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name='results',
+        help_text=_('Exam for this result')
+    )
+    
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='exam_results',
+        help_text=_('Student')
+    )
+    
+    section = models.ForeignKey(
+        'tenants.Section',
+        on_delete=models.CASCADE,
+        related_name='exam_results',
+        help_text=_('Section')
+    )
+    
+    marks_obtained = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text=_('Marks obtained by student')
+    )
+    
+    grade = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text=_('Grade (auto-calculated)')
+    )
+    
+    grade_point = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Grade point (auto-calculated)')
+    )
+    
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Percentage (auto-calculated)')
+    )
+    
+    is_pass = models.BooleanField(
+        default=False,
+        help_text=_('Whether student passed')
+    )
+    
+    is_absent = models.BooleanField(
+        default=False,
+        help_text=_('Whether student was absent')
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='DRAFT',
+        help_text=_('Result status')
+    )
+    
+    remarks = models.TextField(
+        blank=True,
+        help_text=_('Remarks/comments')
+    )
+    
+    entered_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='entered_results',
+        help_text=_('User who entered this result')
+    )
+    
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When result was published')
+    )
+    
+    class Meta:
+        db_table = 'exam_results'
+        verbose_name = _('Exam Result')
+        verbose_name_plural = _('Exam Results')
+        ordering = ['exam', 'section', 'student']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['exam', 'student'],
+                name='unique_exam_student_result'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'exam', 'section']),
+            models.Index(fields=['student', 'exam']),
+            models.Index(fields=['status', 'is_pass']),
+        ]
+    
+    def __str__(self):
+        return f"{self.student} - {self.exam.name}: {self.marks_obtained}/{self.exam.total_marks}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-calculate percentage, grade, and pass/fail."""
+        # Calculate percentage
+        if self.exam.total_marks and not self.is_absent:
+            self.percentage = (self.marks_obtained / self.exam.total_marks) * 100
+            
+            # Determine pass/fail
+            self.is_pass = self.marks_obtained >= self.exam.passing_marks
+            
+            # Calculate grade
+            try:
+                grade_config = GradeConfiguration.objects.filter(
+                    tenant=self.tenant,
+                    academic_year=self.exam.exam_term.academic_year,
+                    is_default=True
+                ).first()
+                
+                if grade_config:
+                    grade_scale = GradeScale.objects.filter(
+                        configuration=grade_config,
+                        min_percentage__lte=self.percentage,
+                        max_percentage__gte=self.percentage
+                    ).first()
+                    
+                    if grade_scale:
+                        self.grade = grade_scale.grade
+                        self.grade_point = grade_scale.grade_point
+            except Exception:
+                pass  # Silently fail if grade calculation fails
+        
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """Validate result data."""
+        super().clean()
+        
+        if not self.is_absent and self.marks_obtained is not None:
+            if self.marks_obtained > self.exam.total_marks:
+                raise ValidationError({
+                    'marks_obtained': _('Marks obtained cannot exceed total marks')
+                })
+            
+            if self.marks_obtained < 0:
+                raise ValidationError({
+                    'marks_obtained': _('Marks obtained cannot be negative')
+                })

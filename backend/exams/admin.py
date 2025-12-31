@@ -3,7 +3,10 @@ Exams Admin Configuration
 """
 
 from django.contrib import admin
-from .models import ExamTerm, Exam, ExamSchedule, Topic, LearningOutcome, QuestionBank
+from .models import (
+    ExamTerm, Exam, ExamSchedule, Topic, LearningOutcome, QuestionBank,
+    GradeConfiguration, GradeScale, ExamResult
+)
 
 
 @admin.register(ExamTerm)
@@ -60,3 +63,47 @@ class QuestionBankAdmin(admin.ModelAdmin):
     def question_text_short(self, obj):
         return obj.question_text[:50] + '...' if len(obj.question_text) > 50 else obj.question_text
     question_text_short.short_description = 'Question'
+
+
+class GradeScaleInline(admin.TabularInline):
+    model = GradeScale
+    extra = 1
+    fields = ['grade', 'min_percentage', 'max_percentage', 'grade_point', 'remarks']
+
+
+@admin.register(GradeConfiguration)
+class GradeConfigurationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'academic_year', 'is_default', 'created_at']
+    list_filter = ['is_default', 'academic_year']
+    search_fields = ['name', 'description']
+    ordering = ['-is_default', 'name']
+    inlines = [GradeScaleInline]
+
+
+@admin.register(GradeScale)
+class GradeScaleAdmin(admin.ModelAdmin):
+    list_display = ['grade', 'configuration', 'min_percentage', 'max_percentage', 'grade_point', 'remarks']
+    list_filter = ['configuration']
+    ordering = ['configuration', '-min_percentage']
+
+
+@admin.register(ExamResult)
+class ExamResultAdmin(admin.ModelAdmin):
+    list_display = ['student', 'exam', 'section', 'marks_obtained', 'percentage', 'grade', 'is_pass', 'status']
+    list_filter = ['status', 'is_pass', 'is_absent', 'exam__exam_term', 'section']
+    search_fields = ['student__first_name', 'student__last_name', 'student__roll_number']
+    raw_id_fields = ['exam', 'student', 'section', 'entered_by']
+    readonly_fields = ['percentage', 'grade', 'grade_point', 'is_pass', 'published_at']
+    ordering = ['exam', 'section', 'student']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('exam', 'student', 'section')
+        }),
+        ('Marks', {
+            'fields': ('marks_obtained', 'is_absent', 'percentage', 'grade', 'grade_point', 'is_pass')
+        }),
+        ('Status', {
+            'fields': ('status', 'remarks', 'entered_by', 'published_at')
+        }),
+    )

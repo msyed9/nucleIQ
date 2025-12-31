@@ -8,6 +8,9 @@ from .views import (
     ExamTermViewSet, ExamViewSet, ExamScheduleViewSet,
     TopicViewSet, LearningOutcomeViewSet, QuestionBankViewSet
 )
+from .result_views import (
+    GradeConfigurationViewSet, GradeScaleViewSet, ExamResultViewSet
+)
 
 router = DefaultRouter()
 router.register(r'terms', ExamTermViewSet, basename='examterm')
@@ -16,6 +19,9 @@ router.register(r'schedules', ExamScheduleViewSet, basename='examschedule')
 router.register(r'topics', TopicViewSet, basename='topic')
 router.register(r'learning-outcomes', LearningOutcomeViewSet, basename='learningoutcome')
 router.register(r'questions', QuestionBankViewSet, basename='questionbank')
+router.register(r'grade-configurations', GradeConfigurationViewSet, basename='gradeconfiguration')
+router.register(r'grade-scales', GradeScaleViewSet, basename='gradescale')
+router.register(r'results', ExamResultViewSet, basename='examresult')
 
 urlpatterns = [
     path('', include(router.urls)),
