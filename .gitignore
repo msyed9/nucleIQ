@@ -26,3 +26,4 @@ Thumbs.db
 # Backups
 backup/
 *.backup
+node_modules
