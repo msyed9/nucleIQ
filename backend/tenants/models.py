@@ -1,0 +1,943 @@
+"""
+Tenant Models for NucleIQ Multi-Tenant SaaS
+Defines Tenant, TenantBranding, Domain, and AcademicYear models.
+"""
+
+import uuid
+from django.db import models
+from django.core.validators import RegexValidator
+from django.utils import timezone
+from core.models import BaseModel
+
+
+class Tenant(BaseModel):
+    """
+    Tenant model representing a school/institution.
+    
+    Each tenant is isolated using Row Level Security (RLS) at the database level.
+    """
+    
+    PLAN_CHOICES = [
+        ('trial', 'Trial'),
+        ('basic', 'Basic'),
+        ('standard', 'Standard'),
+        ('premium', 'Premium'),
+        ('enterprise', 'Enterprise'),
+    ]
+    
+    name = models.CharField(
+        max_length=255,
+        help_text="School/Institution name"
+    )
+    
+    subdomain = models.SlugField(
+        max_length=63,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+                message='Subdomain must contain only lowercase letters, numbers, and hyphens'
+            )
+        ],
+        help_text="Unique subdomain (e.g., 'myschool' for myschool.nucleiq.com)"
+    )
+    
+    schema_name = models.CharField(
+        max_length=63,
+        unique=True,
+        editable=False,
+        help_text="Database schema name (auto-generated from subdomain)"
+    )
+    
+    plan = models.CharField(
+        max_length=20,
+        choices=PLAN_CHOICES,
+        default='trial',
+        help_text="Subscription plan"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this tenant is active"
+    )
+    
+    # Contact information
+    admin_email = models.EmailField(
+        help_text="Primary admin email for this tenant"
+    )
+    admin_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Primary admin phone number"
+    )
+    
+    # Subscription details
+    trial_ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the trial period ends"
+    )
+    subscription_starts_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the paid subscription started"
+    )
+    subscription_ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the subscription expires"
+    )
+    
+    # Limits
+    max_students = models.PositiveIntegerField(
+        default=100,
+        help_text="Maximum number of students allowed"
+    )
+    max_staff = models.PositiveIntegerField(
+        default=20,
+        help_text="Maximum number of staff members allowed"
+    )
+    
+    # Metadata
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional tenant metadata"
+    )
+    
+    class Meta:
+        db_table = 'tenants'
+        verbose_name = 'Tenant'
+        verbose_name_plural = 'Tenants'
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.subdomain})"
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate schema_name from subdomain."""
+        if not self.schema_name:
+            self.schema_name = f"tenant_{self.subdomain}"
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_trial(self):
+        """Check if tenant is in trial period."""
+        return self.plan == 'trial'
+    
+    @property
+    def is_trial_expired(self):
+        """Check if trial has expired."""
+        if self.trial_ends_at:
+            return timezone.now() > self.trial_ends_at
+        return False
+    
+    @property
+    def is_subscription_active(self):
+        """Check if subscription is active."""
+        if not self.subscription_ends_at:
+            return False
+        return timezone.now() < self.subscription_ends_at
+
+
+class TenantBranding(BaseModel):
+    """
+    Tenant branding configuration.
+    Stores logos, colors, fonts, and gallery images for customization.
+    """
+    
+    tenant = models.OneToOneField(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='branding',
+        help_text="Tenant this branding belongs to"
+    )
+    
+    # Logo and visual assets
+    logo_url = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="URL to the school logo"
+    )
+    favicon_url = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="URL to the favicon"
+    )
+    login_background_url = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="URL to the login page background image"
+    )
+    email_header_image = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="URL to the email header image"
+    )
+    
+    # Color scheme
+    primary_color = models.CharField(
+        max_length=7,
+        default='#1976D2',
+        validators=[
+            RegexValidator(
+                regex=r'^#[0-9A-Fa-f]{6}$',
+                message='Color must be a valid hex code (e.g., #1976D2)'
+            )
+        ],
+        help_text="Primary brand color (hex code)"
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        default='#424242',
+        validators=[
+            RegexValidator(
+                regex=r'^#[0-9A-Fa-f]{6}$',
+                message='Color must be a valid hex code'
+            )
+        ],
+        help_text="Secondary brand color (hex code)"
+    )
+    sidebar_color = models.CharField(
+        max_length=7,
+        default='#263238',
+        validators=[
+            RegexValidator(
+                regex=r'^#[0-9A-Fa-f]{6}$',
+                message='Color must be a valid hex code'
+            )
+        ],
+        help_text="Sidebar background color (hex code)"
+    )
+    
+    # Typography
+    font_family = models.CharField(
+        max_length=100,
+        default='Inter, sans-serif',
+        help_text="Primary font family"
+    )
+    
+    # Gallery images (for login carousel, school profile, etc.)
+    gallery_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of gallery image URLs (JSON array)"
+    )
+    
+    # Additional customization
+    custom_css = models.TextField(
+        blank=True,
+        help_text="Custom CSS for advanced styling"
+    )
+    
+    class Meta:
+        db_table = 'tenant_branding'
+        verbose_name = 'Tenant Branding'
+        verbose_name_plural = 'Tenant Brandings'
+    
+    def __str__(self):
+        return f"Branding for {self.tenant.name}"
+
+
+class Domain(BaseModel):
+    """
+    Custom domain mapping for tenants.
+    Allows schools to use their own domains (e.g., portal.myschool.com).
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='domains',
+        help_text="Tenant this domain belongs to"
+    )
+    
+    domain = models.CharField(
+        max_length=255,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$',
+                message='Enter a valid domain name'
+            )
+        ],
+        help_text="Custom domain (e.g., portal.myschool.com)"
+    )
+    
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Whether this is the primary domain for the tenant"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this domain is active"
+    )
+    
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the domain was verified"
+    )
+    
+    class Meta:
+        db_table = 'tenant_domains'
+        verbose_name = 'Domain'
+        verbose_name_plural = 'Domains'
+        ordering = ['-is_primary', 'domain']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'is_primary'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_domain_per_tenant'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.domain} ({'Primary' if self.is_primary else 'Secondary'})"
+
+
+class AcademicYear(BaseModel):
+    """
+    Academic Year model for tenant-specific academic calendars.
+    
+    Note: This does NOT inherit from TenantAwareModel to avoid circular imports.
+    The tenant field is defined explicitly here.
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='academic_years',
+        db_index=True,
+        help_text="Tenant this academic year belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=50,
+        help_text="Academic year name (e.g., '2024-2025')"
+    )
+    
+    start_date = models.DateField(
+        help_text="Start date of the academic year"
+    )
+    
+    end_date = models.DateField(
+        help_text="End date of the academic year"
+    )
+    
+    is_active = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this is the currently active academic year"
+    )
+    
+    is_enrollment_open = models.BooleanField(
+        default=False,
+        help_text="Whether enrollment/admission is open for this year"
+    )
+    
+    is_locked = models.BooleanField(
+        default=False,
+        help_text="Whether this academic year is locked (for past years)"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Additional description or notes"
+    )
+    
+    class Meta:
+        db_table = 'academic_years'
+        verbose_name = 'Academic Year'
+        verbose_name_plural = 'Academic Years'
+        ordering = ['-start_date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'name'],
+                name='unique_academic_year_name_per_tenant'
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'is_active'],
+                condition=models.Q(is_active=True),
+                name='unique_active_academic_year_per_tenant'
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_date__gt=models.F('start_date')),
+                name='end_date_after_start_date'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.tenant.name})"
+    
+    def is_date_active(self):
+        """Check if this academic year is currently active based on dates."""
+        from datetime import date
+        today = date.today()
+        return self.start_date <= today <= self.end_date
+    
+    def get_duration_days(self):
+        """Get the duration of the academic year in days."""
+        return (self.end_date - self.start_date).days
+    
+    def get_progress_percentage(self):
+        """Get the progress percentage of the academic year (0-100)."""
+        from datetime import date
+        today = date.today()
+        
+        if today < self.start_date:
+            return 0.0
+        elif today > self.end_date:
+            return 100.0
+        else:
+            total_days = self.get_duration_days()
+            elapsed_days = (today - self.start_date).days
+            return round((elapsed_days / total_days) * 100, 2)
+    
+    def clean(self):
+        """Validate academic year constraints."""
+        from django.core.exceptions import ValidationError
+        
+        if self.end_date <= self.start_date:
+            raise ValidationError("End date must be after start date")
+        
+        # Check for overlapping academic years
+        if self.tenant_id:
+            overlapping = AcademicYear.objects.filter(
+                tenant=self.tenant,
+                is_deleted=False
+            ).exclude(id=self.id).filter(
+                models.Q(start_date__lte=self.end_date) &
+                models.Q(end_date__gte=self.start_date)
+            )
+            
+            if overlapping.exists():
+                raise ValidationError(
+                    "Academic year dates overlap with existing academic year"
+                )
+
+
+class AcademicTerm(BaseModel):
+    """
+    Academic Term/Semester model.
+    Divides an academic year into terms (e.g., Term 1, Term 2, Semester 1).
+    """
+    
+    TERM_TYPES = [
+        ('TERM', 'Term'),
+        ('SEMESTER', 'Semester'),
+        ('QUARTER', 'Quarter'),
+        ('TRIMESTER', 'Trimester'),
+    ]
+    
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='terms',
+        help_text="Academic year this term belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=50,
+        help_text="Term name (e.g., 'Term 1', 'Semester 1', 'Q1')"
+    )
+    
+    term_type = models.CharField(
+        max_length=20,
+        choices=TERM_TYPES,
+        default='TERM',
+        help_text="Type of term"
+    )
+    
+    term_number = models.IntegerField(
+        help_text="Sequential number (1, 2, 3, etc.)"
+    )
+    
+    start_date = models.DateField(
+        help_text="Start date of the term"
+    )
+    
+    end_date = models.DateField(
+        help_text="End date of the term"
+    )
+    
+    is_active = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this is the currently active term"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Additional description or notes"
+    )
+    
+    class Meta:
+        db_table = 'academic_terms'
+        verbose_name = 'Academic Term'
+        verbose_name_plural = 'Academic Terms'
+        ordering = ['academic_year', 'term_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['academic_year', 'term_number'],
+                name='unique_term_number_per_year'
+            ),
+            models.UniqueConstraint(
+                fields=['academic_year', 'is_active'],
+                condition=models.Q(is_active=True),
+                name='unique_active_term_per_year'
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_date__gt=models.F('start_date')),
+                name='term_end_date_after_start_date'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.academic_year.name}"
+    
+    def is_date_active(self):
+        """Check if this term is currently active based on dates."""
+        from datetime import date
+        today = date.today()
+        return self.start_date <= today <= self.end_date
+    
+    def get_duration_days(self):
+        """Get the duration of the term in days."""
+        return (self.end_date - self.start_date).days
+    
+    def get_progress_percentage(self):
+        """Get the progress percentage of the term (0-100)."""
+        from datetime import date
+        today = date.today()
+        
+        if today < self.start_date:
+            return 0.0
+        elif today > self.end_date:
+            return 100.0
+        else:
+            total_days = self.get_duration_days()
+            elapsed_days = (today - self.start_date).days
+            return round((elapsed_days / total_days) * 100, 2)
+    
+    def clean(self):
+        """Validate term constraints."""
+        from django.core.exceptions import ValidationError
+        
+        if self.end_date <= self.start_date:
+            raise ValidationError("End date must be after start date")
+        
+        # Validate term dates are within academic year
+        if self.academic_year_id:
+            if self.start_date < self.academic_year.start_date:
+                raise ValidationError(
+                    "Term start date must be within the academic year"
+                )
+            
+            if self.end_date > self.academic_year.end_date:
+                raise ValidationError(
+                    "Term end date must be within the academic year"
+                )
+
+
+# ============================================================================
+# SCHOOL HIERARCHY MODELS
+# ============================================================================
+
+class Department(BaseModel):
+    """
+    Department/Wing model (e.g., "Primary", "High School", "Science Wing").
+    Organizational structure for grouping grade levels.
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='departments',
+        help_text="Tenant this department belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Department name (e.g., 'Primary', 'High School')"
+    )
+    
+    code = models.CharField(
+        max_length=20,
+        help_text="Short code (e.g., 'PRI', 'HS')"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Department description"
+    )
+    
+    head_of_department = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='headed_departments',
+        help_text="Head of department (staff member)"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this department is active"
+    )
+    
+    display_order = models.IntegerField(
+        default=0,
+        help_text="Display order (lower numbers first)"
+    )
+    
+    class Meta:
+        db_table = 'departments'
+        verbose_name = 'Department'
+        verbose_name_plural = 'Departments'
+        ordering = ['display_order', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'name'],
+                name='unique_department_name_per_tenant'
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'code'],
+                name='unique_department_code_per_tenant'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.tenant.name})"
+
+
+class GradeLevel(BaseModel):
+    """
+    Grade Level/Class model (e.g., "Class 1", "Grade 10", "Year 12").
+    Represents a specific grade/class in the school.
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='grade_levels',
+        help_text="Tenant this grade level belongs to"
+    )
+    
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.CASCADE,
+        related_name='grade_levels',
+        null=True,
+        blank=True,
+        help_text="Department this grade belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=50,
+        help_text="Grade name (e.g., 'Class 1', 'Grade 10')"
+    )
+    
+    short_name = models.CharField(
+        max_length=20,
+        help_text="Short name (e.g., '1', '10', 'KG')"
+    )
+    
+    display_order = models.IntegerField(
+        help_text="Display order (1, 2, 3... for Class 1, 2, 3...)"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Grade description"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this grade is active"
+    )
+    
+    class Meta:
+        db_table = 'grade_levels'
+        verbose_name = 'Grade Level'
+        verbose_name_plural = 'Grade Levels'
+        ordering = ['display_order']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'name'],
+                name='unique_grade_name_per_tenant'
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'display_order'],
+                name='unique_grade_order_per_tenant'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.tenant.name})"
+    
+    def get_sections_count(self):
+        """Get number of sections in this grade."""
+        return self.sections.filter(is_active=True).count()
+    
+    def get_students_count(self):
+        """Get total number of students in this grade."""
+        from students.models import Student
+        return Student.objects.filter(
+            tenant=self.tenant,
+            current_class=self.name,
+            is_active=True
+        ).count()
+
+
+class Section(BaseModel):
+    """
+    Section model (e.g., "A", "B", "Red", "Blue").
+    Represents a division within a grade level.
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='sections',
+        help_text="Tenant this section belongs to"
+    )
+    
+    grade_level = models.ForeignKey(
+        GradeLevel,
+        on_delete=models.CASCADE,
+        related_name='sections',
+        help_text="Grade level this section belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=50,
+        help_text="Section name (e.g., 'A', 'Red', 'Alpha')"
+    )
+    
+    capacity = models.IntegerField(
+        default=40,
+        help_text="Maximum number of students allowed"
+    )
+    
+    class_teacher = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='class_teacher_sections',
+        help_text="Class teacher for this section"
+    )
+    
+    room_number = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Classroom/room number"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this section is active"
+    )
+    
+    display_order = models.IntegerField(
+        default=0,
+        help_text="Display order within grade"
+    )
+    
+    class Meta:
+        db_table = 'sections'
+        verbose_name = 'Section'
+        verbose_name_plural = 'Sections'
+        ordering = ['grade_level', 'display_order', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['grade_level', 'name'],
+                name='unique_section_name_per_grade'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.grade_level.name} - {self.name}"
+    
+    def get_students_count(self):
+        """Get number of students in this section."""
+        from students.models import Student
+        return Student.objects.filter(
+            tenant=self.tenant,
+            current_class=self.grade_level.name,
+            section=self.name,
+            is_active=True
+        ).count()
+    
+    def get_available_capacity(self):
+        """Get remaining capacity."""
+        return self.capacity - self.get_students_count()
+    
+    def is_full(self):
+        """Check if section is at capacity."""
+        return self.get_students_count() >= self.capacity
+
+
+class Subject(BaseModel):
+    """
+    Subject model (e.g., "Mathematics", "Physics", "English").
+    Represents a subject taught in the school.
+    """
+    
+    SUBJECT_TYPES = [
+        ('THEORY', 'Theory'),
+        ('PRACTICAL', 'Practical'),
+        ('BOTH', 'Theory & Practical'),
+    ]
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='subjects',
+        help_text="Tenant this subject belongs to"
+    )
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Subject name (e.g., 'Mathematics', 'Physics')"
+    )
+    
+    code = models.CharField(
+        max_length=20,
+        help_text="Subject code (e.g., 'MATH', 'PHY')"
+    )
+    
+    subject_type = models.CharField(
+        max_length=20,
+        choices=SUBJECT_TYPES,
+        default='THEORY',
+        help_text="Type of subject"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Subject description"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this subject is active"
+    )
+    
+    display_order = models.IntegerField(
+        default=0,
+        help_text="Display order"
+    )
+    
+    class Meta:
+        db_table = 'subjects'
+        verbose_name = 'Subject'
+        verbose_name_plural = 'Subjects'
+        ordering = ['display_order', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'name'],
+                name='unique_subject_name_per_tenant'
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'code'],
+                name='unique_subject_code_per_tenant'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class ClassSubject(BaseModel):
+    """
+    Class-Subject mapping model.
+    Defines which subjects are taught in which grade levels.
+    (e.g., "Class 1 studies Mathematics")
+    """
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='class_subjects',
+        help_text="Tenant this mapping belongs to"
+    )
+    
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='class_subjects',
+        help_text="Academic year for this mapping"
+    )
+    
+    grade_level = models.ForeignKey(
+        GradeLevel,
+        on_delete=models.CASCADE,
+        related_name='class_subjects',
+        help_text="Grade level"
+    )
+    
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+        related_name='class_subjects',
+        help_text="Subject"
+    )
+    
+    is_mandatory = models.BooleanField(
+        default=True,
+        help_text="Whether this subject is mandatory for this grade"
+    )
+    
+    is_elective = models.BooleanField(
+        default=False,
+        help_text="Whether this is an elective subject"
+    )
+    
+    teacher = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='teaching_subjects',
+        help_text="Primary teacher for this subject-grade combination"
+    )
+    
+    weekly_periods = models.IntegerField(
+        default=5,
+        help_text="Number of periods per week"
+    )
+    
+    total_marks = models.IntegerField(
+        default=100,
+        help_text="Total marks for this subject"
+    )
+    
+    passing_marks = models.IntegerField(
+        default=40,
+        help_text="Minimum passing marks"
+    )
+    
+    display_order = models.IntegerField(
+        default=0,
+        help_text="Display order in report cards"
+    )
+    
+    class Meta:
+        db_table = 'class_subjects'
+        verbose_name = 'Class Subject'
+        verbose_name_plural = 'Class Subjects'
+        ordering = ['grade_level', 'display_order', 'subject']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['academic_year', 'grade_level', 'subject'],
+                name='unique_subject_per_grade_per_year'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.grade_level.name} - {self.subject.name} ({self.academic_year.name})"

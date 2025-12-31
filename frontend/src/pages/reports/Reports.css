@@ -1,0 +1,46 @@
+.reports-page {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.report-category {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.category-icon {
+    font-size: 3rem;
+    text-align: center;
+}
+
+.report-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.report-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    transition: background 0.3s;
+}
+
+.report-item:hover {
+    background: #f3f4f6;
+}
+
+.report-name {
+    font-weight: 500;
+    color: #333;
+}

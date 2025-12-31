@@ -1,0 +1,313 @@
+/* Class View Styles */
+
+.class-view {
+    padding: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.class-view-header {
+    margin-bottom: 2rem;
+}
+
+.class-view-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.class-view-header p {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Section Selector */
+.section-selector {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-selector label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #333;
+}
+
+.section-selector select {
+    width: 100%;
+    padding: 0.875rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.section-selector select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+/* Section Info Card */
+.section-info-card {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+    margin-bottom: 2rem;
+}
+
+.section-icon {
+    font-size: 4rem;
+    flex-shrink: 0;
+}
+
+.section-details {
+    flex: 1;
+}
+
+.section-details h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.class-teacher {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+}
+
+.room-number {
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.section-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+/* Weekly Timetable */
+.weekly-timetable {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    padding: 1.5rem;
+}
+
+.timetable-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1000px;
+}
+
+.timetable-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    font-weight: 600;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timetable-table thead th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.timetable-table thead th:last-child {
+    border-top-right-radius: 8px;
+}
+
+.time-column {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #555;
+    min-width: 120px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+
+.period-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem;
+}
+
+.period {
+    font-size: 0.875rem;
+    color: #667eea;
+    font-weight: 700;
+}
+
+.time {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.class-cell {
+    padding: 0.75rem;
+    border: 1px solid #e0e0e0;
+    background: #fafafa;
+    transition: all 0.2s;
+    min-width: 150px;
+}
+
+.class-cell:hover {
+    background: #e8f4fd;
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+.class-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.subject-name {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+}
+
+.teacher-name {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.room-info {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    font-weight: 500;
+}
+
+.no-class {
+    text-align: center;
+    color: #ccc;
+    font-size: 1.25rem;
+}
+
+/* Loading and Error States */
+.loading {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.125rem;
+    color: #666;
+}
+
+.error-message {
+    padding: 1rem;
+    background: #fee;
+    color: #c00;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Print Styles */
+@media print {
+
+    .class-view-header,
+    .section-selector {
+        display: none;
+    }
+
+    .section-info-card {
+        background: white;
+        color: black;
+        border: 2px solid #333;
+    }
+
+    .timetable-table {
+        page-break-inside: avoid;
+    }
+
+    .class-cell:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .class-view {
+        padding: 1rem;
+    }
+
+    .section-info-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .section-stats {
+        justify-content: center;
+    }
+
+    .timetable-table {
+        font-size: 0.75rem;
+    }
+
+    .class-cell {
+        min-width: 100px;
+        padding: 0.5rem;
+    }
+}

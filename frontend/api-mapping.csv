@@ -1,0 +1,97 @@
+prefix,endpoint,used_by_frontend,frontend_files,notes
+api/dashboard,analytics/,true,frontend/src/pages/Dashboard.tsx,Dashboard stats and cache endpoints used.
+api/dashboard,widgets/,false,,Dashboard widget endpoints not used by default UI.
+api/dashboard,layout/,true,frontend/src/components/dashboard/DashboardGrid.tsx,Layout endpoints are used for dashboard layout.
+api/timetable,slots/,false,,Timetable slots UI not implemented.
+api/timetable,templates/,false,,Timetable templates UI not implemented.
+api/users,users/,false,,User management UI not fully implemented in frontend.
+api/users,roles/,false,,RBAC roles UI missing.
+api/users,permissions/,false,,Permissions UI missing.
+api/users,impersonate/,false,,Impersonation is backend-only for admins.
+api/transport,vehicles/,false,,Vehicles list UI not present.
+api/transport,drivers/,false,,Drivers UI not present.
+api/transport,routes/,false,,Routes UI not present.
+api/transport,stops/,false,,Stops UI not present.
+api/transport,allocations/,true,frontend/src/pages/transport/TransportAllocations.tsx,Student transport allocations CRUD connected.
+api/security,passes/,true,frontend/src/pages/security/GuardScanner.tsx,Gate pass scanning/lookup used.
+api/salah_tracker,records/,false,,Salah tracker not used by frontend.
+api/tenants,years/,false,,Academic year management UI not integrated.
+api/tenants,departments/,false,,Departments UI not integrated.
+api/tenants,grades/,false,,Grade levels UI not integrated.
+api/tenants,sections/,false,,Sections UI not integrated.
+api/tenants,hq/,false,,Headquarters UI not integrated.
+api/students,students/,true,frontend/src/pages/students/StudentsList.tsx,Student list CRUD connected.
+api/students,remarks/,false,,Student remarks UI not present.
+api/students,documents/,false,,Student documents UI not present.
+api/students,health-records/,false,,Student health records UI not present.
+api/students,enrollments/,false,,Student enrollment UI not present.
+api/staff,staff/,true,frontend/src/pages/staff/AddStaff.tsx,Staff create form present.
+api/staff,documents/,false,,Staff documents UI not present.
+api/staff,attendance/,false,,Staff attendance UI not present.
+api/staff,leaves/,false,,Staff leave management UI not present.
+api/placement,recruiters/,false,,Placement recruiter UI not present.
+api/placement,drives/,false,,Placement drives UI not present.
+api/placement,applications/,false,,Student applications UI not present.
+api/payroll,components/,false,,Payroll components UI not present.
+api/payroll,structures/,false,,Salary structures UI not present.
+api/payroll,cycles/,false,,Payroll cycles UI not present.
+api/payroll,payslips/,false,,Payslips UI not present.
+api/lms,live/,false,,Live class UI not present.
+api/habit_tracker,habits/,false,,Habit tracker UI not present.
+api/habit_tracker,logs/,false,,Student habit logs UI not present.
+api/hr,leave-types/,false,,Leave types UI not present.
+api/hr,leave-balances/,false,,Leave balances UI not present.
+api/hr,leave-applications/,false,,Leave applications UI not present.
+api/library,books/,true,frontend/src/pages/library/LibraryBooks.tsx,Library books CRUD connected.
+api/library,copies/,false,,Book copies UI not present.
+api/library,members/,false,,Library members UI not present.
+api/library,issues/,false,,Book issue/return UI not present.
+api/library,digital/,false,,Digital resources UI not present.
+api/idcards,templates/,false,,ID card templates UI not present.
+api/idcards,designs/,false,,ID card designs UI not present.
+api/idcards,generations/,false,,ID card generation UI not present.
+api/inventory,items/,false,,Inventory items UI not present.
+api/inventory,transactions/,false,,Inventory transactions UI not present.
+api/inventory,orders/,false,,Inventory orders UI not present.
+api/hostel,buildings/,false,,Hostel buildings UI not present.
+api/hostel,rooms/,false,,Hostel rooms UI not present.
+api/hostel,beds/,false,,Hostel beds UI not present.
+api/hostel,allocations/,false,,Hostel allocations UI not present.
+api/helpdesk,tickets/,true,frontend/src/pages/helpdesk/HelpdeskTickets.tsx,Helpdesk tickets list connected with search/pagination.
+api/fees,categories/,false,,Fee categories UI not present.
+api/fees,structures/,false,,Fee structures UI partially present but not integrated.
+api/fees,allocations/,true,frontend/src/pages/fees/BulkAllocateFeeStructure.tsx,Bulk allocation endpoint used.
+api/fees,invoices/,true,frontend/src/pages/fees/CollectFees.tsx;frontend/src/pages/fees/GenerateMonthlyInvoices.tsx,Invoice endpoints used.
+api/fees,transactions/,true,frontend/src/pages/fees/CollectFees.tsx,Fee transactions used by collect-fees UI.
+api/fees,defaulters/,false,,Fee defaulters UI not present.
+api/fees,sibling-discounts/,false,,Sibling discount UI not present.
+api/cms,themes/,false,,CMS theme admin UI not present in frontend.
+api/cms,websites/,false,,Website admin UI not present.
+api/cms,pages/,true,frontend/src/public/PublicSchoolSite.tsx,CMS public pages consumed by public site.
+api/cms,sections/,false,,CMS sections UI not present.
+api/cms,assets/,false,,CMS assets UI not present.
+api/cms,navigation/,false,,CMS navigation UI not present.
+api/finance,accounts/,false,,Finance ledger UI not present.
+api/finance,journal-entries/,false,,Journal entries UI not present.
+api/finance,petty-cash/,false,,Petty cash UI not present.
+api/finance,vendor-payments/,false,,Vendor payments UI not present.
+api/finance,salary-payments/,false,,Salary payments UI not present.
+api/finance,reports/,false,,Finance reports UI not present.
+api/communication,providers/,false,,Communication providers UI not present.
+api/communication,templates/,false,,Message templates UI not present.
+api/communication,notices/,true,frontend/src/pages/communication/NoticeBoard.tsx,Active notices are used by noticeboard.
+api/communication,logs/,false,,Communication logs UI not present.
+api/communication,broadcasts/,false,,Broadcast messages UI not present.
+api/exams,terms/,false,,Exam term admin UI not present.
+api/exams,exams/,true,frontend/src/pages/exams/ExamScheduler.tsx,Exams scheduling UI uses exams endpoints.
+api/exams,schedules/,true,frontend/src/pages/exams/ExamScheduler.tsx,Exam schedules are used.
+api/exams,topics/,false,,Topics UI not present.
+api/exams,learning-outcomes/,false,,Learning outcomes UI not present.
+api/exams,questions/,false,,Question bank UI not present.
+api/core,config/,false,,Mobile config endpoint exists but not used by main UI.
+api/crm,leads/,false,,CRM leads UI not present.
+api/crm,interactions/,false,,CRM interactions UI not present.
+api/crm,documents/,false,,CRM documents UI not present.
+api/crm,visitors/,false,,CRM visitors UI not present.
+api/attendance,records/,false,,Attendance records UI partial; aggregates page uses a different action if present.
+api/attendance,config/,false,,Attendance config UI not present.

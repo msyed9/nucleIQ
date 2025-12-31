@@ -1,0 +1,414 @@
+/* Timetable Builder Styles */
+
+.timetable-builder {
+    padding: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.timetable-header {
+    margin-bottom: 2rem;
+}
+
+.timetable-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.timetable-header p {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Filters */
+.timetable-filters {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.875rem;
+}
+
+.filter-group select {
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.filter-group select:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+/* Subject Palette */
+.subject-palette {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.subject-palette h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.palette-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* Timetable Grid */
+.timetable-grid-container {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    padding: 1.5rem;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #4f46e5;
+    z-index: 10;
+}
+
+.error-message {
+    padding: 1rem;
+    background: #fee;
+    color: #c00;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.timetable-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1200px;
+}
+
+.timetable-grid thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    font-weight: 600;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timetable-grid thead th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.timetable-grid thead th:last-child {
+    border-top-right-radius: 8px;
+}
+
+.time-cell {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    color: #555;
+    border: 1px solid #e0e0e0;
+    min-width: 100px;
+}
+
+.period-number {
+    font-size: 0.875rem;
+    color: #4f46e5;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.time-range {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.break-label {
+    font-size: 0.875rem;
+    color: #999;
+    font-style: italic;
+}
+
+.break-cell {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    text-align: center;
+    padding: 1rem;
+    font-weight: 600;
+    color: #2d3436;
+    border: 1px solid #e0e0e0;
+}
+
+.droppable-cell {
+    padding: 0.5rem;
+    min-height: 80px;
+    border: 2px dashed #e0e0e0;
+    background: #fafafa;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.droppable-cell.can-drop {
+    cursor: pointer;
+}
+
+.droppable-cell.drop-over {
+    background: #e8f4fd;
+    border-color: #4f46e5;
+    box-shadow: inset 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.empty-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 60px;
+    color: #ccc;
+    font-size: 1.5rem;
+    font-weight: 300;
+    transition: all 0.2s;
+}
+
+.droppable-cell:hover .empty-slot {
+    color: #4f46e5;
+    transform: scale(1.2);
+}
+
+/* Timetable Slot */
+.timetable-slot {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: move;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.timetable-slot:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.timetable-slot.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.slot-subject {
+    font-weight: 700;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.slot-teacher {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.slot-room {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-style: italic;
+}
+
+.slot-delete {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: all 0.2s;
+    opacity: 0;
+}
+
+.timetable-slot:hover .slot-delete {
+    opacity: 1;
+}
+
+.slot-delete:hover {
+    background: rgba(255, 59, 48, 0.9);
+    transform: scale(1.1);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #1a1a1a;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 0.875rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-cancel {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .timetable-builder {
+        padding: 1rem;
+    }
+
+    .timetable-filters {
+        flex-direction: column;
+    }
+
+    .timetable-grid {
+        font-size: 0.875rem;
+    }
+
+    .timetable-slot {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+}

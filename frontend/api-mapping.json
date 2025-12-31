@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "generated_at": "2025-12-30T00:00:00Z",
+    "notes": "Map of backend router prefixes to frontend usage (project scan)."
+  },
+  "mapping": {
+    "fees/categories": {"path":"/api/fees/categories/","used":false,"frontendFiles":[]},
+    "fees/structures": {"path":"/api/fees/structures/","used":false,"frontendFiles":[]},
+    "fees/allocations": {"path":"/api/fees/allocations/","used":true,"frontendFiles":["frontend/src/pages/fees/BulkAllocateFeeStructure.tsx"]},
+    "fees/invoices": {"path":"/api/fees/invoices/","used":true,"frontendFiles":["frontend/src/pages/fees/CollectFees.tsx","frontend/src/pages/fees/GenerateMonthlyInvoices.tsx"]},
+    "fees/transactions": {"path":"/api/fees/transactions/","used":true,"frontendFiles":["frontend/src/pages/fees/CollectFees.tsx"]},
+    "fees/defaulters": {"path":"/api/fees/defaulters/","used":false,"frontendFiles":[]},
+    "fees/sibling-discounts": {"path":"/api/fees/sibling-discounts/","used":false,"frontendFiles":[]},
+
+    "billing/plans": {"path":"/api/billing/plans/","used":true,"frontendFiles":["frontend/src/pages/billing/SubscriptionManage.tsx"]},
+    "billing/subscriptions": {"path":"/api/billing/subscriptions/","used":true,"frontendFiles":["frontend/src/pages/billing/SubscriptionManage.tsx"]},
+    "billing/invoices": {"path":"/api/billing/invoices/","used":true,"frontendFiles":["frontend/src/pages/billing/SubscriptionManage.tsx"]},
+    "billing/transactions": {"path":"/api/billing/transactions/","used":false,"frontendFiles":[]},
+    "billing/webhooks/razorpay": {"path":"/api/billing/webhooks/razorpay/","used":false,"frontendFiles":[]},
+    "billing/webhooks/stripe": {"path":"/api/billing/webhooks/stripe/","used":false,"frontendFiles":[]},
+
+    "search/root": {"path":"/api/search/","used":true,"frontendFiles":["frontend/src/components/layout/CommandPalette.tsx"]},
+    "search/recent": {"path":"/api/search/recent/","used":true,"frontendFiles":["frontend/src/components/layout/CommandPalette.tsx"]},
+    "search/suggestions": {"path":"/api/search/suggestions/","used":false,"frontendFiles":[]},
+
+    "cms/public": {"path":"/api/cms/public/<domain>/","used":true,"frontendFiles":["frontend/src/public/PublicSchoolSite.tsx"]},
+
+    "alumni/jobs": {"path":"/api/alumni/jobs/","used":true,"frontendFiles":["frontend/src/pages/alumni/AlumniPortal.tsx"]},
+    "alumni/campaigns": {"path":"/api/alumni/campaigns/","used":true,"frontendFiles":["frontend/src/pages/alumni/AlumniPortal.tsx"]},
+    "alumni/profiles": {"path":"/api/alumni/profiles/","used":false,"frontendFiles":[]},
+    "alumni/events": {"path":"/api/alumni/events/","used":false,"frontendFiles":[]},
+
+    "dashboard/analytics": {"path":"/api/dashboard/analytics/","used":true,"frontendFiles":["frontend/src/pages/Dashboard.tsx"]},
+    "dashboard/widgets": {"path":"/api/dashboard/widgets/","used":false,"frontendFiles":[]},
+    "dashboard/layout": {"path":"/api/dashboard/layout/","used":false,"frontendFiles":[]},
+
+    "exams/exams": {"path":"/api/exams/exams/","used":true,"frontendFiles":["frontend/src/pages/exams/ExamScheduler.tsx"]},
+    "exams/schedules": {"path":"/api/exams/schedules/","used":true,"frontendFiles":["frontend/src/pages/exams/ExamScheduler.tsx"]},
+
+    "staff/staff": {"path":"/api/staff/staff/","used":true,"frontendFiles":["frontend/src/pages/staff/AddStaff.tsx"]},
+    "staff/documents": {"path":"/api/staff/documents/","used":false,"frontendFiles":[]},
+    "staff/attendance": {"path":"/api/staff/attendance/","used":false,"frontendFiles":[]},
+
+    "communication/notices": {"path":"/api/communication/notices/","used":true,"frontendFiles":["frontend/src/pages/communication/NoticeBoard.tsx"]},
+    "communication/providers": {"path":"/api/communication/providers/","used":false,"frontendFiles":[]},
+    "communication/templates": {"path":"/api/communication/templates/","used":false,"frontendFiles":[]},
+    "communication/logs": {"path":"/api/communication/logs/","used":false,"frontendFiles":[]},
+    "communication/broadcasts": {"path":"/api/communication/broadcasts/","used":false,"frontendFiles":[]},
+
+    "security/passes": {"path":"/api/security/passes/","used":true,"frontendFiles":["frontend/src/pages/security/GuardScanner.tsx"]},
+
+    "students/students": {"path":"/api/students/students/","used":false,"frontendFiles":[]},
+
+    "library/books": {"path":"/api/library/books/","used":false,"frontendFiles":[]},
+
+    "transport/vehicles": {"path":"/api/transport/vehicles/","used":false,"frontendFiles":[]},
+
+    "payroll/payslips": {"path":"/api/payroll/payslips/","used":false,"frontendFiles":[]},
+
+    "idcards/templates": {"path":"/api/idcards/templates/","used":false,"frontendFiles":[]},
+
+    "finance/accounts": {"path":"/api/finance/accounts/","used":false,"frontendFiles":[]}
+  }
+}
