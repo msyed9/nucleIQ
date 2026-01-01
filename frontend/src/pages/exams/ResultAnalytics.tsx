@@ -10,7 +10,7 @@ import {
     Tooltip,
     Legend,
     ArcElement,
-} from 'chart.js';
+} from 'chart.js/auto';
 import { Bar, Pie } from 'react-chartjs-2';
 import './ResultAnalytics.css';
 

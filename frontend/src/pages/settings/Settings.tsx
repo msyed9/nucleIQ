@@ -1,220 +1,408 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
-import { usePreferences } from '../../contexts/PreferencesContext';
-import './Settings.css';
+/**
+ * Settings Page - Redesigned with NucleIQ Design System
+ * Modern settings interface with tabs and form controls
+ */
+
+import React, { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import {
+    Settings as SettingsIcon,
+    School,
+    Users,
+    Bell,
+    Lock,
+    Globe,
+    Palette,
+    Database,
+    Save
+} from 'lucide-react';
+import { Button, Card, Input, Select, Checkbox } from '@/design-system';
+
+type SettingsTab = 'general' | 'academic' | 'users' | 'notifications' | 'security' | 'appearance' | 'system';
 
 const Settings: React.FC = () => {
-    const { t } = useTranslation();
-    const { preferences, updatePreferences } = usePreferences();
-
-    const [schoolName, setSchoolName] = useState('Demo School');
-    const [schoolEmail, setSchoolEmail] = useState('info@demoschool.com');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+    const [schoolName, setSchoolName] = useState('Demo Government School');
+    const [schoolEmail, setSchoolEmail] = useState('school@example.com');
     const [schoolPhone, setSchoolPhone] = useState('+91 1234567890');
-    const [address, setAddress] = useState('123 School Street, City');
+    const [language, setLanguage] = useState('en');
+    const [timezone, setTimezone] = useState('Asia/Kolkata');
+    const [emailNotifications, setEmailNotifications] = useState(true);
+    const [smsNotifications, setSmsNotifications] = useState(false);
 
-    // User Preferences - Initialize from context
-    const [language, setLanguage] = useState(preferences.language || 'en');
-    const [themeMode, setThemeMode] = useState(preferences.theme_mode || 'system');
-    const [timezone, setTimezone] = useState(preferences.timezone || 'UTC');
-    const [dateFormat, setDateFormat] = useState(preferences.date_format || 'YYYY-MM-DD');
-    const [timeFormat, setTimeFormat] = useState(preferences.time_format || '24h');
-    const [saving, setSaving] = useState(false);
+    // Theme Context
+    const { themeMode, setThemeMode, themeColor, setThemeColor } = useTheme();
 
-    // Update local state when preferences change
-    useEffect(() => {
-        setLanguage(preferences.language || 'en');
-        setThemeMode(preferences.theme_mode || 'system');
-        setTimezone(preferences.timezone || 'UTC');
-        setDateFormat(preferences.date_format || 'YYYY-MM-DD');
-        setTimeFormat(preferences.time_format || '24h');
-    }, [preferences]);
+    const tabs = [
+        { id: 'general' as SettingsTab, label: 'General', icon: SettingsIcon },
+        { id: 'academic' as SettingsTab, label: 'Academic', icon: School },
+        { id: 'users' as SettingsTab, label: 'Users & Roles', icon: Users },
+        { id: 'notifications' as SettingsTab, label: 'Notifications', icon: Bell },
+        { id: 'security' as SettingsTab, label: 'Security', icon: Lock },
+        { id: 'appearance' as SettingsTab, label: 'Appearance', icon: Palette },
+        { id: 'system' as SettingsTab, label: 'System', icon: Database },
+    ];
+
+    const languageOptions = [
+        { value: 'en', label: 'English' },
+        { value: 'te', label: 'Telugu (తెలుగు)' },
+        { value: 'hi', label: 'Hindi (हिंदी)' },
+    ];
+
+    const timezoneOptions = [
+        { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
+        { value: 'Asia/Dubai', label: 'Gulf Standard Time (GST)' },
+        { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
+    ];
 
     const handleSave = () => {
-        alert(t('settings.settingsSaved'));
-    };
-
-    const handlePreferencesSave = async () => {
-        setSaving(true);
-        try {
-            await updatePreferences({
-                language,
-                theme_mode: themeMode,
-                timezone,
-                date_format: dateFormat,
-                time_format: timeFormat
-            });
-            alert(t('settings.preferencesSaved'));
-        } catch (error) {
-            console.error('Failed to save preferences:', error);
-            alert(t('settings.saveFailed'));
-        } finally {
-            setSaving(false);
-        }
+        console.log('Saving settings...');
+        // TODO: Implement save functionality
     };
 
     return (
-        <div className="settings-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">{t('settings.title')}</h1>
-                    <p className="page-subtitle">{t('settings.subtitle')}</p>
-                </div>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+            {/* Header */}
+            <div style={{ marginBottom: '2rem' }}>
+                <h1 style={{
+                    fontFamily: 'var(--font-family-primary)',
+                    fontSize: '2.25rem',
+                    fontWeight: 700,
+                    color: 'var(--color-text-primary)',
+                    margin: '0 0 0.5rem 0'
+                }}>
+                    Settings
+                </h1>
+                <p style={{
+                    fontSize: '1rem',
+                    color: 'var(--color-text-secondary)',
+                    margin: 0
+                }}>
+                    Manage your school settings and preferences
+                </p>
             </div>
 
-            <div className="settings-grid">
-                {/* School Profile */}
-                <Card title={t('settings.schoolProfile')}>
-                    <div className="form-group">
-                        <label>{t('settings.schoolName')}</label>
-                        <input
-                            type="text"
-                            value={schoolName}
-                            onChange={(e) => setSchoolName(e.target.value)}
-                            className="form-input"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.email')}</label>
-                        <input
-                            type="email"
-                            value={schoolEmail}
-                            onChange={(e) => setSchoolEmail(e.target.value)}
-                            className="form-input"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.phone')}</label>
-                        <input
-                            type="tel"
-                            value={schoolPhone}
-                            onChange={(e) => setSchoolPhone(e.target.value)}
-                            className="form-input"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.address')}</label>
-                        <textarea
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            className="form-input"
-                            rows={3}
-                        />
-                    </div>
-                    <Button variant="primary" onClick={handleSave}>
-                        {t('settings.saveChanges')}
-                    </Button>
-                </Card>
+            <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem' }}>
+                {/* Sidebar Tabs */}
+                <div>
+                    <Card padding="sm">
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
 
-                {/* Academic Year */}
-                <Card title={t('settings.academicYear')}>
-                    <div className="form-group">
-                        <label>{t('settings.currentAcademicYear')}</label>
-                        <select className="form-input">
-                            <option>2024-2025</option>
-                            <option>2025-2026</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.sessionStartDate')}</label>
-                        <input type="date" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.sessionEndDate')}</label>
-                        <input type="date" className="form-input" />
-                    </div>
-                </Card>
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                            padding: '0.75rem 1rem',
+                                            background: isActive ? 'var(--color-primary-50)' : 'transparent',
+                                            color: isActive ? 'var(--color-primary-700)' : 'var(--color-text-secondary)',
+                                            border: 'none',
+                                            borderRadius: '0.5rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 200ms',
+                                            fontFamily: 'var(--font-family-primary)',
+                                            fontSize: '0.875rem',
+                                            fontWeight: isActive ? 600 : 500,
+                                            textAlign: 'left',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.background = 'transparent';
+                                            }
+                                        }}
+                                    >
+                                        <Icon size={18} />
+                                        <span>{tab.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </Card>
+                </div>
 
-                {/* Branding */}
-                <Card title={t('settings.branding')}>
-                    <div className="form-group">
-                        <label>{t('settings.schoolLogo')}</label>
-                        <input type="file" className="form-input" accept="image/*" />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.primaryColor')}</label>
-                        <input type="color" className="form-input" defaultValue="#667eea" />
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.secondaryColor')}</label>
-                        <input type="color" className="form-input" defaultValue="#764ba2" />
-                    </div>
-                </Card>
+                {/* Content Area */}
+                <div>
+                    {activeTab === 'general' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                General Settings
+                            </h2>
 
-                {/* User Preferences */}
-                <Card title={t('settings.preferences')}>
-                    <div className="form-group">
-                        <label>{t('settings.language')}</label>
-                        <select
-                            className="form-input"
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                        >
-                            <option value="en">{t('languages.en')}</option>
-                            <option value="hi">{t('languages.hi')}</option>
-                            <option value="ar">{t('languages.ar')}</option>
-                            <option value="ur">{t('languages.ur')}</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.themeMode')}</label>
-                        <select
-                            className="form-input"
-                            value={themeMode}
-                            onChange={(e) => setThemeMode(e.target.value)}
-                        >
-                            <option value="light">{t('theme.light')}</option>
-                            <option value="dark">{t('theme.dark')}</option>
-                            <option value="system">{t('theme.system')}</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.timezone')}</label>
-                        <select
-                            className="form-input"
-                            value={timezone}
-                            onChange={(e) => setTimezone(e.target.value)}
-                        >
-                            <option value="UTC">UTC</option>
-                            <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                            <option value="America/New_York">America/New York (EST)</option>
-                            <option value="Europe/London">Europe/London (GMT)</option>
-                            <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.dateFormat')}</label>
-                        <select
-                            className="form-input"
-                            value={dateFormat}
-                            onChange={(e) => setDateFormat(e.target.value)}
-                        >
-                            <option value="YYYY-MM-DD">YYYY-MM-DD (2025-12-29)</option>
-                            <option value="DD/MM/YYYY">DD/MM/YYYY (29/12/2025)</option>
-                            <option value="MM/DD/YYYY">MM/DD/YYYY (12/29/2025)</option>
-                            <option value="DD-MMM-YYYY">DD-MMM-YYYY (29-Dec-2025)</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>{t('settings.timeFormat')}</label>
-                        <select
-                            className="form-input"
-                            value={timeFormat}
-                            onChange={(e) => setTimeFormat(e.target.value)}
-                        >
-                            <option value="24h">24 Hour (14:30)</option>
-                            <option value="12h">12 Hour (2:30 PM)</option>
-                        </select>
-                    </div>
-                    <Button
-                        variant="primary"
-                        onClick={handlePreferencesSave}
-                        disabled={saving}
-                    >
-                        {saving ? t('common.loading') : t('settings.savePreferences')}
-                    </Button>
-                </Card>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <Input
+                                    label="School Name"
+                                    value={schoolName}
+                                    onChange={(e) => setSchoolName(e.target.value)}
+                                    required
+                                    fullWidth
+                                />
+
+                                <Input
+                                    label="School Email"
+                                    type="email"
+                                    value={schoolEmail}
+                                    onChange={(e) => setSchoolEmail(e.target.value)}
+                                    required
+                                    fullWidth
+                                />
+
+                                <Input
+                                    label="School Phone"
+                                    type="tel"
+                                    value={schoolPhone}
+                                    onChange={(e) => setSchoolPhone(e.target.value)}
+                                    required
+                                    fullWidth
+                                />
+
+                                <Select
+                                    label="Default Language"
+                                    options={languageOptions}
+                                    value={language}
+                                    onChange={setLanguage}
+                                    fullWidth
+                                />
+
+                                <Select
+                                    label="Timezone"
+                                    options={timezoneOptions}
+                                    value={timezone}
+                                    onChange={setTimezone}
+                                    fullWidth
+                                />
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                    <Button variant="outline">
+                                        Cancel
+                                    </Button>
+                                    <Button variant="primary" iconLeft={Save} onClick={handleSave}>
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'academic' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                Academic Settings
+                            </h2>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <Input
+                                    label="Academic Year"
+                                    value="2024-2025"
+                                    fullWidth
+                                />
+
+                                <Input
+                                    label="Total Working Days"
+                                    type="number"
+                                    value="220"
+                                    fullWidth
+                                />
+
+                                <Select
+                                    label="Grading System"
+                                    options={[
+                                        { value: 'percentage', label: 'Percentage (0-100)' },
+                                        { value: 'gpa', label: 'GPA (0-10)' },
+                                        { value: 'letter', label: 'Letter Grades (A-F)' },
+                                    ]}
+                                    value="percentage"
+                                    onChange={() => { }}
+                                    fullWidth
+                                />
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                    <Button variant="outline">
+                                        Cancel
+                                    </Button>
+                                    <Button variant="primary" iconLeft={Save} onClick={handleSave}>
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'notifications' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                Notification Settings
+                            </h2>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <Checkbox
+                                    label="Email Notifications"
+                                    checked={emailNotifications}
+                                    onChange={(e) => setEmailNotifications(e.target.checked)}
+                                    helperText="Receive notifications via email"
+                                />
+
+                                <Checkbox
+                                    label="SMS Notifications"
+                                    checked={smsNotifications}
+                                    onChange={(e) => setSmsNotifications(e.target.checked)}
+                                    helperText="Receive notifications via SMS"
+                                />
+
+                                <Checkbox
+                                    label="Fee Payment Reminders"
+                                    checked={true}
+                                    onChange={() => { }}
+                                    helperText="Send automatic fee payment reminders"
+                                />
+
+                                <Checkbox
+                                    label="Attendance Alerts"
+                                    checked={true}
+                                    onChange={() => { }}
+                                    helperText="Alert when student attendance is low"
+                                />
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                    <Button variant="outline">
+                                        Cancel
+                                    </Button>
+                                    <Button variant="primary" iconLeft={Save} onClick={handleSave}>
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'appearance' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                Appearance Settings
+                            </h2>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <Checkbox
+                                    label="Dark Mode"
+                                    checked={themeMode === 'dark'}
+                                    onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
+                                    helperText="Enable dark mode theme"
+                                />
+
+                                <Select
+                                    label="Theme Color"
+                                    options={[
+                                        { value: '#0b3b66', label: 'Blue (Default)' },
+                                        { value: '#15803d', label: 'Green' },
+                                        { value: '#7e22ce', label: 'Purple' },
+                                        { value: '#c2410c', label: 'Orange' },
+                                        { value: '#be123c', label: 'Red' },
+                                    ]}
+                                    value={themeColor} // Hex code
+                                    onChange={(val) => setThemeColor(val)}
+                                    fullWidth
+                                />
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                    <Button variant="outline">
+                                        Cancel
+                                    </Button>
+                                    <Button variant="primary" iconLeft={Save} onClick={handleSave}>
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'users' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                Users & Roles
+                            </h2>
+                            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+                                Manage user permissions and roles
+                            </p>
+                            <Button variant="primary" iconLeft={Users}>
+                                Manage Users
+                            </Button>
+                        </Card>
+                    )}
+
+                    {activeTab === 'security' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                Security Settings
+                            </h2>
+                            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+                                Configure security and authentication settings
+                            </p>
+                            <Button variant="primary" iconLeft={Lock}>
+                                Change Password
+                            </Button>
+                        </Card>
+                    )}
+
+                    {activeTab === 'system' && (
+                        <Card padding="lg">
+                            <h2 style={{
+                                margin: '0 0 1rem 0',
+                                fontSize: '1.5rem',
+                                fontWeight: 600,
+                                color: 'var(--color-text-primary)'
+                            }}>
+                                System Settings
+                            </h2>
+                            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+                                System configuration and maintenance
+                            </p>
+                            <Button variant="primary" iconLeft={Database}>
+                                System Info
+                            </Button>
+                        </Card>
+                    )}
+                </div>
             </div>
         </div>
     );

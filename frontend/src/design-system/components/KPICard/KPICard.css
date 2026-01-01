@@ -1,0 +1,150 @@
+/**
+ * NucleIQ Design System - KPI Card Styles
+ */
+
+.ds-kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #FFFFFF;
+    border-radius: 1rem;
+    /* 16px */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 280px;
+}
+
+.ds-kpi-card--hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.ds-kpi-card--clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.ds-kpi-card--clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+}
+
+.ds-kpi-card--clickable:active {
+    transform: scale(0.98);
+}
+
+/* Icon Container */
+.ds-kpi-card__icon-container {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+/* Content */
+.ds-kpi-card__content {
+    flex: 1;
+    min-width: 0;
+    /* Prevent overflow */
+}
+
+.ds-kpi-card__value {
+    font-family: 'Inter', sans-serif;
+    font-size: 2.25rem;
+    /* 36px */
+    font-weight: 700;
+    color: #1A237E;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+
+.ds-kpi-card__label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    /* 14px */
+    font-weight: 500;
+    color: #546E7A;
+    margin-bottom: 0.5rem;
+}
+
+/* Trend */
+.ds-kpi-card__trend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    /* 12px */
+    font-weight: 600;
+}
+
+.ds-kpi-card__trend--up {
+    color: #4CAF50;
+}
+
+.ds-kpi-card__trend--down {
+    color: #F44336;
+}
+
+.ds-kpi-card__trend-label {
+    margin-left: 0.25rem;
+    color: #78909C;
+    font-weight: 400;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-kpi-card {
+        min-width: unset;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .ds-kpi-card__icon-container {
+        width: 48px;
+        height: 48px;
+    }
+
+    .ds-kpi-card__icon-container svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .ds-kpi-card__value {
+        font-size: 1.75rem;
+        /* 28px */
+    }
+
+    .ds-kpi-card__label {
+        font-size: 0.75rem;
+        /* 12px */
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-kpi-card {
+        background: #1E1E1E;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .ds-kpi-card--hoverable:hover {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    .ds-kpi-card__value {
+        color: #FFFFFF;
+    }
+
+    .ds-kpi-card__label {
+        color: #B0BEC5;
+    }
+
+    .ds-kpi-card__trend-label {
+        color: #90A4AE;
+    }
+}

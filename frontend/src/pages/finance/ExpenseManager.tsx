@@ -59,17 +59,17 @@ const ExpenseManager: React.FC = () => {
 
     const { t } = useTranslation();
 
-    if (loading) return <Loading fullScreen text={t('expense.loading')} />;
+    if (loading) return <Loading fullScreen text={t('expense.loading', 'Loading expenses...')} />;
 
     return (
         <div className="finance-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">{t('expense.title')}</h1>
-                    <p className="page-subtitle">{t('expense.subtitle')}</p>
+                    <h1 className="page-title">{t('expense.title', 'Expense Manager')}</h1>
+                    <p className="page-subtitle">{t('expense.subtitle', 'Manage petty cash and expenses')}</p>
                 </div>
                 <Button variant="primary" onClick={() => setShowAddModal(true)}>
-                    {t('expense.new')}
+                    {t('expense.new', '+ New Expense Request')}
                 </Button>
             </div>
 
@@ -77,7 +77,7 @@ const ExpenseManager: React.FC = () => {
             <div className="expense-summary">
                 <Card className="summary-card">
                     <div className="summary-content">
-                        <span className="summary-label">{t('expense.total_pending')}</span>
+                        <span className="summary-label">{t('expense.total_pending', 'Total Pending')}</span>
                         <span className="summary-value">
                             {formatCurrency(
                                 expenses
@@ -89,7 +89,7 @@ const ExpenseManager: React.FC = () => {
                 </Card>
                 <Card className="summary-card">
                     <div className="summary-content">
-                        <span className="summary-label">{t('expense.total_approved')}</span>
+                        <span className="summary-label">{t('expense.total_approved', 'Total Approved')}</span>
                         <span className="summary-value">
                             {formatCurrency(
                                 expenses
@@ -107,13 +107,13 @@ const ExpenseManager: React.FC = () => {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>{t('expense.request_no')}</th>
-                                <th>{t('expense.requested_by')}</th>
-                                <th>{t('expense.purpose')}</th>
-                                <th>{t('expense.amount')}</th>
-                                <th>{t('expense.date')}</th>
-                                <th>{t('expense.status')}</th>
-                                <th>{t('expense.actions')}</th>
+                                <th>{t('expense.request_no', 'Request No.')}</th>
+                                <th>{t('expense.requested_by', 'Requested By')}</th>
+                                <th>{t('expense.purpose', 'Purpose')}</th>
+                                <th>{t('expense.amount', 'Amount')}</th>
+                                <th>{t('expense.date', 'Date')}</th>
+                                <th>{t('expense.status', 'Status')}</th>
+                                <th>{t('expense.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -133,10 +133,10 @@ const ExpenseManager: React.FC = () => {
                                         {expense.status === 'pending' && (
                                             <div className="action-buttons">
                                                 <Button size="small" variant="success">
-                                                    {t('expense.approve')}
+                                                    {t('expense.approve', 'Approve')}
                                                 </Button>
                                                 <Button size="small" variant="danger">
-                                                    {t('expense.reject')}
+                                                    {t('expense.reject', 'Reject')}
                                                 </Button>
                                             </div>
                                         )}

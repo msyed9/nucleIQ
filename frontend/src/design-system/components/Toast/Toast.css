@@ -1,0 +1,225 @@
+/**
+ * NucleIQ Design System - Toast Styles
+ */
+
+.ds-toast-container {
+    position: fixed;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    pointer-events: none;
+}
+
+/* Positions */
+.ds-toast-container--top-right {
+    top: 0;
+    right: 0;
+}
+
+.ds-toast-container--top-left {
+    top: 0;
+    left: 0;
+}
+
+.ds-toast-container--bottom-right {
+    bottom: 0;
+    right: 0;
+}
+
+.ds-toast-container--bottom-left {
+    bottom: 0;
+    left: 0;
+}
+
+.ds-toast-container--top-center {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.ds-toast-container--bottom-center {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Toast */
+.ds-toast {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 300px;
+    max-width: 500px;
+    padding: 1rem 1.25rem;
+    background: #FFFFFF;
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    pointer-events: auto;
+    animation: slideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 4px solid;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.ds-toast--exiting {
+    animation: slideOut 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* Variants */
+.ds-toast--success {
+    border-left-color: #4CAF50;
+}
+
+.ds-toast--success .ds-toast__icon {
+    color: #4CAF50;
+}
+
+.ds-toast--error {
+    border-left-color: #F44336;
+}
+
+.ds-toast--error .ds-toast__icon {
+    color: #F44336;
+}
+
+.ds-toast--warning {
+    border-left-color: #FF9800;
+}
+
+.ds-toast--warning .ds-toast__icon {
+    color: #FF9800;
+}
+
+.ds-toast--info {
+    border-left-color: #2196F3;
+}
+
+.ds-toast--info .ds-toast__icon {
+    color: #2196F3;
+}
+
+/* Icon */
+.ds-toast__icon {
+    flex-shrink: 0;
+}
+
+/* Message */
+.ds-toast__message {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #212121;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Close button */
+.ds-toast__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: none;
+    border: none;
+    border-radius: 0.375rem;
+    color: #78909C;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.ds-toast__close:hover {
+    background: #F5F5F5;
+    color: #212121;
+}
+
+.ds-toast__close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-toast-container {
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+        padding: 0.75rem;
+    }
+
+    .ds-toast {
+        min-width: unset;
+        width: 100%;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-toast {
+        background: #2C2C2C;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .ds-toast__message {
+        color: #FFFFFF;
+    }
+
+    .ds-toast__close {
+        color: #B0BEC5;
+    }
+
+    .ds-toast__close:hover {
+        background: #424242;
+        color: #FFFFFF;
+    }
+}

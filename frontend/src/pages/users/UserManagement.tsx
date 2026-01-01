@@ -171,7 +171,7 @@ const UserManagement: React.FC = () => {
         return matchesSearch && matchesRole && matchesStatus;
     });
 
-    if (loading) return <Loading fullScreen text={t('common.loading')} />;
+    if (loading) return <Loading fullScreen text={t('common.loading', 'Loading...')} />;
 
     return (
         <div className="users-page">
@@ -211,8 +211,8 @@ const UserManagement: React.FC = () => {
                         className="filter-select"
                     >
                         <option value="">{t('users.all_status', { defaultValue: 'All Status' })}</option>
-                        <option value="active">{t('common.active')}</option>
-                        <option value="inactive">{t('common.inactive')}</option>
+                        <option value="active">{t('common.active', 'Active')}</option>
+                        <option value="inactive">{t('common.inactive', 'Inactive')}</option>
                     </select>
                 </div>
             </Card>
@@ -223,13 +223,13 @@ const UserManagement: React.FC = () => {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>{t('users.name')}</th>
-                                <th>{t('users.email')}</th>
+                                <th>{t('users.name', 'Name')}</th>
+                                <th>{t('users.email', 'Email')}</th>
                                 <th>{t('users.phone', { defaultValue: 'Phone' })}</th>
-                                <th>{t('users.roles')}</th>
-                                <th>{t('users.status')}</th>
+                                <th>{t('users.roles', 'Roles')}</th>
+                                <th>{t('users.status', 'Status')}</th>
                                 <th>{t('users.joined', { defaultValue: 'Joined' })}</th>
-                                <th>{t('users.actions')}</th>
+                                <th>{t('users.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -252,21 +252,21 @@ const UserManagement: React.FC = () => {
                                     </td>
                                     <td>
                                         <span className={`status-badge status-${user.is_active ? 'active' : 'inactive'}`}>
-                                            {user.is_active ? t('users.status_active') : t('users.status_inactive')}
+                                            {user.is_active ? t('users.status_active', 'Active') : t('users.status_inactive', 'Inactive')}
                                         </span>
                                     </td>
                                     <td>{new Date(user.date_joined).toLocaleDateString()}</td>
                                     <td>
                                         <div className="action-buttons">
                                             <Button size="small" variant="outline" onClick={() => handleOpenModal(user)}>
-                                                ✏️ {t('common.edit')}
+                                                ✏️ {t('common.edit', 'Edit')}
                                             </Button>
                                             <Button
                                                 size="small"
                                                 variant={user.is_active ? 'danger' : 'success'}
                                                 onClick={() => handleToggleActive(user)}
                                             >
-                                                {user.is_active ? '🚫' : '✅'} {user.is_active ? t('users.deactivate') : t('users.activate')}
+                                                {user.is_active ? '🚫' : '✅'} {user.is_active ? t('users.deactivate', 'Deactivate') : t('users.activate', 'Activate')}
                                             </Button>
                                             <Button size="small" variant="danger" onClick={() => handleDeleteUser(user.id)}>
                                                 🗑️
@@ -285,7 +285,7 @@ const UserManagement: React.FC = () => {
                 <div className="modal-overlay" onClick={handleCloseModal}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>{editingUser ? t('users.edit_user') : t('users.add_user')}</h2>
+                            <h2>{editingUser ? t('users.edit_user', 'Edit User') : t('users.add_user', 'Add User')}</h2>
                             <button className="modal-close" onClick={handleCloseModal}>✕</button>
                         </div>
                         <form onSubmit={handleSubmit}>
@@ -312,7 +312,7 @@ const UserManagement: React.FC = () => {
                                 </div>
                                 <div className="form-row">
                                     <div className="form-group">
-                                        <label>{t('users.email')}</label>
+                                        <label>{t('users.email', 'Email')}</label>
                                         <input
                                             type="email"
                                             value={formData.email}
@@ -341,7 +341,7 @@ const UserManagement: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="form-group">
-                                    <label>{t('users.roles')}</label>
+                                    <label>{t('users.roles', 'Roles')}</label>
                                     <div className="checkbox-group">
                                         {roles.map(role => (
                                             <label key={role.id} className="checkbox-label">
@@ -382,10 +382,10 @@ const UserManagement: React.FC = () => {
                             </div>
                             <div className="modal-footer">
                                 <Button type="button" variant="outline" onClick={handleCloseModal}>
-                                    {t('common.cancel')}
+                                    {t('common.cancel', 'Cancel')}
                                 </Button>
                                 <Button type="submit" variant="primary">
-                                    {editingUser ? t('common.update') : t('common.create')}
+                                    {editingUser ? t('common.update', 'Update') : t('common.create', 'Create')}
                                 </Button>
                             </div>
                         </form>

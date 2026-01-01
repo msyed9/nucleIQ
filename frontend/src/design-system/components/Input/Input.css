@@ -1,0 +1,226 @@
+/**
+ * NucleIQ Design System - Input Styles
+ */
+
+.ds-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ds-input-wrapper--full-width {
+    width: 100%;
+}
+
+/* Label */
+.ds-input__label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    /* 14px */
+    font-weight: 600;
+    color: #1A237E;
+    margin: 0;
+}
+
+.ds-input__required {
+    color: #F44336;
+    font-weight: 700;
+}
+
+/* Input Container */
+.ds-input__container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Input */
+.ds-input {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    /* 16px */
+    color: #212121;
+    background: #FFFFFF;
+    border: 2px solid #CFD8DC;
+    border-radius: 0.75rem;
+    /* 12px */
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+.ds-input::placeholder {
+    color: #90A4AE;
+}
+
+.ds-input:focus {
+    border-color: #1976D2;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.ds-input:disabled {
+    background: #F5F5F5;
+    color: #B0BEC5;
+    cursor: not-allowed;
+}
+
+/* Sizes */
+.ds-input--sm {
+    height: 2rem;
+    /* 32px */
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    /* 14px */
+}
+
+.ds-input--md {
+    height: 2.75rem;
+    /* 44px - mobile touch target */
+    padding: 0 1rem;
+    font-size: 1rem;
+    /* 16px */
+}
+
+.ds-input--lg {
+    height: 3.5rem;
+    /* 56px */
+    padding: 0 1.25rem;
+    font-size: 1.125rem;
+    /* 18px */
+}
+
+/* With icons */
+.ds-input--with-icon-left {
+    padding-left: 2.5rem;
+}
+
+.ds-input--with-icon-right {
+    padding-right: 2.5rem;
+}
+
+.ds-input--sm.ds-input--with-icon-left {
+    padding-left: 2rem;
+}
+
+.ds-input--sm.ds-input--with-icon-right {
+    padding-right: 2rem;
+}
+
+.ds-input--lg.ds-input--with-icon-left {
+    padding-left: 3rem;
+}
+
+.ds-input--lg.ds-input--with-icon-right {
+    padding-right: 3rem;
+}
+
+/* Icons */
+.ds-input__icon {
+    position: absolute;
+    color: #78909C;
+    pointer-events: none;
+}
+
+.ds-input__icon--left {
+    left: 0.75rem;
+}
+
+.ds-input__icon--right {
+    right: 0.75rem;
+}
+
+.ds-input--sm~.ds-input__icon--left {
+    left: 0.5rem;
+}
+
+.ds-input--sm~.ds-input__icon--right {
+    right: 0.5rem;
+}
+
+.ds-input--lg~.ds-input__icon--left {
+    left: 1rem;
+}
+
+.ds-input--lg~.ds-input__icon--right {
+    right: 1rem;
+}
+
+/* States */
+.ds-input--error {
+    border-color: #F44336;
+}
+
+.ds-input--error:focus {
+    border-color: #F44336;
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+}
+
+.ds-input--success {
+    border-color: #4CAF50;
+}
+
+.ds-input--success:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Messages */
+.ds-input__message {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    /* 12px */
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ds-input__message--helper {
+    color: #78909C;
+}
+
+.ds-input__message--error {
+    color: #F44336;
+    font-weight: 500;
+}
+
+.ds-input__message--success {
+    color: #4CAF50;
+    font-weight: 500;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-input__label {
+        color: #FFFFFF;
+    }
+
+    .ds-input {
+        background: #2C2C2C;
+        color: #FFFFFF;
+        border-color: #424242;
+    }
+
+    .ds-input::placeholder {
+        color: #78909C;
+    }
+
+    .ds-input:focus {
+        border-color: #42A5F5;
+        box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.2);
+    }
+
+    .ds-input:disabled {
+        background: #1E1E1E;
+        color: #546E7A;
+    }
+
+    .ds-input__icon {
+        color: #B0BEC5;
+    }
+
+    .ds-input__message--helper {
+        color: #B0BEC5;
+    }
+}

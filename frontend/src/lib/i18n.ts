@@ -94,6 +94,31 @@ const resources = {
             'students.no_data': 'No students found',
             'students.showing': 'Showing {{shown}} of {{total}} students',
             'students.view': 'View',
+            'students.roll_no': 'Roll Number',
+            'students.admission_number': 'Admission Number',
+            'students.admission_date': 'Admission Date',
+            'students.first_name': 'First Name',
+            'students.last_name': 'Last Name',
+            'students.date_of_birth': 'Date of Birth',
+            'students.gender': 'Gender',
+            'students.email': 'Email',
+            'students.phone': 'Phone',
+            'students.address': 'Address',
+            'students.father_name': 'Father Name',
+            'students.father_phone': 'Father Phone',
+            'students.mother_name': 'Mother Name',
+            'students.family_info': 'Family & Contact Information',
+            'students.basic_info': 'Basic Information',
+            'students.photo': 'Student Photo',
+            'students.upload_photo': 'Click to upload photo',
+            'students.photo_hint': 'JPG, PNG (Max 2MB)',
+            'students.enrollment': 'Enrollment Details',
+            'students.class_section': 'Class & Section',
+            'students.submit_admission': 'Complete Admission',
+            'students.add_title': 'Student Admission',
+            'students.add_subtitle': 'Enroll a new student into the school',
+            'students.add_success': 'Student admitted and enrolled successfully! 🎉',
+            'students.add_error': 'Failed to admit student. Please check all fields.',
             // Attendance
             'attendance.title': 'Mark Attendance',
             'attendance.subtitle': 'Record student attendance',
@@ -108,7 +133,7 @@ const resources = {
             'attendance.section': 'Section',
             'attendance.status': 'Status',
             'attendance.save': 'Save Attendance',
-            
+
             // Users
             'users.title': 'Users',
             'users.subtitle': 'Manage user accounts',
@@ -312,7 +337,7 @@ const resources = {
             'attendance.section': 'सेक्शन',
             'attendance.status': 'स्थिति',
             'attendance.save': 'उपस्थिति सहेजें',
-            
+
             // Users
             'users.title': 'उपयोगकर्ता',
             'users.subtitle': 'उपयोगकर्ता खाते प्रबंधित करें',
@@ -841,6 +866,8 @@ i18n
         interpolation: {
             escapeValue: false, // React already escapes
         },
+        keySeparator: false, // Allow keys to contain dots
+        nsSeparator: false,
     });
 
 // Languages that should use RTL layout

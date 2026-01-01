@@ -89,15 +89,15 @@ const StaffList: React.FC = () => {
             </div>
             {/* Header */}
             <div className="header">
-                <h1>👩‍🏫 {t('staff.title')}</h1>
-                <button className="btn-primary">{t('staff.add')}</button>
+                <h1>👩‍🏫 {t('staff.title', 'Staff Directory')}</h1>
+                <button className="btn-primary">{t('staff.add', '+ Add Staff')}</button>
             </div>
 
             {/* Filters */}
             <div className="filters">
                 <input
                     type="text"
-                    placeholder={t('staff.search_placeholder')}
+                    placeholder={t('staff.search_placeholder', 'Search by name, email, or employee ID...')}
                     value={filters.search}
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     className="search-input"
@@ -140,25 +140,25 @@ const StaffList: React.FC = () => {
             <div className="stats-summary">
                 <div className="stat-card">
                     <div className="stat-value">{staff.length}</div>
-                    <div className="stat-label">{t('staff.total')}</div>
+                    <div className="stat-label">{t('staff.total', 'Total Staff')}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">
                         {staff.filter(s => s.status === 'ACTIVE').length}
                     </div>
-                    <div className="stat-label">{t('staff.active')}</div>
+                    <div className="stat-label">{t('staff.active', 'Active')}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">
                         {staff.filter(s => s.status === 'ON_LEAVE').length}
                     </div>
-                    <div className="stat-label">{t('staff.on_leave')}</div>
+                    <div className="stat-label">{t('staff.on_leave', 'On Leave')}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">
                         {staff.filter(s => s.designation === 'TEACHER' || s.designation === 'ASSISTANT_TEACHER').length}
                     </div>
-                    <div className="stat-label">{t('staff.teachers')}</div>
+                    <div className="stat-label">{t('staff.teachers', 'Teachers')}</div>
                 </div>
             </div>
 

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import api from '../../services/api';
 import interact from 'interactjs';
 import { useTranslation } from 'react-i18next';
+import QRCode from 'react-qr-code';
+import html2canvas from 'html2canvas';
 import './Designer.css';
 
 interface Element {
@@ -60,6 +62,7 @@ const IDCardDesigner: React.FC = () => {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [loading, setLoading] = useState(true);
     const [designName, setDesignName] = useState('My Custom Design');
+    const [uploadedImages, setUploadedImages] = useState<{ [key: string]: string }>({});
     const { t } = useTranslation();
     const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -234,6 +237,38 @@ const IDCardDesigner: React.FC = () => {
         }
     };
 
+    const exportAsImage = async () => {
+        if (!canvasRef.current) return;
+
+        try {
+            const canvas = await html2canvas(canvasRef.current, {
+                backgroundColor: design.background.value || '#FFFFFF',
+                scale: 2
+            });
+
+            const link = document.createElement('a');
+            link.download = `${designName}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        } catch (error) {
+            console.error('Error exporting image:', error);
+            alert('Failed to export image');
+        }
+    };
+
+    const handleImageUpload = (elementId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageUrl = e.target?.result as string;
+                setUploadedImages(prev => ({ ...prev, [elementId]: imageUrl }));
+                updateElementProperty(elementId, 'src', imageUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const updateBackground = (color: string) => {
         setDesign(prev => ({
             ...prev,
@@ -283,6 +318,9 @@ const IDCardDesigner: React.FC = () => {
                         📊 {t('designer.add_barcode')}
                     </button>
                 </div>
+                <button onClick={exportAsImage} className="btn-export" style={{ marginLeft: 'auto' }}>
+                    💾 Export PNG
+                </button>
                 <button onClick={saveDesign} className="save-btn">
                     💾 {t('designer.save') || t('designer.save_success')}
                 </button>
@@ -392,13 +430,31 @@ const IDCardDesigner: React.FC = () => {
                             >
                                 {element.type === 'text' && element.text}
                                 {element.type === 'image' && (
-                                    <div className="image-placeholder">
-                                        🖼️ {element.src}
-                                    </div>
+                                    uploadedImages[element.id] || element.src?.startsWith('http') || element.src?.startsWith('data:') ? (
+                                        <img
+                                            src={uploadedImages[element.id] || element.src}
+                                            alt="ID Card"
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="image-placeholder">
+                                            🖼️ {element.src}
+                                        </div>
+                                    )
                                 )}
                                 {element.type === 'qrcode' && (
-                                    <div className="qr-placeholder">
-                                        📱 QR<br />{element.data}
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: element.qrBackground || '#FFFFFF' }}>
+                                        <QRCode
+                                            value={element.data || 'Sample'}
+                                            size={Math.min((element.width * 10) - 10, (element.height * 10) - 10)}
+                                            fgColor={element.qrColor || '#000000'}
+                                            bgColor={element.qrBackground || '#FFFFFF'}
+                                            level="H"
+                                        />
                                     </div>
                                 )}
                                 {element.type === 'barcode' && (
@@ -581,6 +637,15 @@ const IDCardDesigner: React.FC = () => {
                                             onChange={e => updateElementProperty(selectedEl.id, 'src', e.target.value)}
                                         />
                                         <small>Use {'{StudentPhoto}'} for student photo</small>
+                                    </div>
+                                    <div className="property-group">
+                                        <label>Upload Image</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageUpload(selectedEl.id, e)}
+                                            className="file-input"
+                                        />
                                     </div>
                                 </div>
                             )}

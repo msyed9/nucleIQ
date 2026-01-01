@@ -22,9 +22,10 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, updatePreferences } = useAuth();
     const [themeMode, setThemeModeState] = useState<'light' | 'dark' | 'system'>('system');
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [customColor, setCustomColorState] = useState<string>(localStorage.getItem('theme_color') || '');
 
     // Get user preference or default
     const userThemeMode = user?.preference?.theme_mode || 'system';
@@ -69,30 +70,26 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         }
     }, [themeMode]);
 
-    // Apply tenant branding
+    // Apply tenant branding and custom colors
     useEffect(() => {
-        if (branding) {
-            const root = document.documentElement;
+        const root = document.documentElement;
 
-            // Apply colors as CSS variables
-            root.style.setProperty('--color-primary', branding.primary_color);
+        // Determine primary color: custom > branding > default
+        const primaryColor = customColor || branding?.primary_color || '#0b3b66'; // Default NucleIQ blue
+
+        root.style.setProperty('--color-primary', primaryColor);
+
+        // If using branding secondary, or derive it? For now use branding or default
+        if (branding) {
             root.style.setProperty('--color-secondary', branding.secondary_color);
             root.style.setProperty('--color-sidebar', branding.sidebar_color);
-
-            // Apply font family
-            if (branding.font_family) {
-                root.style.setProperty('--font-family', branding.font_family);
-            }
-
-            // Update favicon if available
+            if (branding.font_family) root.style.setProperty('--font-family', branding.font_family);
             if (branding.favicon_url) {
                 const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-                if (favicon) {
-                    favicon.href = branding.favicon_url;
-                }
+                if (favicon) favicon.href = branding.favicon_url;
             }
         }
-    }, [branding]);
+    }, [branding, customColor]);
 
     // Apply RTL direction
     const isRTL = useMemo(() => {
@@ -110,7 +107,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         // Update user preference if authenticated
         if (user) {
             try {
-                const { updatePreferences } = useAuth();
                 await updatePreferences({ theme_mode: mode });
             } catch (error) {
                 console.error('Failed to update theme preference:', error);
@@ -122,12 +118,20 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         // Update user preference if authenticated
         if (user) {
             try {
-                const { updatePreferences } = useAuth();
                 await updatePreferences({ language: lang as any });
             } catch (error) {
                 console.error('Failed to update language preference:', error);
             }
         }
+    };
+
+    // ...
+
+    const themeColor = customColor || branding?.primary_color || 'blue'; // Fallback to blue/default
+
+    const setThemeColor = (color: string) => {
+        setCustomColorState(color);
+        localStorage.setItem('theme_color', color);
     };
 
     const value: ThemeContextType = {
@@ -138,6 +142,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         language: userLanguage,
         isRTL,
         setLanguage,
+        themeColor, // Return the selected color
+        setThemeColor
     };
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

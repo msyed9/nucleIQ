@@ -105,31 +105,31 @@ const CollectFees: React.FC = () => {
         <div className="collect-fees-container">
             <div className="header">
                 <div className="header-left">
-                    <h1>💰 {t('fees.title')}</h1>
-                    <p className="subtitle">{t('fees.subtitle')}</p>
+                    <h1>💰 {t('fees.title', 'Fee Collection')}</h1>
+                    <p className="subtitle">{t('fees.subtitle', 'Manage student fee payments')}</p>
                 </div>
                 <button className="btn-generate" onClick={handleGenerateMonthly}>
                     <span className="btn-icon">📅</span>
-                    {t('fees.generate')}
+                    {t('fees.generate', 'Generate Monthly Invoices')}
                 </button>
             </div>
 
             <div className="stats-bar">
                 <div className="stat-card">
                     <div className="stat-value">{invoices.length}</div>
-                    <div className="stat-label">{t('fees.pending_invoices')}</div>
+                    <div className="stat-label">{t('fees.pending_invoices', 'Pending Invoices')}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">
                         ₹{invoices.reduce((sum, inv) => sum + Number(inv.balance_amount), 0).toFixed(2)}
                     </div>
-                    <div className="stat-label">{t('fees.total_outstanding')}</div>
+                    <div className="stat-label">{t('fees.total_outstanding', 'Total Outstanding')}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">
                         {invoices.filter(inv => inv.status === 'PARTIAL').length}
                     </div>
-                    <div className="stat-label">{t('fees.partial_payments')}</div>
+                    <div className="stat-label">{t('fees.partial_payments', 'Partial Payments')}</div>
                 </div>
             </div>
 
@@ -137,11 +137,11 @@ const CollectFees: React.FC = () => {
                 {/* Invoice List */}
                 <div className="invoice-list">
                     <div className="list-header">
-                        <h2>{t('fees.pending_invoices')}</h2>
+                        <h2>{t('fees.pending_invoices', 'Pending Invoices')}</h2>
                         <input
                             type="text"
                             className="search-input"
-                            placeholder={t('fees.search_placeholder')}
+                            placeholder={t('fees.search_placeholder', '🔍 Search by student or invoice...')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -150,11 +150,11 @@ const CollectFees: React.FC = () => {
                     {loading ? (
                         <div className="loading">
                             <div className="spinner"></div>
-                            <p>{t('fees.loading')}</p>
+                            <p>{t('fees.loading', 'Loading invoices...')}</p>
                         </div>
                     ) : filteredInvoices.length === 0 ? (
                         <div className="empty-state">
-                            <p>📭 {t('fees.no_data')}</p>
+                            <p>📭 {t('fees.no_data', 'No pending invoices found')}</p>
                         </div>
                     ) : (
                         <div className="invoices">
@@ -191,7 +191,7 @@ const CollectFees: React.FC = () => {
                 <div className="payment-form">
                     {selectedInvoice ? (
                         <>
-                            <h2>💳 {t('fees.collect_payment')}</h2>
+                            <h2>💳 {t('fees.collect_payment', 'Collect Payment')}</h2>
 
                             <div className="invoice-summary">
                                 <div className="summary-row">

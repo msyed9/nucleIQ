@@ -1,82 +1,293 @@
-import React from 'react';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
-import { useTranslation } from 'react-i18next';
-import './Reports.css';
+/**
+ * Reports Dashboard - Redesigned with NucleIQ Design System
+ * Modern reports interface with export functionality
+ */
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    FileText,
+    Download,
+    Calendar,
+    Users,
+    DollarSign,
+    TrendingUp,
+    BarChart3,
+    PieChart,
+    FileSpreadsheet,
+    Filter
+} from 'lucide-react';
+import { Button, Card, Select, Input } from '@/design-system';
+
+interface ReportCategory {
+    id: string;
+    title: string;
+    description: string;
+    icon: React.ComponentType<any>;
+    reports: Report[];
+}
+
+interface Report {
+    id: string;
+    name: string;
+    description: string;
+    lastGenerated?: string;
+}
 
 const ReportsDashboard: React.FC = () => {
-    const reportCategories = [
+    const navigate = useNavigate();
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const reportCategories: ReportCategory[] = [
         {
+            id: 'students',
             title: 'Student Reports',
-            icon: '👨‍🎓',
+            description: 'Student-related analytics and reports',
+            icon: Users,
             reports: [
-                'Student List',
-                'Admission Report',
-                'Class-wise Report',
-                'Student Attendance',
-            ],
+                { id: 'student-list', name: 'Student List', description: 'Complete student directory with details', lastGenerated: '2 hours ago' },
+                { id: 'attendance-summary', name: 'Attendance Summary', description: 'Student attendance statistics', lastGenerated: '1 day ago' },
+                { id: 'performance', name: 'Academic Performance', description: 'Student grades and performance metrics', lastGenerated: '3 days ago' },
+            ]
         },
         {
-            title: 'Staff Reports',
-            icon: '👨‍🏫',
-            reports: [
-                'Staff List',
-                'Department-wise',
-                'Staff Attendance',
-                'Salary Report',
-            ],
-        },
-        {
+            id: 'financial',
             title: 'Financial Reports',
-            icon: '💰',
+            description: 'Fee collection and financial analytics',
+            icon: DollarSign,
             reports: [
-                'Fee Collection',
-                'Fee Defaulters',
-                'Income Statement',
-                'Balance Sheet',
-            ],
+                { id: 'fee-collection', name: 'Fee Collection', description: 'Fee collection summary by class/month', lastGenerated: '5 hours ago' },
+                { id: 'defaulters', name: 'Fee Defaulters', description: 'List of pending fee payments', lastGenerated: '1 day ago' },
+                { id: 'income-expense', name: 'Income vs Expense', description: 'Financial overview and trends', lastGenerated: '1 week ago' },
+            ]
         },
         {
+            id: 'attendance',
             title: 'Attendance Reports',
-            icon: '📅',
+            description: 'Attendance tracking and analytics',
+            icon: Calendar,
             reports: [
-                'Daily Attendance',
-                'Monthly Summary',
-                'Class-wise Attendance',
-                'Absentee Report',
-            ],
+                { id: 'daily-attendance', name: 'Daily Attendance', description: 'Day-wise attendance records', lastGenerated: 'Today' },
+                { id: 'monthly-attendance', name: 'Monthly Attendance', description: 'Month-wise attendance summary', lastGenerated: '2 days ago' },
+                { id: 'absentee-list', name: 'Absentee List', description: 'Students absent today', lastGenerated: 'Today' },
+            ]
+        },
+        {
+            id: 'academic',
+            title: 'Academic Reports',
+            description: 'Exam results and academic analytics',
+            icon: BarChart3,
+            reports: [
+                { id: 'exam-results', name: 'Exam Results', description: 'Detailed exam results by class', lastGenerated: '1 week ago' },
+                { id: 'subject-analysis', name: 'Subject Analysis', description: 'Subject-wise performance analysis', lastGenerated: '1 week ago' },
+                { id: 'toppers-list', name: 'Toppers List', description: 'Top performing students', lastGenerated: '1 week ago' },
+            ]
         },
     ];
 
-    const { t } = useTranslation();
+    const categoryOptions = [
+        { value: 'all', label: 'All Categories' },
+        { value: 'students', label: 'Student Reports' },
+        { value: 'financial', label: 'Financial Reports' },
+        { value: 'attendance', label: 'Attendance Reports' },
+        { value: 'academic', label: 'Academic Reports' },
+    ];
+
+    const filteredCategories = reportCategories.filter(category =>
+        selectedCategory === 'all' || category.id === selectedCategory
+    );
+
+    const handleGenerateReport = (reportId: string) => {
+        console.log('Generating report:', reportId);
+        // TODO: Implement report generation
+    };
 
     return (
-        <div className="reports-page">
-            <div className="page-header">
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '2rem',
+                flexWrap: 'wrap',
+                gap: '1rem'
+            }}>
                 <div>
-                    <h1 className="page-title">{t('reports.title')}</h1>
-                    <p className="page-subtitle">{t('reports.subtitle')}</p>
+                    <h1 style={{
+                        fontFamily: 'var(--font-family-primary)',
+                        fontSize: '2.25rem',
+                        fontWeight: 700,
+                        color: 'var(--color-text-primary)',
+                        margin: '0 0 0.5rem 0'
+                    }}>
+                        Reports & Analytics
+                    </h1>
+                    <p style={{
+                        fontSize: '1rem',
+                        color: 'var(--color-text-secondary)',
+                        margin: 0
+                    }}>
+                        Generate and download various reports
+                    </p>
                 </div>
+
+                <Button variant="primary" iconLeft={Download}>
+                    Export All
+                </Button>
             </div>
 
-            <div className="reports-grid">
-                {reportCategories.map((category) => (
-                    <Card key={category.title} title={category.title}>
-                        <div className="report-category">
-                            <div className="category-icon">{category.icon}</div>
-                            <div className="report-list">
+            {/* Filters */}
+            <Card padding="lg" style={{ marginBottom: '2rem' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                    gap: '1rem'
+                }}>
+                    <Select
+                        options={categoryOptions}
+                        value={selectedCategory}
+                        onChange={setSelectedCategory}
+                        placeholder="Filter by category"
+                        fullWidth
+                    />
+
+                    <Input
+                        placeholder="Search reports..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        iconLeft={Filter}
+                        fullWidth
+                    />
+                </div>
+            </Card>
+
+            {/* Report Categories */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {filteredCategories.map((category) => {
+                    const CategoryIcon = category.icon;
+
+                    return (
+                        <Card key={category.id} padding="lg">
+                            {/* Category Header */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                marginBottom: '1.5rem',
+                                paddingBottom: '1rem',
+                                borderBottom: '1px solid var(--color-border-light)'
+                            }}>
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    borderRadius: '12px',
+                                    background: 'var(--color-primary-50)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <CategoryIcon size={24} style={{ color: 'var(--color-primary-600)' }} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <h2 style={{
+                                        margin: '0 0 0.25rem 0',
+                                        fontSize: '1.25rem',
+                                        fontWeight: 600,
+                                        color: 'var(--color-text-primary)'
+                                    }}>
+                                        {category.title}
+                                    </h2>
+                                    <p style={{
+                                        margin: 0,
+                                        fontSize: '0.875rem',
+                                        color: 'var(--color-text-secondary)'
+                                    }}>
+                                        {category.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Reports Grid */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: '1rem'
+                            }}>
                                 {category.reports.map((report) => (
-                                    <div key={report} className="report-item">
-                                        <span className="report-name">{report}</span>
-                                        <Button size="small" variant="outline">
-                                            {t('reports.generate')}
-                                        </Button>
+                                    <div
+                                        key={report.id}
+                                        style={{
+                                            padding: '1.25rem',
+                                            border: '1px solid var(--color-border-light)',
+                                            borderRadius: '0.75rem',
+                                            transition: 'all 200ms',
+                                            cursor: 'pointer'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = 'var(--color-border-light)';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '0.75rem',
+                                            marginBottom: '1rem'
+                                        }}>
+                                            <FileText size={20} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                                            <div style={{ flex: 1 }}>
+                                                <h3 style={{
+                                                    margin: '0 0 0.25rem 0',
+                                                    fontSize: '1rem',
+                                                    fontWeight: 600,
+                                                    color: 'var(--color-text-primary)'
+                                                }}>
+                                                    {report.name}
+                                                </h3>
+                                                <p style={{
+                                                    margin: 0,
+                                                    fontSize: '0.8125rem',
+                                                    color: 'var(--color-text-secondary)',
+                                                    lineHeight: 1.5
+                                                }}>
+                                                    {report.description}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {report.lastGenerated && (
+                                            <p style={{
+                                                margin: '0 0 1rem 0',
+                                                fontSize: '0.75rem',
+                                                color: 'var(--color-text-tertiary)'
+                                            }}>
+                                                Last generated: {report.lastGenerated}
+                                            </p>
+                                        )}
+
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                iconLeft={Download}
+                                                onClick={() => handleGenerateReport(report.id)}
+                                                fullWidth
+                                            >
+                                                Generate
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </Card>
-                ))}
+                        </Card>
+                    );
+                })}
             </div>
         </div>
     );

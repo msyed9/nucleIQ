@@ -132,55 +132,55 @@ export const SubscriptionManage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">{t('billing.title')}</h1>
+            <h1 className="text-3xl font-bold mb-8">{t('billing.title', 'Subscription Management')}</h1>
 
             {/* Current Subscription */}
             {subscription && (
                 <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                    <h2 className="text-2xl font-semibold mb-4">{t('billing.current_subscription')}</h2>
+                    <h2 className="text-2xl font-semibold mb-4">{t('billing.current_subscription', 'Current Subscription')}</h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
-                            <p className="text-gray-600">{t('billing.plan')}</p>
+                            <p className="text-gray-600">{t('billing.plan', 'Plan')}</p>
                             <p className="text-xl font-semibold">{subscription.plan_details.name}</p>
                         </div>
 
                         <div>
-                            <p className="text-gray-600">{t('billing.status')}</p>
+                            <p className="text-gray-600">{t('billing.status', 'Status')}</p>
                             <p className={`text-xl font-semibold ${subscription.status === 'active' ? 'text-green-600' :
-                                    subscription.status === 'trial' ? 'text-blue-600' :
-                                        'text-red-600'
+                                subscription.status === 'trial' ? 'text-blue-600' :
+                                    'text-red-600'
                                 }`}>
                                 {t(`billing.status_${subscription.status.toLowerCase()}`, { defaultValue: subscription.status.toUpperCase() })}
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-gray-600">{t('billing.billing_cycle')}</p>
+                            <p className="text-gray-600">{t('billing.billing_cycle', 'Billing Cycle')}</p>
                             <p className="text-xl font-semibold capitalize">{subscription.billing_cycle}</p>
                         </div>
 
                         <div>
-                            <p className="text-gray-600">{t('billing.renews_in')}</p>
+                            <p className="text-gray-600">{t('billing.renews_in', 'Renews In')}</p>
                             <p className="text-xl font-semibold">{subscription.days_until_renewal_count} days</p>
                         </div>
                     </div>
 
                     {/* Usage Limits */}
                     <div className="border-t pt-4 mb-4">
-                        <h3 className="font-semibold mb-2">{t('billing.plan_limits')}</h3>
+                        <h3 className="font-semibold mb-2">{t('billing.plan_limits', 'Plan Limits')}</h3>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="text-center">
                                 <p className="text-2xl font-bold text-primary">{subscription.plan_details.max_students}</p>
-                                <p className="text-sm text-gray-600">{t('billing.plan_students')}</p>
+                                <p className="text-sm text-gray-600">{t('billing.plan_students', 'Students')}</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-2xl font-bold text-primary">{subscription.plan_details.max_staff}</p>
-                                <p className="text-sm text-gray-600">{t('billing.plan_staff')}</p>
+                                <p className="text-sm text-gray-600">{t('billing.plan_staff', 'Staff')}</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-2xl font-bold text-primary">{subscription.plan_details.max_storage_gb} GB</p>
-                                <p className="text-sm text-gray-600">{t('billing.plan_storage')}</p>
+                                <p className="text-sm text-gray-600">{t('billing.plan_storage', 'Storage')}</p>
                             </div>
                         </div>
                     </div>
@@ -190,7 +190,7 @@ export const SubscriptionManage: React.FC = () => {
                             onClick={handleCancelSubscription}
                             className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
                         >
-                            {t('billing.cancel_subscription')}
+                            {t('billing.cancel_subscription', 'Cancel Subscription')}
                         </button>
                     )}
                 </div>
@@ -198,7 +198,7 @@ export const SubscriptionManage: React.FC = () => {
 
             {/* Available Plans */}
             <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-4">{t('billing.available_plans')}</h2>
+                <h2 className="text-2xl font-semibold mb-4">{t('billing.available_plans', 'Available Plans')}</h2>
 
                 {/* Billing Cycle Selector */}
                 <div className="flex gap-2 mb-6">
@@ -207,8 +207,8 @@ export const SubscriptionManage: React.FC = () => {
                             key={cycle}
                             onClick={() => setSelectedBillingCycle(cycle)}
                             className={`px-4 py-2 rounded ${selectedBillingCycle === cycle
-                                    ? 'bg-primary text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-primary text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                         >
                             {t(`billing.select_cycle_${cycle}`)}
@@ -241,15 +241,15 @@ export const SubscriptionManage: React.FC = () => {
                                 <ul className="mb-6 space-y-2">
                                     <li className="flex items-center">
                                         <span className="text-green-500 mr-2">✓</span>
-                                        {plan.max_students} {t('billing.plan_students')}
+                                        {plan.max_students} {t('billing.plan_students', 'Students')}
                                     </li>
                                     <li className="flex items-center">
                                         <span className="text-green-500 mr-2">✓</span>
-                                        {plan.max_staff} {t('billing.plan_staff')}
+                                        {plan.max_staff} {t('billing.plan_staff', 'Staff')}
                                     </li>
                                     <li className="flex items-center">
                                         <span className="text-green-500 mr-2">✓</span>
-                                        {plan.max_storage_gb} GB {t('billing.plan_storage')}
+                                        {plan.max_storage_gb} GB {t('billing.plan_storage', 'Storage')}
                                     </li>
                                 </ul>
 
@@ -275,7 +275,7 @@ export const SubscriptionManage: React.FC = () => {
 
             {/* Invoices */}
             <div>
-                <h2 className="text-2xl font-semibold mb-4">{t('billing.invoices')}</h2>
+                <h2 className="text-2xl font-semibold mb-4">{t('billing.invoices', 'Invoices')}</h2>
 
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -312,8 +312,8 @@ export const SubscriptionManage: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-red-100 text-red-800'
+                                            invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
                                             }`}>
                                             {invoice.status}
                                         </span>
@@ -324,7 +324,7 @@ export const SubscriptionManage: React.FC = () => {
                                                 onClick={() => handlePayInvoice(invoice.id)}
                                                 className="text-primary hover:text-primary-dark mr-4"
                                             >
-                                                {t('billing.pay_now')}
+                                                {t('billing.pay_now', 'Pay Now')}
                                             </button>
                                         )}
                                         {invoice.pdf_url && (

@@ -11,8 +11,6 @@ import { StatCard } from './widgets/StatCard';
 import { AbsenteeList } from './widgets/AbsenteeList';
 import { NextClassCard } from './widgets/NextClassCard';
 import 'react-grid-layout/css/styles.css';
-import 'react-grid-layout/css/resizable.css';
-import './DashboardGrid.css';
 
 interface WidgetConfig {
     i: string;

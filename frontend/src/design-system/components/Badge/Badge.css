@@ -1,0 +1,169 @@
+/**
+ * NucleIQ Design System - Badge Styles
+ */
+
+.ds-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 9999px;
+    /* Fully rounded */
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sizes */
+.ds-badge--sm {
+    height: 1.25rem;
+    /* 20px */
+    padding: 0 0.5rem;
+    font-size: 0.625rem;
+    /* 10px */
+    letter-spacing: 0.025em;
+}
+
+.ds-badge--md {
+    height: 1.5rem;
+    /* 24px */
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    /* 12px */
+    letter-spacing: 0.025em;
+}
+
+.ds-badge--lg {
+    height: 2rem;
+    /* 32px */
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    /* 14px */
+    letter-spacing: 0.025em;
+}
+
+/* Dot variant */
+.ds-badge--dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border-radius: 50%;
+}
+
+.ds-badge--dot.ds-badge--sm {
+    width: 0.375rem;
+    height: 0.375rem;
+}
+
+.ds-badge--dot.ds-badge--lg {
+    width: 0.625rem;
+    height: 0.625rem;
+}
+
+/* Variants */
+.ds-badge--primary {
+    background: #E3F2FD;
+    color: #1976D2;
+}
+
+.ds-badge--primary.ds-badge--dot {
+    background: #1976D2;
+}
+
+.ds-badge--secondary {
+    background: #F1F8E9;
+    color: #689F38;
+}
+
+.ds-badge--secondary.ds-badge--dot {
+    background: #689F38;
+}
+
+.ds-badge--success {
+    background: #E8F5E9;
+    color: #388E3C;
+}
+
+.ds-badge--success.ds-badge--dot {
+    background: #4CAF50;
+}
+
+.ds-badge--warning {
+    background: #FFF8E1;
+    color: #F57C00;
+}
+
+.ds-badge--warning.ds-badge--dot {
+    background: #FF9800;
+}
+
+.ds-badge--error {
+    background: #FFEBEE;
+    color: #D32F2F;
+}
+
+.ds-badge--error.ds-badge--dot {
+    background: #F44336;
+}
+
+.ds-badge--info {
+    background: #E3F2FD;
+    color: #1976D2;
+}
+
+.ds-badge--info.ds-badge--dot {
+    background: #2196F3;
+}
+
+.ds-badge--neutral {
+    background: #F5F5F5;
+    color: #616161;
+}
+
+.ds-badge--neutral.ds-badge--dot {
+    background: #9E9E9E;
+}
+
+/* Icon */
+.ds-badge__icon {
+    flex-shrink: 0;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-badge--primary {
+        background: rgba(33, 150, 243, 0.2);
+        color: #42A5F5;
+    }
+
+    .ds-badge--secondary {
+        background: rgba(139, 195, 74, 0.2);
+        color: #9CCC65;
+    }
+
+    .ds-badge--success {
+        background: rgba(76, 175, 80, 0.2);
+        color: #66BB6A;
+    }
+
+    .ds-badge--warning {
+        background: rgba(255, 152, 0, 0.2);
+        color: #FFA726;
+    }
+
+    .ds-badge--error {
+        background: rgba(244, 67, 54, 0.2);
+        color: #EF5350;
+    }
+
+    .ds-badge--info {
+        background: rgba(33, 150, 243, 0.2);
+        color: #42A5F5;
+    }
+
+    .ds-badge--neutral {
+        background: #424242;
+        color: #E0E0E0;
+    }
+}

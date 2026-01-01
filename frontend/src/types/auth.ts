@@ -139,4 +139,6 @@ export interface ThemeContextType {
   language: string;
   isRTL: boolean;
   setLanguage: (lang: string) => void;
+  themeColor: string;
+  setThemeColor: (color: string) => void;
 }

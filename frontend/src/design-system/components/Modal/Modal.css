@@ -1,0 +1,219 @@
+/**
+ * NucleIQ Design System - Modal Styles
+ */
+
+.ds-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+    animation: fadeIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(4px);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.ds-modal {
+    background: #FFFFFF;
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 2rem);
+    animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Sizes */
+.ds-modal--sm {
+    width: 100%;
+    max-width: 400px;
+}
+
+.ds-modal--md {
+    width: 100%;
+    max-width: 600px;
+}
+
+.ds-modal--lg {
+    width: 100%;
+    max-width: 800px;
+}
+
+.ds-modal--xl {
+    width: 100%;
+    max-width: 1200px;
+}
+
+.ds-modal--full {
+    width: calc(100vw - 2rem);
+    height: calc(100vh - 2rem);
+    max-width: none;
+}
+
+/* Header */
+.ds-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #E0E0E0;
+    flex-shrink: 0;
+}
+
+.ds-modal__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1A237E;
+    margin: 0;
+}
+
+.ds-modal__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: none;
+    border-radius: 0.5rem;
+    color: #78909C;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.ds-modal__close:hover {
+    background: #F5F5F5;
+    color: #212121;
+}
+
+.ds-modal__close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Content */
+.ds-modal__content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    color: #212121;
+    line-height: 1.6;
+}
+
+/* Footer */
+.ds-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #E0E0E0;
+    flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-modal-overlay {
+        padding: 0;
+    }
+
+    .ds-modal {
+        border-radius: 1rem 1rem 0 0;
+        max-height: 90vh;
+        align-self: flex-end;
+        width: 100%;
+        max-width: none;
+    }
+
+    .ds-modal--full {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .ds-modal__header {
+        padding: 1rem;
+    }
+
+    .ds-modal__content {
+        padding: 1rem;
+    }
+
+    .ds-modal__footer {
+        padding: 1rem;
+        flex-direction: column-reverse;
+    }
+
+    .ds-modal__footer>* {
+        width: 100%;
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-modal-overlay {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .ds-modal {
+        background: #1E1E1E;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .ds-modal__header {
+        border-bottom-color: #424242;
+    }
+
+    .ds-modal__title {
+        color: #FFFFFF;
+    }
+
+    .ds-modal__close {
+        color: #B0BEC5;
+    }
+
+    .ds-modal__close:hover {
+        background: #2C2C2C;
+        color: #FFFFFF;
+    }
+
+    .ds-modal__content {
+        color: #FFFFFF;
+    }
+
+    .ds-modal__footer {
+        border-top-color: #424242;
+    }
+}

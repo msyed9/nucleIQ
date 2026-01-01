@@ -1,0 +1,491 @@
+/**
+ * NucleIQ Design System - Global Styles
+ * Import this file in your main App.tsx or index.tsx
+ */
+
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@300;400;500;600;700;800&display=swap');
+
+/* CSS Variables from Design Tokens */
+:root {
+    /* Primary Colors - Trust Blue */
+    --color-primary-50: #E3F2FD;
+    --color-primary-100: #BBDEFB;
+    --color-primary-500: #2196F3;
+    --color-primary-700: #1976D2;
+    --color-primary-900: #0D47A1;
+
+    /* Secondary Colors - Growth Green */
+    --color-secondary-50: #F1F8E9;
+    --color-secondary-500: #8BC34A;
+    --color-secondary-700: #689F38;
+
+    /* Accent Colors - Warm Orange */
+    --color-accent-500: #FF9800;
+    --color-accent-700: #F57C00;
+
+    /* Semantic Colors */
+    --color-success: #4CAF50;
+    --color-warning: #FFC107;
+    --color-error: #F44336;
+    --color-info: #2196F3;
+
+    /* Neutral Colors */
+    --color-neutral-0: #FFFFFF;
+    --color-neutral-50: #FAFAFA;
+    --color-neutral-100: #F5F5F5;
+    --color-neutral-300: #E0E0E0;
+    --color-neutral-500: #9E9E9E;
+    --color-neutral-700: #616161;
+    --color-neutral-900: #212121;
+
+    /* Text Colors */
+    --color-text-primary: #1A237E;
+    --color-text-secondary: #546E7A;
+    --color-text-tertiary: #78909C;
+    --color-text-disabled: #B0BEC5;
+    --color-text-inverse: #FFFFFF;
+
+    /* Background Colors */
+    --color-bg-primary: #FFFFFF;
+    --color-bg-secondary: #FAFAFA;
+    --color-bg-tertiary: #F5F5F5;
+
+    /* Border Colors */
+    --color-border-light: #E0E0E0;
+    --color-border-medium: #BDBDBD;
+    --color-border-focus: #2196F3;
+
+    /* Spacing (8px grid) */
+    --spacing-1: 0.25rem;
+    /* 4px */
+    --spacing-2: 0.5rem;
+    /* 8px */
+    --spacing-3: 0.75rem;
+    /* 12px */
+    --spacing-4: 1rem;
+    /* 16px */
+    --spacing-5: 1.25rem;
+    /* 20px */
+    --spacing-6: 1.5rem;
+    /* 24px */
+    --spacing-8: 2rem;
+    /* 32px */
+    --spacing-10: 2.5rem;
+    /* 40px */
+    --spacing-12: 3rem;
+    /* 48px */
+    --spacing-16: 4rem;
+    /* 64px */
+
+    /* Border Radius */
+    --radius-sm: 0.25rem;
+    /* 4px */
+    --radius-base: 0.5rem;
+    /* 8px */
+    --radius-md: 0.75rem;
+    /* 12px */
+    --radius-lg: 1rem;
+    /* 16px */
+    --radius-xl: 1.5rem;
+    /* 24px */
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 8px 12px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 20px 32px -8px rgba(0, 0, 0, 0.15);
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-focus: 0 0 0 3px rgba(33, 150, 243, 0.1);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Typography */
+    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    --font-family-telugu: 'Noto Sans Telugu', 'Inter', sans-serif;
+}
+
+/* Dark Mode Variables */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg-primary: #121212;
+        --color-bg-secondary: #1E1E1E;
+        --color-bg-tertiary: #2C2C2C;
+
+        --color-text-primary: #FFFFFF;
+        --color-text-secondary: #B0BEC5;
+        --color-text-tertiary: #78909C;
+        --color-text-disabled: #546E7A;
+        --color-text-inverse: #1A237E;
+
+        --color-border-light: #424242;
+        --color-border-medium: #616161;
+        --color-border-focus: #42A5F5;
+
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.4);
+        --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* Global Reset */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Base Styles */
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    font-family: var(--font-family-primary);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-family-primary);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+h1 {
+    font-size: 3rem;
+    /* 48px */
+    letter-spacing: -0.025em;
+}
+
+h2 {
+    font-size: 2.25rem;
+    /* 36px */
+    letter-spacing: -0.025em;
+}
+
+h3 {
+    font-size: 1.875rem;
+    /* 30px */
+    font-weight: 600;
+}
+
+h4 {
+    font-size: 1.5rem;
+    /* 24px */
+    font-weight: 600;
+}
+
+h5 {
+    font-size: 1.25rem;
+    /* 20px */
+    font-weight: 600;
+}
+
+h6 {
+    font-size: 1.125rem;
+    /* 18px */
+    font-weight: 600;
+}
+
+p {
+    margin: 0 0 1rem 0;
+}
+
+/* Links */
+a {
+    color: var(--color-primary-700);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-primary-900);
+    text-decoration: underline;
+}
+
+a:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* Lists */
+ul,
+ol {
+    margin: 0 0 1rem 0;
+    padding-left: 1.5rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--color-bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+thead {
+    background-color: var(--color-bg-secondary);
+}
+
+th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+td {
+    padding: 1rem;
+    border-top: 1px solid var(--color-border-light);
+    color: var(--color-text-primary);
+}
+
+tbody tr {
+    transition: background-color var(--transition-fast);
+}
+
+tbody tr:hover {
+    background-color: var(--color-bg-secondary);
+}
+
+/* Form Elements */
+input,
+textarea,
+select {
+    font-family: var(--font-family-primary);
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: var(--shadow-focus);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-disabled);
+    cursor: not-allowed;
+}
+
+/* Buttons (base styles, use design system components for full functionality) */
+button {
+    font-family: var(--font-family-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
+/* Utility Classes */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-4);
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mt-1 {
+    margin-top: var(--spacing-1);
+}
+
+.mt-2 {
+    margin-top: var(--spacing-2);
+}
+
+.mt-4 {
+    margin-top: var(--spacing-4);
+}
+
+.mt-6 {
+    margin-top: var(--spacing-6);
+}
+
+.mt-8 {
+    margin-top: var(--spacing-8);
+}
+
+.mb-1 {
+    margin-bottom: var(--spacing-1);
+}
+
+.mb-2 {
+    margin-bottom: var(--spacing-2);
+}
+
+.mb-4 {
+    margin-bottom: var(--spacing-4);
+}
+
+.mb-6 {
+    margin-bottom: var(--spacing-6);
+}
+
+.mb-8 {
+    margin-bottom: var(--spacing-8);
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-1 {
+    gap: var(--spacing-1);
+}
+
+.gap-2 {
+    gap: var(--spacing-2);
+}
+
+.gap-4 {
+    gap: var(--spacing-4);
+}
+
+.gap-6 {
+    gap: var(--spacing-6);
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+
+    h1 {
+        font-size: 2.25rem;
+        /* 36px */
+    }
+
+    h2 {
+        font-size: 1.875rem;
+        /* 30px */
+    }
+
+    h3 {
+        font-size: 1.5rem;
+        /* 24px */
+    }
+
+    h4 {
+        font-size: 1.25rem;
+        /* 20px */
+    }
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Print styles */
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    a {
+        text-decoration: underline;
+    }
+
+    button,
+    .no-print {
+        display: none;
+    }
+}

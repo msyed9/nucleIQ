@@ -1,0 +1,151 @@
+/**
+ * NucleIQ Design System - Card Styles
+ */
+
+.ds-card {
+    /* Base styles */
+    background: #FFFFFF;
+    border-radius: 1rem;
+    /* 16px */
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+/* Variants */
+.ds-card--default {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid transparent;
+}
+
+.ds-card--outlined {
+    box-shadow: none;
+    border: 1px solid #E0E0E0;
+}
+
+.ds-card--elevated {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid transparent;
+}
+
+/* Padding */
+.ds-card--padding-none {
+    padding: 0;
+}
+
+.ds-card--padding-sm .ds-card__body {
+    padding: 1rem;
+    /* 16px */
+}
+
+.ds-card--padding-md .ds-card__body {
+    padding: 1.5rem;
+    /* 24px */
+}
+
+.ds-card--padding-lg .ds-card__body {
+    padding: 2rem;
+    /* 32px */
+}
+
+/* Header and Footer */
+.ds-card__header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #E0E0E0;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.125rem;
+    /* 18px */
+    font-weight: 600;
+    color: #1A237E;
+}
+
+.ds-card__footer {
+    padding: 1.5rem;
+    border-top: 1px solid #E0E0E0;
+    background: #FAFAFA;
+}
+
+/* Padding adjustments for header/footer */
+.ds-card--padding-sm .ds-card__header,
+.ds-card--padding-sm .ds-card__footer {
+    padding: 1rem;
+}
+
+.ds-card--padding-lg .ds-card__header,
+.ds-card--padding-lg .ds-card__footer {
+    padding: 2rem;
+}
+
+/* Hoverable */
+.ds-card--hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.ds-card--outlined.ds-card--hoverable:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    border-color: #BDBDBD;
+}
+
+/* Clickable */
+.ds-card--clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.ds-card--clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+}
+
+.ds-card--clickable:active {
+    transform: scale(0.98);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-card--padding-md .ds-card__body {
+        padding: 1rem;
+    }
+
+    .ds-card--padding-lg .ds-card__body {
+        padding: 1.5rem;
+    }
+
+    .ds-card__header,
+    .ds-card__footer {
+        padding: 1rem;
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-card {
+        background: #1E1E1E;
+    }
+
+    .ds-card--default {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .ds-card--outlined {
+        border-color: #424242;
+    }
+
+    .ds-card--elevated {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    .ds-card__header {
+        border-bottom-color: #424242;
+        color: #FFFFFF;
+    }
+
+    .ds-card__footer {
+        border-top-color: #424242;
+        background: #2C2C2C;
+    }
+
+    .ds-card--hoverable:hover {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+    }
+}

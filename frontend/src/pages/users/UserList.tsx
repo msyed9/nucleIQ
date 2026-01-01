@@ -62,23 +62,23 @@ const UserList: React.FC = () => {
 
     const { t } = useTranslation();
 
-    if (loading) return <Loading fullScreen text={t('common.loading')} />;
+    if (loading) return <Loading fullScreen text={t('common.loading', 'Loading...')} />;
 
     return (
         <div className="users-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">{t('users.title')}</h1>
-                    <p className="page-subtitle">{t('users.subtitle')}</p>
+                    <h1 className="page-title">{t('users.title', 'User Management')}</h1>
+                    <p className="page-subtitle">{t('users.subtitle', 'Manage system users and roles')}</p>
                 </div>
-                <Button variant="primary">{t('users.add')}</Button>
+                <Button variant="primary">{t('users.add', 'Add User')}</Button>
             </div>
 
             <Card>
                 <div className="search-bar">
                     <input
                         type="text"
-                        placeholder={t('users.search_placeholder')}
+                        placeholder={t('users.search_placeholder', 'Search users...')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"
@@ -89,11 +89,11 @@ const UserList: React.FC = () => {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>{t('users.name')}</th>
-                                <th>{t('users.email')}</th>
-                                <th>{t('users.roles')}</th>
-                                <th>{t('users.status')}</th>
-                                <th>{t('users.actions')}</th>
+                                <th>{t('users.name', 'Name')}</th>
+                                <th>{t('users.email', 'Email')}</th>
+                                <th>{t('users.roles', 'Roles')}</th>
+                                <th>{t('users.status', 'Status')}</th>
+                                <th>{t('users.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,12 +117,12 @@ const UserList: React.FC = () => {
                                             className={`status-badge status-${user.is_active ? 'active' : 'inactive'
                                                 }`}
                                         >
-                                            {user.is_active ? t('users.status_active') : t('users.status_inactive')}
+                                            {user.is_active ? t('users.status_active', 'Active') : t('users.status_inactive', 'Inactive')}
                                         </span>
                                     </td>
                                     <td>
                                         <Button size="small" variant="outline">
-                                            {t('common.edit')}
+                                            {t('common.edit', 'Edit')}
                                         </Button>
                                     </td>
                                 </tr>

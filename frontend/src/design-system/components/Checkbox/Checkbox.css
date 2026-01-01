@@ -1,0 +1,204 @@
+/**
+ * NucleIQ Design System - Checkbox Styles
+ */
+
+.ds-checkbox-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ds-checkbox__container {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    position: relative;
+    cursor: pointer;
+}
+
+.ds-checkbox__input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ds-checkbox {
+    width: 1.25rem;
+    /* 20px */
+    height: 1.25rem;
+    /* 20px */
+    border: 2px solid #CFD8DC;
+    border-radius: 0.375rem;
+    /* 6px */
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    /* Align with first line of text */
+}
+
+.ds-checkbox__check-icon {
+    color: #FFFFFF;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ds-checkbox__indeterminate-icon {
+    width: 10px;
+    height: 2px;
+    background: #FFFFFF;
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Checked state */
+.ds-checkbox__input:checked+.ds-checkbox {
+    background: #1976D2;
+    border-color: #1976D2;
+}
+
+.ds-checkbox__input:checked+.ds-checkbox .ds-checkbox__check-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Indeterminate state */
+.ds-checkbox--indeterminate {
+    background: #1976D2;
+    border-color: #1976D2;
+}
+
+.ds-checkbox--indeterminate .ds-checkbox__indeterminate-icon {
+    opacity: 1;
+}
+
+/* Hover state */
+.ds-checkbox__container:hover .ds-checkbox:not(.ds-checkbox--disabled) {
+    border-color: #1976D2;
+}
+
+/* Focus state */
+.ds-checkbox__input:focus+.ds-checkbox {
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Error state */
+.ds-checkbox--error {
+    border-color: #F44336;
+}
+
+.ds-checkbox__input:checked+.ds-checkbox--error {
+    background: #F44336;
+    border-color: #F44336;
+}
+
+.ds-checkbox__input:focus+.ds-checkbox--error {
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+}
+
+/* Disabled state */
+.ds-checkbox--disabled {
+    background: #F5F5F5;
+    border-color: #E0E0E0;
+    cursor: not-allowed;
+}
+
+.ds-checkbox__input:checked+.ds-checkbox--disabled {
+    background: #B0BEC5;
+    border-color: #B0BEC5;
+}
+
+.ds-checkbox__container:has(.ds-checkbox--disabled) {
+    cursor: not-allowed;
+}
+
+.ds-checkbox__container:has(.ds-checkbox--disabled) .ds-checkbox__label {
+    color: #B0BEC5;
+}
+
+/* Label */
+.ds-checkbox__label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    /* 14px */
+    font-weight: 500;
+    color: #212121;
+    line-height: 1.5;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+/* Messages */
+.ds-checkbox__message {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    /* 12px */
+    line-height: 1.5;
+    margin: 0;
+    padding-left: 2rem;
+    /* Align with label */
+}
+
+.ds-checkbox__message--helper {
+    color: #78909C;
+}
+
+.ds-checkbox__message--error {
+    color: #F44336;
+    font-weight: 500;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .ds-checkbox {
+        background: #2C2C2C;
+        border-color: #424242;
+    }
+
+    .ds-checkbox__input:checked+.ds-checkbox {
+        background: #42A5F5;
+        border-color: #42A5F5;
+    }
+
+    .ds-checkbox--indeterminate {
+        background: #42A5F5;
+        border-color: #42A5F5;
+    }
+
+    .ds-checkbox__container:hover .ds-checkbox:not(.ds-checkbox--disabled) {
+        border-color: #42A5F5;
+    }
+
+    .ds-checkbox__input:focus+.ds-checkbox {
+        box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.2);
+    }
+
+    .ds-checkbox--disabled {
+        background: #1E1E1E;
+        border-color: #424242;
+    }
+
+    .ds-checkbox__input:checked+.ds-checkbox--disabled {
+        background: #546E7A;
+        border-color: #546E7A;
+    }
+
+    .ds-checkbox__label {
+        color: #FFFFFF;
+    }
+
+    .ds-checkbox__container:has(.ds-checkbox--disabled) .ds-checkbox__label {
+        color: #546E7A;
+    }
+
+    .ds-checkbox__message--helper {
+        color: #B0BEC5;
+    }
+}

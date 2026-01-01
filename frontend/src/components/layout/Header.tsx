@@ -17,7 +17,7 @@ const Header: React.FC = () => {
         <header className="header">
             <div className="header-content">
                 <div className="header-left">
-                    <h2 className="header-title">{t('header.welcome', { name: user?.first_name || '' })}</h2>
+                    <h2 className="header-title">{t('header.welcome', 'Welcome back, {{name}}!', { name: user?.first_name || '' })}</h2>
                 </div>
 
                 <div className="header-right">

@@ -231,7 +231,7 @@ const AddStudent: React.FC = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>{t('students.date_of_birth')}</label>
+                                <label>{t('students.date_of_birth', 'Date of Birth')}</label>
                                 <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
@@ -249,21 +249,21 @@ const AddStudent: React.FC = () => {
                     <Card title={t('students.family_info', { defaultValue: 'Contact & Family' })}>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>{t('students.email')}</label>
+                                <label>{t('students.email', 'Email')}</label>
                                 <input type="email" name="email" value={formData.email} onChange={handleChange} />
                             </div>
                             <div className="form-group">
-                                <label>{t('students.phone')}</label>
+                                <label>{t('students.phone', 'Phone')}</label>
                                 <input name="phone" value={formData.phone} onChange={handleChange} />
                             </div>
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>{t('students.father_name')}</label>
+                                <label>{t('students.father_name', 'Father Name')}</label>
                                 <input name="father_name" value={formData.father_name} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('students.father_phone')}</label>
+                                <label>{t('students.father_phone', 'Father Phone')}</label>
                                 <input name="father_phone" value={formData.father_phone} onChange={handleChange} required />
                             </div>
                         </div>
@@ -286,7 +286,7 @@ const AddStudent: React.FC = () => {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>{t('students.roll_number')}</label>
+                                <label>{t('students.roll_no', 'Roll Number')}</label>
                                 <input name="roll_number" value={formData.roll_number} onChange={handleChange} />
                             </div>
                         </div>
