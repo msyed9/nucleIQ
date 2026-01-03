@@ -6,15 +6,41 @@
   :root {
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
+    
+    /* Light mode variables */
+    --color-bg-primary: #FFFFFF;
+    --color-bg-secondary: #F5F7FA;
+    --color-text-primary: #212121;
+    --color-text-secondary: #546E7A;
+  }
+  
+  /* Dark mode variables - class based */
+  .dark,
+  html.dark {
+    --color-bg-primary: #121212;
+    --color-bg-secondary: #1E1E1E;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #B0BEC5;
+  }
+  
+  /* System preference fallback */
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --color-bg-primary: #121212;
+      --color-bg-secondary: #1E1E1E;
+      --color-text-primary: #FFFFFF;
+      --color-text-secondary: #B0BEC5;
+    }
   }
   
   * {
-    @apply border-gray-200;
+    @apply border-gray-200 dark:border-gray-700;
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
     font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 200ms ease-in-out, color 200ms ease-in-out;
   }
 }
 

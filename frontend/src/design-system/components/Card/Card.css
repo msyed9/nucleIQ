@@ -117,35 +117,74 @@
     }
 }
 
-/* Dark mode */
+/* Dark mode - Class-based */
+.dark .ds-card,
+html.dark .ds-card {
+    background: #1E1E1E;
+}
+
+.dark .ds-card--default,
+html.dark .ds-card--default {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark .ds-card--outlined,
+html.dark .ds-card--outlined {
+    border-color: #424242;
+}
+
+.dark .ds-card--elevated,
+html.dark .ds-card--elevated {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.dark .ds-card__header,
+html.dark .ds-card__header {
+    border-bottom-color: #424242;
+    color: #FFFFFF;
+}
+
+.dark .ds-card__footer,
+html.dark .ds-card__footer {
+    border-top-color: #424242;
+    background: #2C2C2C;
+}
+
+.dark .ds-card--hoverable:hover,
+html.dark .ds-card--hoverable:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* System preference fallback */
 @media (prefers-color-scheme: dark) {
-    .ds-card {
+    :root:not(.light) .ds-card {
         background: #1E1E1E;
     }
 
-    .ds-card--default {
+    :root:not(.light) .ds-card--default {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .ds-card--outlined {
+    :root:not(.light) .ds-card--outlined {
         border-color: #424242;
     }
 
-    .ds-card--elevated {
+    :root:not(.light) .ds-card--elevated {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
 
-    .ds-card__header {
+    :root:not(.light) .ds-card__header {
         border-bottom-color: #424242;
         color: #FFFFFF;
     }
 
-    .ds-card__footer {
+    :root:not(.light) .ds-card__footer {
         border-top-color: #424242;
         background: #2C2C2C;
     }
 
-    .ds-card--hoverable:hover {
+    :root:not(.light) .ds-card--hoverable:hover {
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     }
+
 }

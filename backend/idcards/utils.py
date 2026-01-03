@@ -329,12 +329,20 @@ def generate_id_cards_bulk(design, queryset, card_type):
             }
         
         elif card_type == 'STAFF':
-            # TODO: Implement staff data mapping
+            # Complete staff data mapping
             data = {
-                'StaffName': record.get_full_name() if hasattr(record, 'get_full_name') else str(record),
-                'EmployeeID': getattr(record, 'employee_id', 'N/A'),
-                'Department': getattr(record, 'department', 'N/A'),
-                'Designation': getattr(record, 'designation', 'N/A'),
+                'StaffName': record.get_full_name(),
+                'EmployeeID': record.employee_id,
+                'Designation': record.get_designation_display() if hasattr(record, 'get_designation_display') else getattr(record, 'designation', 'N/A'),
+                'Department': record.department.name if hasattr(record, 'department') and record.department else 'N/A',
+                'BloodGroup': record.blood_group or 'N/A',
+                'Email': record.email or 'N/A',
+                'Phone': record.phone or 'N/A',
+                'EmergencyContact': record.emergency_contact_phone or 'N/A',
+                'EmergencyContactName': record.emergency_contact_name or 'N/A',
+                'JoiningDate': record.joining_date.strftime('%d/%m/%Y') if hasattr(record, 'joining_date') and record.joining_date else 'N/A',
+                'StaffPhoto': record.photo.path if record.photo else '',
+                'Address': record.address[:50] if record.address and len(record.address) > 50 else (record.address or 'N/A'),
             }
         
         else:

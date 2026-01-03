@@ -3,7 +3,13 @@ Staff Serializers
 """
 
 from rest_framework import serializers
-from .models import Staff, StaffDocument, StaffAttendance, StaffLeave
+from .models import (
+    Staff, StaffDocument, StaffAttendance, StaffLeave,
+    StaffHealthProfile, StaffMedicalHistory, StaffMedicalCheckup,
+    StaffVaccination, StaffInjuryReport,
+    TrainingProgram, TrainingEnrollment, TrainingFeedback,
+    AppraisalCycle, StaffAppraisal, StaffGoal
+)
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -58,13 +64,17 @@ class StaffDocumentSerializer(serializers.ModelSerializer):
     
     staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
+    verified_by_name = serializers.CharField(source='verified_by.get_full_name', read_only=True)
     
     class Meta:
         model = StaffDocument
         fields = [
             'id', 'tenant', 'staff', 'staff_name',
-            'document_type', 'title', 'description',
+            'category', 'document_type', 'title', 'description',
+            'document_number', 'issue_date', 'expiry_date', 'issuing_authority',
             'file', 'uploaded_by', 'uploaded_by_name',
+            'status', 'verified_by', 'verified_by_name',
+            'verification_date', 'verification_notes',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -81,7 +91,9 @@ class StaffAttendanceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'tenant', 'staff', 'staff_name', 'staff_employee_id',
             'date', 'status', 'check_in_time', 'check_out_time',
+            'is_late', 'is_early_going', 'overtime_hours',
             'remarks', 'marked_by',
+            'biometric_punch_in', 'biometric_punch_out', 'biometric_device_id',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -104,3 +116,129 @@ class StaffLeaveSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'total_days', 'created_at', 'updated_at']
+
+
+class StaffHealthProfileSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Health Profile."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffHealthProfile
+        fields = '__all__'
+        read_only_fields = ['id', 'bmi', 'created_at', 'updated_at']
+
+
+class StaffMedicalHistorySerializer(serializers.ModelSerializer):
+    """Serializer for Staff Medical History."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffMedicalHistory
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class StaffMedicalCheckupSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Medical Checkup."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffMedicalCheckup
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class StaffVaccinationSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Vaccination."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffVaccination
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class StaffInjuryReportSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Injury Report."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffInjuryReport
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TrainingProgramSerializer(serializers.ModelSerializer):
+    """Serializer for Training Program."""
+    
+    enrolled_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TrainingProgram
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_enrolled_count(self, obj):
+        return obj.enrollments.filter(status='ENROLLED').count()
+
+
+class TrainingEnrollmentSerializer(serializers.ModelSerializer):
+    """Serializer for Training Enrollment."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    program_name = serializers.CharField(source='training_program.program_name', read_only=True)
+    
+    class Meta:
+        model = TrainingEnrollment
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TrainingFeedbackSerializer(serializers.ModelSerializer):
+    """Serializer for Training Feedback."""
+    
+    staff_name = serializers.CharField(source='enrollment.staff.get_full_name', read_only=True)
+    program_name = serializers.CharField(source='enrollment.training_program.program_name', read_only=True)
+    
+    class Meta:
+        model = TrainingFeedback
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class AppraisalCycleSerializer(serializers.ModelSerializer):
+    """Serializer for Appraisal Cycle."""
+    
+    class Meta:
+        model = AppraisalCycle
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class StaffAppraisalSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Appraisal."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    manager_name = serializers.CharField(source='manager.get_full_name', read_only=True)
+    cycle_name = serializers.CharField(source='appraisal_cycle.name', read_only=True)
+    
+    class Meta:
+        model = StaffAppraisal
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class StaffGoalSerializer(serializers.ModelSerializer):
+    """Serializer for Staff Goal."""
+    
+    staff_name = serializers.CharField(source='staff.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StaffGoal
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']

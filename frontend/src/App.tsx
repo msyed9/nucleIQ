@@ -37,6 +37,22 @@ import FeeDefaulters from './pages/fees/FeeDefaulters';
 import FinancialReports from './pages/finance/FinancialReports';
 import LibraryManagement from './pages/library/LibraryManagement';
 
+// Phase 4 Inventory Module Imports
+import InventoryDashboard from './pages/inventory/InventoryDashboard';
+import ItemMaster from './pages/inventory/ItemMaster';
+import StockTransactions from './pages/inventory/StockTransactions';
+import InventoryReports from './pages/inventory/InventoryReports';
+
+// Phase 3 Finance Module Imports
+import ChartOfAccounts from './pages/finance/ChartOfAccounts';
+import JournalEntries from './pages/finance/JournalEntries';
+import VendorMaster from './pages/finance/VendorMaster';
+import VendorPayments from './pages/finance/VendorPayments';
+import SalaryPayments from './pages/finance/SalaryPayments';
+import FinanceDashboard from './pages/finance/FinanceDashboard';
+import BudgetManagement from './pages/finance/BudgetManagement';
+import BankReconciliation from './pages/finance/BankReconciliation';
+
 // Phase 5 Imports
 import AlumniPortal from './pages/alumni/AlumniPortal';
 import LiveClassJoin from './pages/lms/LiveClassJoin';
@@ -57,6 +73,9 @@ import WebsiteBuilder from './pages/cms/WebsiteBuilder';
 import ExamScheduler from './pages/exams/ExamScheduler';
 import ResultEntry from './pages/exams/ResultEntry';
 import ResultAnalytics from './pages/exams/ResultAnalytics';
+import QuestionBank from './pages/exams/QuestionBank';
+import LearningOutcomes from './pages/exams/LearningOutcomes';
+import OnlineExamination from './pages/exams/OnlineExamination';
 import NoticeBoard from './pages/communication/NoticeBoard';
 import MessageComposer from './pages/communication/MessageComposer';
 import LeadConversion from './pages/crm/LeadConversion';
@@ -70,6 +89,9 @@ import LeaveApproval from './pages/hr/LeaveApproval';
 import SalaryStructure from './pages/payroll/SalaryStructure';
 import LibraryMembers from './pages/library/LibraryMembers';
 import VehicleMaintenance from './pages/transport/VehicleMaintenance';
+import DigitalResourcesLibrary from './pages/library/DigitalResources';
+import LibraryReports from './pages/library/LibraryReports';
+import LibrarySettings from './pages/library/LibrarySettings';
 import HostelFees from './pages/hostel/HostelFees';
 import PurchaseOrders from './pages/inventory/PurchaseOrders';
 import StockAdjustment from './pages/inventory/StockAdjustment';
@@ -85,11 +107,43 @@ import PassRequest from './pages/security/PassRequest';
 import PassApproval from './pages/security/PassApproval';
 import CreateTicket from './pages/helpdesk/CreateTicket';
 
+// Phase 6 - Staff Management Pages
+import StaffDocuments from './pages/staff/StaffDocuments';
+import StaffAttendance from './pages/staff/StaffAttendance';
+import LeaveBalance from './pages/staff/LeaveBalance';
+import LeaveApplications from './pages/staff/LeaveApplications';
+import LeaveApprovalPage from './pages/staff/LeaveApproval';
+import HealthRecords from './pages/staff/HealthRecords';
+import TrainingManagement from './pages/staff/TrainingManagement';
+import AppraisalManagement from './pages/staff/AppraisalManagement';
+import MyAppraisal from './pages/staff/MyAppraisal';
+
+// Phase 7 - Reports & Analytics Pages
+import ReportBuilder from './pages/reports/ReportBuilder';
+import AdvancedAnalytics from './pages/reports/AdvancedAnalytics';
+import ScheduledReports from './pages/reports/ScheduledReports';
+
+// Phase 8 - Communication & Notifications Pages
+import NotificationCenter from './pages/notifications/NotificationCenter';
+import EmailCampaigns from './pages/notifications/EmailCampaigns';
+import SMSMessaging from './pages/notifications/SMSMessaging';
+
+// Phase 10 - Settings & Customization
+import SystemSettings from './pages/settings/SystemSettings';
+
+// Phase 11 - Search & Dashboard
+import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
+
+// Phase 12 - Additional Features
+import ParentPortal from './pages/parent/ParentPortal';
+import AuditLogs from './pages/admin/AuditLogs';
+
 // New pages added
 import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
 import StudentsApiList from './pages/students/StudentsList';
 import TransportAllocations from './pages/transport/TransportAllocations';
 import LibraryBooks from './pages/library/LibraryBooks';
+import BookCopies from './pages/library/BookCopies';
 import HelpdeskTickets from './pages/helpdesk/HelpdeskTickets';
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import BillingManagement from './pages/billing/BillingManagement';
@@ -147,6 +201,15 @@ function App() {
                                             <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
                                             {/* Staff routes */}
                                             <Route path="/staff/add" element={<Layout><AddStaff /></Layout>} />
+                                            <Route path="/staff/documents" element={<Layout><StaffDocuments /></Layout>} />
+                                            <Route path="/staff/attendance" element={<Layout><StaffAttendance /></Layout>} />
+                                            <Route path="/staff/leave/balance" element={<Layout><LeaveBalance /></Layout>} />
+                                            <Route path="/staff/leave/applications" element={<Layout><LeaveApplications /></Layout>} />
+                                            <Route path="/staff/leave/approval" element={<Layout><LeaveApprovalPage /></Layout>} />
+                                            <Route path="/staff/health" element={<Layout><HealthRecords /></Layout>} />
+                                            <Route path="/staff/training" element={<Layout><TrainingManagement /></Layout>} />
+                                            <Route path="/staff/appraisal" element={<Layout><AppraisalManagement /></Layout>} />
+                                            <Route path="/staff/my-appraisal" element={<Layout><MyAppraisal /></Layout>} />
                                             <Route path="/staff/:id" element={<Layout><StaffProfile /></Layout>} />
                                             <Route path="/staff" element={<Layout><StaffList /></Layout>} />
                                             {/* Fees routes - specific routes before general */}
@@ -156,15 +219,34 @@ function App() {
                                             {/* Other routes */}
                                             <Route path="/attendance" element={<Layout><MarkAttendance /></Layout>} />
                                             <Route path="/attendance/aggregates" element={<Layout><AttendanceAggregates /></Layout>} />
-                                            <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
+                                            {/* Finance Routes - Phase 3 */}
+                                            <Route path="/finance/dashboard" element={<Layout><FinanceDashboard /></Layout>} />
+                                            <Route path="/finance/chart-of-accounts" element={<Layout><ChartOfAccounts /></Layout>} />
+                                            <Route path="/finance/journal-entries" element={<Layout><JournalEntries /></Layout>} />
+                                            <Route path="/finance/vendors" element={<Layout><VendorMaster /></Layout>} />
+                                            <Route path="/finance/vendor-payments" element={<Layout><VendorPayments /></Layout>} />
+                                            <Route path="/finance/salary-payments" element={<Layout><SalaryPayments /></Layout>} />
+                                            <Route path="/finance/budgets" element={<Layout><BudgetManagement /></Layout>} />
+                                            <Route path="/finance/bank-reconciliation" element={<Layout><BankReconciliation /></Layout>} />
                                             <Route path="/finance/reports" element={<Layout><FinancialReports /></Layout>} />
+                                            <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
+
+                                            {/* Phase 7 - Reports & Analytics */}
+                                            <Route path="/reports/builder" element={<Layout><ReportBuilder /></Layout>} />
+                                            <Route path="/reports/analytics" element={<Layout><AdvancedAnalytics /></Layout>} />
+                                            <Route path="/reports/scheduled" element={<Layout><ScheduledReports /></Layout>} />
                                             <Route path="/reports" element={<Layout><ReportsDashboard /></Layout>} />
                                             {/* Settings routes - specific routes before general */}
                                             <Route path="/settings/academic" element={<Layout><AcademicSetup /></Layout>} />
+                                            <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
                                             <Route path="/settings" element={<Layout><Settings /></Layout>} />
                                             {/* User routes - specific routes before general */}
                                             <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
                                             <Route path="/users" element={<Layout><UserList /></Layout>} />
+                                            {/* Phase 11 & 12 routes */}
+                                            <Route path="/dashboard/enhanced" element={<Layout><EnhancedDashboard /></Layout>} />
+                                            <Route path="/parent-portal" element={<Layout><ParentPortal /></Layout>} />
+                                            <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
                                             {/* Timetable routes */}
                                             <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
                                             <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />
@@ -177,17 +259,31 @@ function App() {
                                             <Route path="/exams" element={<Layout><ExamScheduler /></Layout>} />
                                             <Route path="/exams/results/entry" element={<Layout><ResultEntry /></Layout>} />
                                             <Route path="/exams/results/analytics" element={<Layout><ResultAnalytics /></Layout>} />
+                                            <Route path="/exams/question-bank" element={<Layout><QuestionBank /></Layout>} />
+                                            <Route path="/exams/learning-outcomes" element={<Layout><LearningOutcomes /></Layout>} />
+                                            <Route path="/exams/online" element={<Layout><OnlineExamination /></Layout>} />
                                             <Route path="/lms/classes" element={<Layout><LiveClassJoin /></Layout>} />
                                             <Route path="/lms/digital" element={<Layout><DigitalResources /></Layout>} />
 
                                             {/* Operations */}
                                             <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
+                                            <Route path="/library/books/:bookId/copies" element={<Layout><BookCopies /></Layout>} />
                                             <Route path="/library/books" element={<Layout><LibraryBooks /></Layout>} />
                                             <Route path="/library/members" element={<Layout><LibraryMembers /></Layout>} />
+                                            <Route path="/library/digital-resources" element={<Layout><DigitalResourcesLibrary /></Layout>} />
+                                            <Route path="/library/reports" element={<Layout><LibraryReports /></Layout>} />
+                                            <Route path="/library/settings" element={<Layout><LibrarySettings /></Layout>} />
+
+                                            {/* Inventory Module - Complete */}
+                                            <Route path="/inventory/dashboard" element={<Layout><InventoryDashboard /></Layout>} />
+                                            <Route path="/inventory/items" element={<Layout><ItemMaster /></Layout>} />
+                                            <Route path="/inventory/transactions" element={<Layout><StockTransactions /></Layout>} />
+                                            <Route path="/inventory/reports" element={<Layout><InventoryReports /></Layout>} />
                                             <Route path="/inventory/stock" element={<Layout><StockManager /></Layout>} />
                                             <Route path="/inventory/purchase-orders" element={<Layout><PurchaseOrders /></Layout>} />
                                             <Route path="/inventory/stock-adjustment" element={<Layout><StockAdjustment /></Layout>} />
                                             <Route path="/inventory/vendors" element={<Layout><VendorManagement /></Layout>} />
+
                                             <Route path="/hostel" element={<Layout><HostelDashboard /></Layout>} />
                                             <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
                                             <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />
@@ -199,6 +295,11 @@ function App() {
                                             <Route path="/communication/messages" element={<Layout><MessageComposer /></Layout>} />
                                             <Route path="/communication/templates" element={<Layout><TemplateManager /></Layout>} />
                                             <Route path="/communication/delivery-reports" element={<Layout><DeliveryReports /></Layout>} />
+
+                                            {/* Phase 8 - Notifications & Communication */}
+                                            <Route path="/notifications/center" element={<Layout><NotificationCenter /></Layout>} />
+                                            <Route path="/notifications/email" element={<Layout><EmailCampaigns /></Layout>} />
+                                            <Route path="/notifications/sms" element={<Layout><SMSMessaging /></Layout>} />
 
                                             {/* Finance & HR */}
                                             <Route path="/hr/leaves" element={<Layout><LeaveManage /></Layout>} />
@@ -216,6 +317,8 @@ function App() {
                                             <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
                                             <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
                                             <Route path="/cms/builder" element={<Layout><WebsiteBuilder /></Layout>} />
+                                            <Route path="/cms/website-builder" element={<Layout><WebsiteBuilder /></Layout>} />
+                                            <Route path="/cms/templates" element={<Layout><WebsiteBuilder /></Layout>} />
 
                                             {/* Character Trackers */}
                                             <Route path="/trackers/salah" element={<Layout><SalahTracker /></Layout>} />

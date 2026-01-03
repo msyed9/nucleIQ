@@ -46,6 +46,8 @@ const ParentShop: React.FC = () => {
         alert(`Checkout Total: ₹${calculateTotal()}. Payment integration coming in Phase 5.`);
     };
 
+    if (loading) return <div className="p-10 text-center">Loading store items...</div>;
+
     return (
         <div className="store-container">
             <div className="flex justify-between items-center mb-6">

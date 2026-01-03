@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #1976D2;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1976D2;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #666;
+            margin: 5px 0 0 0;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background-color: #E3F2FD;
+            border-left: 4px solid #1976D2;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .credentials {
+            background-color: #FFF3E0;
+            border-left: 4px solid #FF9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .credentials h3 {
+            margin-top: 0;
+            color: #FF9800;
+        }
+        .credentials p {
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .next-steps {
+            background-color: #F1F8E9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .next-steps h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        .next-steps ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            margin: 8px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #1976D2;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #1565C0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 14px;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #FAFAFA;
+            border-radius: 4px;
+        }
+        .contact-info p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Welcome to {{ school_name }}!</h1>
+            <p>Admission Confirmation</p>
+        </div>
+
+        <div class="content">
+            <p>Dear {{ parent_name }},</p>
+            
+            <p>Congratulations! We are delighted to inform you that <strong>{{ student_name }}</strong> has been successfully admitted to {{ school_name }}.</p>
+
+            <div class="info-box">
+                <h3>📋 Admission Details</h3>
+                <p><strong>Student Name:</strong> {{ student_name }}</p>
+                <p><strong>Admission Number:</strong> {{ admission_number }}</p>
+                <p><strong>Class/Grade:</strong> {{ class_name }}</p>
+                <p><strong>Section:</strong> {{ section_name }}</p>
+                <p><strong>Academic Year:</strong> {{ academic_year }}</p>
+                <p><strong>Admission Date:</strong> {{ admission_date }}</p>
+            </div>
+
+            <div class="credentials">
+                <h3>🔐 Parent Portal Access</h3>
+                <p>You can now access the parent portal to track your child's progress, view attendance, pay fees, and communicate with teachers.</p>
+                <p><strong>Portal URL:</strong> {{ portal_url }}</p>
+                <p><strong>Username:</strong> {{ parent_username }}</p>
+                <p><strong>Temporary Password:</strong> {{ temp_password }}</p>
+                <p style="color: #FF9800; margin-top: 10px;"><em>⚠️ Please change your password after first login for security.</em></p>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{ portal_url }}" class="button">Access Parent Portal</a>
+            </div>
+
+            <div class="next-steps">
+                <h3>📝 Next Steps</h3>
+                <ul>
+                    <li><strong>Submit Documents:</strong> Please submit the following documents within 7 days:
+                        <ul>
+                            <li>Birth Certificate (original + photocopy)</li>
+                            <li>Previous school Transfer Certificate</li>
+                            <li>Recent passport-size photographs (4 copies)</li>
+                            <li>Address proof</li>
+                            <li>Medical fitness certificate</li>
+                        </ul>
+                    </li>
+                    <li><strong>Fee Payment:</strong> Complete the admission fee payment through the parent portal or visit the accounts office.</li>
+                    <li><strong>Orientation:</strong> Attend the parent-student orientation session on {{ orientation_date }} at {{ orientation_time }}.</li>
+                    <li><strong>Uniform:</strong> Collect school uniform details from the office.</li>
+                    <li><strong>Books & Stationery:</strong> Book list will be available in the parent portal.</li>
+                </ul>
+            </div>
+
+            <div class="contact-info">
+                <h3 style="margin-top: 0;">📞 Contact Information</h3>
+                <p><strong>School Office:</strong> {{ school_phone }}</p>
+                <p><strong>Email:</strong> {{ school_email }}</p>
+                <p><strong>Address:</strong> {{ school_address }}</p>
+                <p><strong>Office Hours:</strong> Monday - Friday, 9:00 AM - 4:00 PM</p>
+            </div>
+
+            <p style="margin-top: 30px;">We look forward to welcoming {{ student_name }} to our school community. If you have any questions, please don't hesitate to contact us.</p>
+
+            <p style="margin-top: 20px;">
+                <strong>Best regards,</strong><br>
+                <strong>{{ school_name }}</strong><br>
+                Admissions Office
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated email. Please do not reply to this message.</p>
+            <p>© {{ current_year }} {{ school_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

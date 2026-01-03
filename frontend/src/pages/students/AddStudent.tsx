@@ -49,7 +49,7 @@ const AddStudent: React.FC = () => {
             const sectionsRes = await api.get('/tenants/sections/');
 
             // Handle different response structures
-            let sectionsData = [];
+            let sectionsData: any[] = [];
             if (Array.isArray(sectionsRes.data)) {
                 // Direct array response
                 sectionsData = sectionsRes.data;

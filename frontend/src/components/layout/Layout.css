@@ -2,13 +2,14 @@
 .layout {
     display: flex;
     min-height: 100vh;
-    background: var(--color-bg-primary, #F5F7FA);
+    background: var(--color-bg-secondary, #F5F7FA);
+    transition: background-color 200ms ease-in-out;
 }
 
 /* Sidebar - Modern Design */
 .sidebar {
     width: 260px;
-    background: #FFFFFF;
+    background: var(--color-bg-primary, #FFFFFF);
     border-right: 1px solid var(--color-border-light, #E0E0E0);
     display: flex;
     flex-direction: column;
@@ -16,11 +17,13 @@
     height: 100vh;
     overflow-y: auto;
     z-index: 1000;
+    transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out;
 }
 
 .sidebar-header {
     padding: 1.5rem;
     border-bottom: 1px solid var(--color-border-light, #E0E0E0);
+    transition: border-color 200ms ease-in-out;
 }
 
 .sidebar-logo {
@@ -32,6 +35,7 @@
     gap: 0.75rem;
     color: var(--color-text-primary, #212121);
     font-family: 'Inter', sans-serif;
+    transition: color 200ms ease-in-out;
 }
 
 .sidebar-nav {
@@ -159,11 +163,12 @@
 
 /* Header */
 .header {
-    background: #FFFFFF;
+    background: var(--color-bg-primary, #FFFFFF);
     border-bottom: 1px solid var(--color-border-light, #E0E0E0);
     position: sticky;
     top: 0;
     z-index: 100;
+    transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out;
 }
 
 .header-content {
@@ -247,13 +252,14 @@
     top: 100%;
     right: 0;
     margin-top: 0.5rem;
-    background: white;
+    background: var(--color-bg-primary, white);
     border-radius: 0.75rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-lg, 0 12px 24px -4px rgba(0, 0, 0, 0.12));
     min-width: 200px;
     overflow: hidden;
     z-index: 1000;
     border: 1px solid var(--color-border-light, #E0E0E0);
+    transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out;
 }
 
 .dropdown-item {
@@ -305,88 +311,196 @@
     background: var(--color-text-tertiary, #B0BEC5);
 }
 
-/* Dark Mode */
+/* Dark Mode - Class-based */
+.dark .layout,
+html.dark .layout {
+    background: #1E1E1E;
+}
+
+.dark .sidebar,
+html.dark .sidebar {
+    background: #2C2C2C;
+    border-right-color: #424242;
+}
+
+.dark .sidebar-header,
+html.dark .sidebar-header {
+    border-bottom-color: #424242;
+}
+
+.dark .sidebar-logo,
+html.dark .sidebar-logo {
+    color: #FFFFFF;
+}
+
+.dark .sidebar-item,
+html.dark .sidebar-item {
+    color: #B0BEC5;
+}
+
+.dark .sidebar-item:hover,
+html.dark .sidebar-item:hover {
+    background: #424242;
+    color: #FFFFFF;
+}
+
+.dark .sidebar-item.active,
+html.dark .sidebar-item.active {
+    background: rgba(66, 165, 245, 0.2);
+    color: #42A5F5;
+}
+
+.dark .sidebar-subitem,
+html.dark .sidebar-subitem {
+    color: #B0BEC5;
+}
+
+.dark .sidebar-subitem:hover,
+html.dark .sidebar-subitem:hover {
+    background: #424242;
+    color: #FFFFFF;
+}
+
+.dark .sidebar-subitem.active,
+html.dark .sidebar-subitem.active {
+    background: rgba(66, 165, 245, 0.2);
+    color: #42A5F5;
+}
+
+.dark .header,
+html.dark .header {
+    background: #2C2C2C;
+    border-bottom-color: #424242;
+}
+
+.dark .header-title,
+html.dark .header-title {
+    color: #FFFFFF;
+}
+
+.dark .user-button:hover,
+html.dark .user-button:hover {
+    background: #424242;
+}
+
+.dark .user-name,
+html.dark .user-name {
+    color: #FFFFFF;
+}
+
+.dark .user-email,
+html.dark .user-email {
+    color: #B0BEC5;
+}
+
+.dark .user-dropdown,
+html.dark .user-dropdown {
+    background: #2C2C2C;
+    border-color: #424242;
+}
+
+.dark .dropdown-item,
+html.dark .dropdown-item {
+    color: #FFFFFF;
+}
+
+.dark .dropdown-item:hover,
+html.dark .dropdown-item:hover {
+    background: #424242;
+}
+
+.dark .dropdown-divider,
+html.dark .dropdown-divider {
+    background: #424242;
+}
+
+.dark .layout-content,
+html.dark .layout-content {
+    background: #1E1E1E;
+}
+
+/* System preference fallback (when no explicit class) */
 @media (prefers-color-scheme: dark) {
-    .layout {
+    :root:not(.light) .layout {
         background: #1E1E1E;
     }
 
-    .sidebar {
+    :root:not(.light) .sidebar {
         background: #2C2C2C;
         border-right-color: #424242;
     }
 
-    .sidebar-header {
+    :root:not(.light) .sidebar-header {
         border-bottom-color: #424242;
     }
 
-    .sidebar-logo {
+    :root:not(.light) .sidebar-logo {
         color: #FFFFFF;
     }
 
-    .sidebar-item {
+    :root:not(.light) .sidebar-item {
         color: #B0BEC5;
     }
 
-    .sidebar-item:hover {
+    :root:not(.light) .sidebar-item:hover {
         background: #424242;
         color: #FFFFFF;
     }
 
-    .sidebar-item.active {
+    :root:not(.light) .sidebar-item.active {
         background: rgba(66, 165, 245, 0.2);
         color: #42A5F5;
     }
 
-    .sidebar-subitem {
+    :root:not(.light) .sidebar-subitem {
         color: #B0BEC5;
     }
 
-    .sidebar-subitem:hover {
+    :root:not(.light) .sidebar-subitem:hover {
         background: #424242;
         color: #FFFFFF;
     }
 
-    .sidebar-subitem.active {
+    :root:not(.light) .sidebar-subitem.active {
         background: rgba(66, 165, 245, 0.2);
         color: #42A5F5;
     }
 
-    .header {
+    :root:not(.light) .header {
         background: #2C2C2C;
         border-bottom-color: #424242;
     }
 
-    .header-title {
+    :root:not(.light) .header-title {
         color: #FFFFFF;
     }
 
-    .user-button:hover {
+    :root:not(.light) .user-button:hover {
         background: #424242;
     }
 
-    .user-name {
+    :root:not(.light) .user-name {
         color: #FFFFFF;
     }
 
-    .user-email {
+    :root:not(.light) .user-email {
         color: #B0BEC5;
     }
 
-    .user-dropdown {
+    :root:not(.light) .user-dropdown {
         background: #2C2C2C;
         border-color: #424242;
     }
 
-    .dropdown-item {
+    :root:not(.light) .dropdown-item {
         color: #FFFFFF;
     }
 
-    .dropdown-item:hover {
+    :root:not(.light) .dropdown-item:hover {
         background: #424242;
     }
 
-    .layout-content {
+    :root:not(.light) .layout-content {
         background: #1E1E1E;
     }
 }

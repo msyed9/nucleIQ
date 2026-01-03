@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AcademicYear, GradeLevel, Section, Department
+from .models import AcademicYear, GradeLevel, Section, Department, Holiday, TenantSettings
 
 class AcademicYearSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,3 +22,82 @@ class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
         fields = '__all__'
+
+class HolidaySerializer(serializers.ModelSerializer):
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
+    duration_days = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Holiday
+        fields = [
+            'id', 'name', 'holiday_type', 'start_date', 'end_date',
+            'description', 'is_attendance_blocked', 'applies_to_students',
+            'applies_to_staff', 'color', 'academic_year', 'academic_year_name',
+            'duration_days', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_duration_days(self, obj):
+        return obj.get_duration_days()
+
+
+class TenantSettingsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TenantSettings model.
+    Handles all tenant-level configuration settings.
+    """
+    password_policy = serializers.SerializerMethodField()
+    notification_config = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TenantSettings
+        fields = [
+            'id', 'tenant',
+            # Academic Settings
+            'academic_year_format', 'term_system', 'grading_system',
+            # Fee Settings
+            'fee_currency', 'fee_currency_symbol', 'late_fee_enabled',
+            'late_fee_amount', 'late_fee_percentage', 'grace_period_days',
+            # Attendance Settings
+            'attendance_marking_time', 'attendance_lock_days',
+            'minimum_attendance_percentage', 'late_arrival_threshold_minutes',
+            # Exam Settings
+            'result_publish_delay_days', 'allow_online_exams', 'exam_proctoring_enabled',
+            # Email Configuration
+            'email_enabled', 'smtp_host', 'smtp_port', 'smtp_username',
+            'smtp_use_tls', 'from_email',
+            # SMS Configuration
+            'sms_enabled', 'sms_provider', 'sms_sender_id',
+            # WhatsApp Configuration
+            'whatsapp_enabled',
+            # Security Settings
+            'password_min_length', 'password_require_uppercase',
+            'password_require_lowercase', 'password_require_numbers',
+            'password_require_special', 'session_timeout_minutes',
+            'max_login_attempts', 'lockout_duration_minutes',
+            'two_factor_auth_required',
+            # Backup Settings
+            'auto_backup_enabled', 'backup_frequency_days', 'backup_retention_days',
+            # Maintenance Mode
+            'maintenance_mode', 'maintenance_message',
+            # Additional
+            'custom_settings',
+            # Computed fields
+            'password_policy', 'notification_config',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'smtp_password': {'write_only': True},
+            'sms_api_key': {'write_only': True},
+            'whatsapp_api_key': {'write_only': True},
+        }
+    
+    def get_password_policy(self, obj):
+        """Get password policy as a dictionary."""
+        return obj.get_password_policy()
+    
+    def get_notification_config(self, obj):
+        """Get notification configuration."""
+        return obj.get_notification_config()
+

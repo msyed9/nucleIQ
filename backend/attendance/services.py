@@ -16,6 +16,8 @@ class AttendanceCalculationService:
         """
         Calculate working days excluding Sundays and holidays.
         """
+        from tenants.models import Holiday
+        
         total_days = (end_date - start_date).days + 1
         
         # Count Sundays
@@ -26,10 +28,65 @@ class AttendanceCalculationService:
                 sundays += 1
             current += timedelta(days=1)
         
-        # For now, just exclude Sundays
-        # TODO: Integrate with Academic Calendar for holidays
-        working_days = total_days - sundays
-        return working_days
+        # Get holidays in date range
+        holidays = Holiday.objects.filter(
+            tenant=tenant,
+            is_deleted=False,
+            start_date__lte=end_date,
+            end_date__gte=start_date
+        )
+        
+        # Count holiday days (excluding Sundays which are already counted)
+        holiday_days = 0
+        for holiday in holidays:
+            current = max(holiday.start_date, start_date)
+            end = min(holiday.end_date, end_date)
+            
+            while current <= end:
+                # Only count if not already a Sunday
+                if current.weekday() != 6:
+                    holiday_days += 1
+                current += timedelta(days=1)
+        
+        working_days = total_days - sundays - holiday_days
+        return max(working_days, 0)  # Ensure non-negative
+    
+    @staticmethod
+    def is_holiday(date, tenant, record_type='STUDENT'):
+        """
+        Check if a given date is a holiday.
+        
+        Args:
+            date: Date to check
+            tenant: Tenant instance
+            record_type: 'STUDENT' or 'STAFF'
+        
+        Returns:
+            tuple: (is_holiday: bool, holiday: Holiday instance or None)
+        """
+        from tenants.models import Holiday
+        
+        # Check if date is Sunday
+        if date.weekday() == 6:
+            return (True, None)
+        
+        # Check for holidays
+        holiday = Holiday.objects.filter(
+            tenant=tenant,
+            is_deleted=False,
+            start_date__lte=date,
+            end_date__gte=date,
+            is_attendance_blocked=True
+        ).first()
+        
+        if holiday:
+            # Check if holiday applies to this record type
+            if record_type == 'STUDENT' and holiday.applies_to_students:
+                return (True, holiday)
+            elif record_type == 'STAFF' and holiday.applies_to_staff:
+                return (True, holiday)
+        
+        return (False, None)
     
     @staticmethod
     def calculate_attendance_percentage(present_days, late_days, working_days):

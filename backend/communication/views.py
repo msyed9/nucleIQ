@@ -20,7 +20,7 @@ from .serializers import (
     NoticeSerializer, MessageLogSerializer, BroadcastMessageSerializer,
     SendMessageSerializer
 )
-from .services import CommunicationService
+
 from core.middleware import get_current_tenant
 
 

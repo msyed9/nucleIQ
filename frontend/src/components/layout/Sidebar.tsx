@@ -46,7 +46,8 @@ import {
     Bell,
     HelpCircle,
     Award,
-    LayoutTemplate
+    LayoutTemplate,
+    Globe
 } from 'lucide-react';
 import './Layout.css';
 
@@ -86,6 +87,12 @@ const menuItems: MenuItem[] = [
         children: [
             { path: '/staff', icon: List, labelKey: 'nav.staff_list', label: 'Staff List' },
             { path: '/staff/add', icon: UserPlus, labelKey: 'nav.add_staff', label: 'Add Staff' },
+            { path: '/staff/documents', icon: FolderOpen, labelKey: 'nav.staff_documents', label: 'Documents' },
+            { path: '/staff/attendance', icon: ClipboardCheck, labelKey: 'nav.staff_attendance', label: 'Attendance' },
+            { path: '/staff/leave', icon: Leaf, labelKey: 'nav.leave_management', label: 'Leave Management' },
+            { path: '/staff/health', icon: Award, labelKey: 'nav.health_records', label: 'Health Records' },
+            { path: '/staff/training', icon: BookOpen, labelKey: 'nav.training', label: 'Training' },
+            { path: '/staff/appraisal', icon: BarChart3, labelKey: 'nav.appraisal', label: 'Appraisal' },
         ]
     },
     {
@@ -96,6 +103,9 @@ const menuItems: MenuItem[] = [
             { path: '/timetable/builder', icon: CalendarDays, labelKey: 'nav.timetable', label: 'Timetable' },
             { path: '/assignments', icon: PenTool, labelKey: 'nav.assignments', label: 'Assignments' },
             { path: '/exams', icon: FileText, labelKey: 'nav.exams', label: 'Exams' },
+            { path: '/exams/question-bank', icon: BookOpen, labelKey: 'nav.question_bank', label: 'Question Bank' },
+            { path: '/exams/learning-outcomes', icon: Award, labelKey: 'nav.learning_outcomes', label: 'Learning Outcomes' },
+            { path: '/exams/online', icon: Video, labelKey: 'nav.online_examination', label: 'Online Examination' },
             { path: '/exams/results/entry', icon: ClipboardCheck, labelKey: 'nav.result_entry', label: 'Result Entry' },
             { path: '/exams/results/analytics', icon: BarChart3, labelKey: 'nav.result_analytics', label: 'Result Analytics' },
             { path: '/lms/classes', icon: Video, labelKey: 'nav.live_classes', label: 'Live Classes' },
@@ -161,11 +171,52 @@ const menuItems: MenuItem[] = [
         children: [
             { path: '/communication', icon: Bell, labelKey: 'nav.notices', label: 'Notices' },
             { path: '/communication/messages', icon: MessageSquare, labelKey: 'nav.messages', label: 'Messages' },
+            { path: '/notifications/center', icon: Bell, labelKey: 'nav.notifications', label: 'Notifications' },
+            { path: '/notifications/email', icon: MessageSquare, labelKey: 'nav.email_campaigns', label: 'Email Campaigns' },
+            { path: '/notifications/sms', icon: MessageSquare, labelKey: 'nav.sms_messaging', label: 'SMS Messaging' },
         ]
     },
-    { path: '/reports', icon: BarChart3, labelKey: 'nav.reports', label: 'Reports' },
+    {
+        icon: Globe,
+        labelKey: 'nav.website',
+        label: 'Website',
+        children: [
+            { path: '/cms/website-builder', icon: Globe, labelKey: 'nav.website_builder', label: 'Website Builder' },
+            { path: '/cms/templates', icon: LayoutTemplate, labelKey: 'nav.templates', label: 'Templates' },
+        ]
+    },
+    { path: '/reports/builder', icon: BarChart3, labelKey: 'nav.reports', label: 'Report Builder' },
+    {
+        icon: BarChart3,
+        labelKey: 'nav.analytics',
+        label: 'Analytics & Reports',
+        children: [
+            { path: '/reports/builder', icon: FileText, labelKey: 'nav.report_builder', label: 'Report Builder' },
+            { path: '/reports/analytics', icon: TrendingUp, labelKey: 'nav.advanced_analytics', label: 'Advanced Analytics' },
+            { path: '/reports/scheduled', icon: Calendar, labelKey: 'nav.scheduled_reports', label: 'Scheduled Reports' },
+        ]
+    },
     { path: '/helpdesk', icon: HelpCircle, labelKey: 'nav.helpdesk', label: 'Helpdesk' },
-    { path: '/settings', icon: Settings, labelKey: 'nav.settings', label: 'Settings' },
+    {
+        icon: Settings,
+        labelKey: 'nav.settings',
+        label: 'Settings',
+        children: [
+            { path: '/settings', icon: Settings, labelKey: 'nav.general_settings', label: 'General Settings' },
+            { path: '/settings/system', icon: SettingsIcon, labelKey: 'nav.system_settings', label: 'System Settings' },
+            { path: '/settings/academic', icon: GraduationCap, labelKey: 'nav.academic_setup', label: 'Academic Setup' },
+        ]
+    },
+    { path: '/parent-portal', icon: Users, labelKey: 'nav.parent_portal', label: 'Parent Portal' },
+    {
+        icon: BarChart3,
+        labelKey: 'nav.admin',
+        label: 'Admin',
+        children: [
+            { path: '/admin/audit-logs', icon: FileText, labelKey: 'nav.audit_logs', label: 'Audit Logs' },
+            { path: '/users/manage', icon: Users, labelKey: 'nav.user_management', label: 'User Management' },
+        ]
+    },
 ];
 
 const Sidebar: React.FC = () => {

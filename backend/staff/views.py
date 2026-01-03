@@ -8,13 +8,20 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from core.permissions import IsTenantUser
-from .models import Staff, StaffDocument, StaffAttendance, StaffLeave
+from .models import (
+    Staff, StaffDocument, StaffAttendance, StaffLeave,
+    StaffHealthProfile, StaffMedicalHistory, StaffMedicalCheckup,
+    StaffVaccination, StaffInjuryReport,
+    TrainingProgram, TrainingEnrollment, TrainingFeedback,
+    AppraisalCycle, StaffAppraisal, StaffGoal
+)
 from .serializers import (
-    StaffSerializer,
-    StaffListSerializer,
-    StaffDocumentSerializer,
-    StaffAttendanceSerializer,
-    StaffLeaveSerializer
+    StaffSerializer, StaffListSerializer,
+    StaffDocumentSerializer, StaffAttendanceSerializer, StaffLeaveSerializer,
+    StaffHealthProfileSerializer, StaffMedicalHistorySerializer, StaffMedicalCheckupSerializer,
+    StaffVaccinationSerializer, StaffInjuryReportSerializer,
+    TrainingProgramSerializer, TrainingEnrollmentSerializer, TrainingFeedbackSerializer,
+    AppraisalCycleSerializer, StaffAppraisalSerializer, StaffGoalSerializer
 )
 
 
@@ -155,18 +162,50 @@ class StaffDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsTenantUser]
     serializer_class = StaffDocumentSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['staff', 'document_type']
+    filterset_fields = ['staff', 'category', 'document_type', 'status']
     
     def get_queryset(self):
         return StaffDocument.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related('staff', 'uploaded_by')
+        ).select_related('staff', 'uploaded_by', 'verified_by')
     
     def perform_create(self, serializer):
         serializer.save(
             tenant=self.request.user.tenant,
             uploaded_by=self.request.user
         )
+    
+    @action(detail=True, methods=['post'])
+    def verify(self, request, pk=None):
+        """Verify a document."""
+        document = self.get_object()
+        
+        from django.utils import timezone
+        
+        document.status = 'VERIFIED'
+        document.verified_by = request.user
+        document.verification_date = timezone.now()
+        document.verification_notes = request.data.get('notes', '')
+        document.save()
+        
+        serializer = self.get_serializer(document)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def expiring_soon(self, request):
+        """Get documents expiring within 30 days."""
+        from datetime import date, timedelta
+        
+        thirty_days_later = date.today() + timedelta(days=30)
+        
+        queryset = self.get_queryset().filter(
+            expiry_date__lte=thirty_days_later,
+            expiry_date__gte=date.today(),
+            status='VERIFIED'
+        )
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class StaffAttendanceViewSet(viewsets.ModelViewSet):
@@ -294,4 +333,295 @@ class StaffLeaveViewSet(viewsets.ModelViewSet):
         """Get pending leave applications."""
         queryset = self.get_queryset().filter(status='PENDING')
         serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class StaffHealthProfileViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Health Profiles."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffHealthProfileSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['staff']
+    
+    def get_queryset(self):
+        return StaffHealthProfile.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class StaffMedicalHistoryViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Medical History."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffMedicalHistorySerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['staff']
+    ordering = ['-date']
+    
+    def get_queryset(self):
+        return StaffMedicalHistory.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class StaffMedicalCheckupViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Medical Checkups."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffMedicalCheckupSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['staff', 'checkup_type', 'fit_status']
+    ordering = ['-checkup_date']
+    
+    def get_queryset(self):
+        return StaffMedicalCheckup.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class StaffVaccinationViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Vaccinations."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffVaccinationSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['staff']
+    ordering = ['-date_administered']
+    
+    def get_queryset(self):
+        return StaffVaccination.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class StaffInjuryReportViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Injury Reports."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffInjuryReportSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['staff', 'severity']
+    ordering = ['-date', '-time']
+    
+    def get_queryset(self):
+        return StaffInjuryReport.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class TrainingProgramViewSet(viewsets.ModelViewSet):
+    """ViewSet for Training Programs."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = TrainingProgramSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'mode', 'status', 'is_mandatory']
+    search_fields = ['program_name', 'trainer_name']
+    ordering = ['-start_date']
+    
+    def get_queryset(self):
+        return TrainingProgram.objects.filter(
+            tenant=self.request.user.tenant
+        )
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+    
+    @action(detail=True, methods=['post'])
+    def enroll(self, request, pk=None):
+        """Enroll staff in training program."""
+        program = self.get_object()
+        staff_ids = request.data.get('staff_ids', [])
+        
+        enrolled = []
+        for staff_id in staff_ids:
+            enrollment, created = TrainingEnrollment.objects.get_or_create(
+                tenant=request.user.tenant,
+                training_program=program,
+                staff_id=staff_id,
+                defaults={'status': 'ENROLLED'}
+            )
+            if created:
+                enrolled.append(enrollment)
+        
+        return Response({
+            'message': f'Enrolled {len(enrolled)} staff members',
+            'count': len(enrolled)
+        })
+    
+    @action(detail=True, methods=['get'])
+    def enrollments(self, request, pk=None):
+        """Get enrollments for this training."""
+        program = self.get_object()
+        enrollments = program.enrollments.all()
+        serializer = TrainingEnrollmentSerializer(enrollments, many=True)
+        return Response(serializer.data)
+
+
+class TrainingEnrollmentViewSet(viewsets.ModelViewSet):
+    """ViewSet for Training Enrollments."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = TrainingEnrollmentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['training_program', 'staff', 'status', 'certificate_issued']
+    
+    def get_queryset(self):
+        return TrainingEnrollment.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('training_program', 'staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+    
+    @action(detail=True, methods=['post'])
+    def issue_certificate(self, request, pk=None):
+        """Issue certificate for training completion."""
+        enrollment = self.get_object()
+        enrollment.certificate_issued = True
+        enrollment.save()
+        
+        serializer = self.get_serializer(enrollment)
+        return Response(serializer.data)
+
+
+class TrainingFeedbackViewSet(viewsets.ModelViewSet):
+    """ViewSet for Training Feedback."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = TrainingFeedbackSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['enrollment__training_program', 'enrollment__staff']
+    
+    def get_queryset(self):
+        return TrainingFeedback.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('enrollment__training_program', 'enrollment__staff')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class AppraisalCycleViewSet(viewsets.ModelViewSet):
+    """ViewSet for Appraisal Cycles."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = AppraisalCycleSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['is_active']
+    ordering = ['-start_date']
+    
+    def get_queryset(self):
+        return AppraisalCycle.objects.filter(
+            tenant=self.request.user.tenant
+        )
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
+class StaffAppraisalViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Appraisals."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffAppraisalSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['appraisal_cycle', 'staff', 'manager', 'status']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        return StaffAppraisal.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('appraisal_cycle', 'staff', 'manager')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+    
+    @action(detail=True, methods=['post'])
+    def submit_self(self, request, pk=None):
+        """Submit self appraisal."""
+        appraisal = self.get_object()
+        
+        appraisal.self_ratings = request.data.get('self_ratings', {})
+        appraisal.self_achievements = request.data.get('self_achievements', '')
+        appraisal.self_goals = request.data.get('self_goals', '')
+        appraisal.training_needs = request.data.get('training_needs', '')
+        appraisal.self_comments = request.data.get('self_comments', '')
+        appraisal.status = 'SELF_COMPLETED'
+        appraisal.save()
+        
+        serializer = self.get_serializer(appraisal)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def submit_manager(self, request, pk=None):
+        """Submit manager appraisal."""
+        appraisal = self.get_object()
+        
+        appraisal.manager_ratings = request.data.get('manager_ratings', {})
+        appraisal.strengths = request.data.get('strengths', '')
+        appraisal.areas_of_improvement = request.data.get('areas_of_improvement', '')
+        appraisal.recommendations = request.data.get('recommendations', '')
+        appraisal.promotion_suggested = request.data.get('promotion_suggested', False)
+        appraisal.increment_suggested = request.data.get('increment_suggested', False)
+        appraisal.manager_comments = request.data.get('manager_comments', '')
+        appraisal.final_rating = request.data.get('final_rating')
+        appraisal.status = 'MANAGER_REVIEW'
+        appraisal.save()
+        
+        serializer = self.get_serializer(appraisal)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Complete appraisal."""
+        appraisal = self.get_object()
+        
+        appraisal.meeting_date = request.data.get('meeting_date')
+        appraisal.action_points = request.data.get('action_points', '')
+        appraisal.status = 'COMPLETED'
+        appraisal.save()
+        
+        serializer = self.get_serializer(appraisal)
+        return Response(serializer.data)
+
+
+class StaffGoalViewSet(viewsets.ModelViewSet):
+    """ViewSet for Staff Goals."""
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = StaffGoalSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['staff', 'status', 'appraisal']
+    ordering = ['target_date']
+    
+    def get_queryset(self):
+        return StaffGoal.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('staff', 'appraisal')
+    
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+    
+    @action(detail=True, methods=['post'])
+    def update_progress(self, request, pk=None):
+        """Update goal progress."""
+        goal = self.get_object()
+        
+        goal.progress_percentage = request.data.get('progress_percentage', goal.progress_percentage)
+        goal.status = request.data.get('status', goal.status)
+        goal.achievement_notes = request.data.get('achievement_notes', goal.achievement_notes)
+        
+        if request.data.get('status') == 'COMPLETED' and not goal.completion_date:
+            from datetime import date
+            goal.completion_date = date.today()
+        
+        goal.save()
+        
+        serializer = self.get_serializer(goal)
         return Response(serializer.data)

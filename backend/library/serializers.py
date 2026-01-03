@@ -29,19 +29,12 @@ class BookCopySerializer(serializers.ModelSerializer):
 
 class LibraryMemberSerializer(serializers.ModelSerializer):
     """Serializer for Library Members"""
-    name = serializers.SerializerMethodField()
-    role = serializers.CharField(source='member_type', read_only=True)
+    student = StudentBasicSerializer(read_only=True)
+    staff = StaffSerializer(read_only=True)
     
     class Meta:
         model = LibraryMember
-        fields = ['id', 'name', 'role', 'books_issued_count', 'total_fines_due', 'max_books_allowed']
-        
-    def get_name(self, obj):
-        if obj.student: 
-            return f"{obj.student.first_name} {obj.student.last_name}"
-        if obj.staff:
-            return f"{obj.staff.first_name} {obj.staff.last_name}"
-        return "Unknown"
+        fields = ['id', 'member_type', 'student', 'staff', 'max_books_allowed', 'books_issued_count', 'total_fines_due']
 
 class BookIssueSerializer(serializers.ModelSerializer):
     """Serializer for issuing books"""

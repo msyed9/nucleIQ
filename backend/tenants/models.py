@@ -941,3 +941,437 @@ class ClassSubject(BaseModel):
     
     def __str__(self):
         return f"{self.grade_level.name} - {self.subject.name} ({self.academic_year.name})"
+
+
+class Holiday(BaseModel):
+    """
+    Holiday model for academic calendar.
+    Tracks holidays, breaks, and non-working days.
+    """
+    
+    HOLIDAY_TYPES = [
+        ('PUBLIC', 'Public Holiday'),
+        ('SCHOOL', 'School Holiday'),
+        ('VACATION', 'Vacation/Break'),
+        ('EXAM', 'Exam Day'),
+        ('EVENT', 'School Event'),
+        ('OTHER', 'Other'),
+    ]
+    
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='holidays',
+        help_text="Tenant this holiday belongs to"
+    )
+    
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='holidays',
+        null=True,
+        blank=True,
+        help_text="Academic year (optional)"
+    )
+    
+    name = models.CharField(
+        max_length=200,
+        help_text="Holiday name (e.g., 'Independence Day', 'Summer Break')"
+    )
+    
+    holiday_type = models.CharField(
+        max_length=20,
+        choices=HOLIDAY_TYPES,
+        default='PUBLIC',
+        help_text="Type of holiday"
+    )
+    
+    start_date = models.DateField(
+        help_text="Start date of holiday"
+    )
+    
+    end_date = models.DateField(
+        help_text="End date of holiday (same as start_date for single day)"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Additional description or notes"
+    )
+    
+    is_attendance_blocked = models.BooleanField(
+        default=True,
+        help_text="Whether attendance marking is blocked on this holiday"
+    )
+    
+    applies_to_students = models.BooleanField(
+        default=True,
+        help_text="Whether this holiday applies to students"
+    )
+    
+    applies_to_staff = models.BooleanField(
+        default=True,
+        help_text="Whether this holiday applies to staff"
+    )
+    
+    color = models.CharField(
+        max_length=7,
+        default='#FF5722',
+        help_text="Color for calendar display (hex code)"
+    )
+    
+    class Meta:
+        db_table = 'holidays'
+        verbose_name = 'Holiday'
+        verbose_name_plural = 'Holidays'
+        ordering = ['start_date']
+        indexes = [
+            models.Index(fields=['tenant', 'start_date', 'end_date']),
+            models.Index(fields=['academic_year']),
+        ]
+    
+    def __str__(self):
+        if self.start_date == self.end_date:
+            return f"{self.name} ({self.start_date})"
+        return f"{self.name} ({self.start_date} to {self.end_date})"
+    
+    def get_duration_days(self):
+        """Get the duration of the holiday in days."""
+        return (self.end_date - self.start_date).days + 1
+    
+    def is_active_on(self, date):
+        """Check if holiday is active on a given date."""
+        return self.start_date <= date <= self.end_date
+    
+    def clean(self):
+        """Validate holiday constraints."""
+        from django.core.exceptions import ValidationError
+        
+        if self.end_date < self.start_date:
+            raise ValidationError("End date must be on or after start date")
+
+
+class TenantSettings(BaseModel):
+    """
+    Tenant Settings model for storing all tenant-level configuration.
+    
+    Stores settings for:
+    - Academic configuration
+    - Fee settings
+    - Attendance settings
+    - Exam settings
+    - Email/SMS configuration
+    - Security settings
+    """
+    
+    tenant = models.OneToOneField(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='settings',
+        help_text="Tenant these settings belong to"
+    )
+    
+    # Academic Settings
+    academic_year_format = models.CharField(
+        max_length=50,
+        default='YYYY-YYYY',
+        help_text="Format for academic year display (e.g., '2024-2025')"
+    )
+    
+    term_system = models.CharField(
+        max_length=20,
+        choices=[
+            ('TERM', 'Term System'),
+            ('SEMESTER', 'Semester System'),
+            ('QUARTER', 'Quarter System'),
+            ('TRIMESTER', 'Trimester System'),
+        ],
+        default='TERM',
+        help_text="Academic term system"
+    )
+    
+    grading_system = models.CharField(
+        max_length=20,
+        choices=[
+            ('PERCENTAGE', 'Percentage'),
+            ('GPA', 'GPA (4.0 Scale)'),
+            ('LETTER', 'Letter Grades'),
+            ('CGPA', 'CGPA (10.0 Scale)'),
+        ],
+        default='PERCENTAGE',
+        help_text="Grading system used"
+    )
+    
+    # Fee Settings
+    fee_currency = models.CharField(
+        max_length=3,
+        default='INR',
+        help_text="Currency code (ISO 4217)"
+    )
+    
+    fee_currency_symbol = models.CharField(
+        max_length=5,
+        default='₹',
+        help_text="Currency symbol"
+    )
+    
+    late_fee_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether late fees are enabled"
+    )
+    
+    late_fee_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Late fee amount"
+    )
+    
+    late_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text="Late fee as percentage of total"
+    )
+    
+    grace_period_days = models.IntegerField(
+        default=7,
+        help_text="Grace period before late fee applies (days)"
+    )
+    
+    # Attendance Settings
+    attendance_marking_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Default time for marking attendance"
+    )
+    
+    attendance_lock_days = models.IntegerField(
+        default=7,
+        help_text="Days after which attendance cannot be modified"
+    )
+    
+    minimum_attendance_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=75.00,
+        help_text="Minimum required attendance percentage"
+    )
+    
+    late_arrival_threshold_minutes = models.IntegerField(
+        default=15,
+        help_text="Minutes after which arrival is considered late"
+    )
+    
+    # Exam Settings
+    result_publish_delay_days = models.IntegerField(
+        default=7,
+        help_text="Days to wait before publishing results"
+    )
+    
+    allow_online_exams = models.BooleanField(
+        default=True,
+        help_text="Whether online exams are enabled"
+    )
+    
+    exam_proctoring_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether exam proctoring is enabled"
+    )
+    
+    # Email Configuration
+    email_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether email notifications are enabled"
+    )
+    
+    smtp_host = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SMTP server host"
+    )
+    
+    smtp_port = models.IntegerField(
+        default=587,
+        help_text="SMTP server port"
+    )
+    
+    smtp_username = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SMTP username"
+    )
+    
+    smtp_password = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SMTP password (encrypted)"
+    )
+    
+    smtp_use_tls = models.BooleanField(
+        default=True,
+        help_text="Use TLS for SMTP"
+    )
+    
+    from_email = models.EmailField(
+        blank=True,
+        help_text="Default 'from' email address"
+    )
+    
+    # SMS Configuration
+    sms_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether SMS notifications are enabled"
+    )
+    
+    sms_provider = models.CharField(
+        max_length=50,
+        choices=[
+            ('TWILIO', 'Twilio'),
+            ('MSG91', 'MSG91'),
+            ('AWS_SNS', 'AWS SNS'),
+            ('CUSTOM', 'Custom'),
+        ],
+        default='TWILIO',
+        help_text="SMS provider"
+    )
+    
+    sms_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SMS API key (encrypted)"
+    )
+    
+    sms_sender_id = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="SMS sender ID"
+    )
+    
+    # WhatsApp Configuration
+    whatsapp_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether WhatsApp notifications are enabled"
+    )
+    
+    whatsapp_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="WhatsApp Business API key"
+    )
+    
+    # Security Settings
+    password_min_length = models.IntegerField(
+        default=8,
+        help_text="Minimum password length"
+    )
+    
+    password_require_uppercase = models.BooleanField(
+        default=True,
+        help_text="Require uppercase letters in password"
+    )
+    
+    password_require_lowercase = models.BooleanField(
+        default=True,
+        help_text="Require lowercase letters in password"
+    )
+    
+    password_require_numbers = models.BooleanField(
+        default=True,
+        help_text="Require numbers in password"
+    )
+    
+    password_require_special = models.BooleanField(
+        default=False,
+        help_text="Require special characters in password"
+    )
+    
+    session_timeout_minutes = models.IntegerField(
+        default=60,
+        help_text="Session timeout in minutes"
+    )
+    
+    max_login_attempts = models.IntegerField(
+        default=5,
+        help_text="Maximum failed login attempts before lockout"
+    )
+    
+    lockout_duration_minutes = models.IntegerField(
+        default=30,
+        help_text="Account lockout duration in minutes"
+    )
+    
+    two_factor_auth_required = models.BooleanField(
+        default=False,
+        help_text="Whether 2FA is required for all users"
+    )
+    
+    # Backup Settings
+    auto_backup_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether automatic backups are enabled"
+    )
+    
+    backup_frequency_days = models.IntegerField(
+        default=1,
+        help_text="Backup frequency in days"
+    )
+    
+    backup_retention_days = models.IntegerField(
+        default=30,
+        help_text="Backup retention period in days"
+    )
+    
+    # Maintenance Mode
+    maintenance_mode = models.BooleanField(
+        default=False,
+        help_text="Whether maintenance mode is active"
+    )
+    
+    maintenance_message = models.TextField(
+        blank=True,
+        help_text="Message to display during maintenance"
+    )
+    
+    # Additional Settings (JSON for flexibility)
+    custom_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional custom settings"
+    )
+    
+    class Meta:
+        db_table = 'tenant_settings'
+        verbose_name = 'Tenant Settings'
+        verbose_name_plural = 'Tenant Settings'
+    
+    def __str__(self):
+        return f"Settings for {self.tenant.name}"
+    
+    def get_password_policy(self):
+        """Get password policy as a dictionary."""
+        return {
+            'min_length': self.password_min_length,
+            'require_uppercase': self.password_require_uppercase,
+            'require_lowercase': self.password_require_lowercase,
+            'require_numbers': self.password_require_numbers,
+            'require_special': self.password_require_special,
+        }
+    
+    def get_notification_config(self):
+        """Get notification configuration."""
+        return {
+            'email': {
+                'enabled': self.email_enabled,
+                'from_email': self.from_email,
+            },
+            'sms': {
+                'enabled': self.sms_enabled,
+                'provider': self.sms_provider,
+                'sender_id': self.sms_sender_id,
+            },
+            'whatsapp': {
+                'enabled': self.whatsapp_enabled,
+            },
+        }
+

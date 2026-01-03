@@ -183,23 +183,50 @@ const PayrollDashboard: React.FC = () => {
         }
     };
 
-    const downloadPayslip = async (payslipId: number) => {
+    const [downloadingPayslips, setDownloadingPayslips] = useState<Set<number>>(new Set());
+
+    const downloadPayslip = async (payslipId: number, staffName: string) => {
+        setDownloadingPayslips(prev => new Set(prev).add(payslipId));
+        setError('');
+
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`/api/payroll/payslips/${payslipId}/download/`, {
+            const response = await axios.get(`/api/payroll/payslips/${payslipId}/download_pdf/`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
 
+            // Extract filename from Content-Disposition header or create default
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = `Payslip_${staffName.replace(' ', '_')}.pdf`;
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `payslip_${payslipId}.pdf`);
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
-        } catch (err) {
-            setError('Failed to download payslip');
+            window.URL.revokeObjectURL(url);
+
+            setSuccess('Payslip downloaded successfully!');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err: any) {
+            console.error('Download error:', err);
+            setError(err.response?.data?.error || 'Failed to download payslip. Please try again.');
+        } finally {
+            setDownloadingPayslips(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(payslipId);
+                return newSet;
+            });
         }
     };
 
@@ -381,10 +408,11 @@ const PayrollDashboard: React.FC = () => {
                                                         <td>
                                                             <button
                                                                 className="btn-download"
-                                                                onClick={() => downloadPayslip(payslip.id)}
+                                                                onClick={() => downloadPayslip(payslip.id, payslip.staff_name)}
                                                                 title="Download Payslip"
+                                                                disabled={downloadingPayslips.has(payslip.id)}
                                                             >
-                                                                📥
+                                                                {downloadingPayslips.has(payslip.id) ? '⏳' : '📥'}
                                                             </button>
                                                         </td>
                                                     </tr>

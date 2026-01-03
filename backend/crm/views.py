@@ -72,9 +72,18 @@ class LeadViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def convert_to_student(self, request, pk=None):
-        """Convert lead to student."""
+        """Convert lead to student with automatic account creation and email notification."""
+        from students.services import create_student_from_lead
+        from tenants.models import Section, AcademicYear
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        import logging
+        
+        logger = logging.getLogger(__name__)
         lead = self.get_object()
         
+        # Validation
         if lead.converted_to_student:
             return Response(
                 {'error': 'Lead already converted to student'},
@@ -84,15 +93,126 @@ class LeadViewSet(viewsets.ModelViewSet):
         serializer = LeadConversionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # TODO: Create student record
-        # This would involve creating a Student object with data from lead
+        section_id = serializer.validated_data.get('section_id')
         
-        lead.converted_to_student = True
-        lead.converted_at = timezone.now()
-        lead.status = 'ADMITTED'
-        lead.save()
+        if not section_id:
+            return Response(
+                {'error': 'Section ID is required for enrollment'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        return Response(self.get_serializer(lead).data)
+        try:
+            # Get section
+            section = Section.objects.get(
+                id=section_id,
+                tenant=lead.tenant
+            )
+            
+            # Get current academic year
+            academic_year = AcademicYear.objects.filter(
+                tenant=lead.tenant,
+                is_active=True
+            ).first()
+            
+            if not academic_year:
+                return Response(
+                    {'error': 'No active academic year found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create student from lead
+            result = create_student_from_lead(lead, section, academic_year)
+            
+            student = result['student']
+            enrollment = result['enrollment']
+            parent_user = result['parent_user']
+            temp_password = result['temp_password']
+            admission_number = result['admission_number']
+            
+            # Send confirmation email
+            try:
+                # Prepare email context
+                portal_url = f"{settings.FRONTEND_URL}/parent/login" if hasattr(settings, 'FRONTEND_URL') else "http://localhost:5173/parent/login"
+                
+                context = {
+                    'school_name': lead.tenant.name,
+                    'parent_name': lead.parent_name,
+                    'student_name': lead.student_name,
+                    'admission_number': admission_number,
+                    'class_name': section.grade_level.name,
+                    'section_name': section.name,
+                    'academic_year': academic_year.name,
+                    'admission_date': student.admission_date.strftime('%d %B %Y'),
+                    'portal_url': portal_url,
+                    'parent_username': parent_user.username,
+                    'temp_password': temp_password,
+                    'orientation_date': 'TBD',  # Can be configured
+                    'orientation_time': 'TBD',
+                    'school_phone': getattr(lead.tenant, 'phone', 'N/A'),
+                    'school_email': getattr(lead.tenant, 'email', 'N/A'),
+                    'school_address': getattr(lead.tenant, 'address', 'N/A'),
+                    'current_year': timezone.now().year,
+                }
+                
+                # Render email template
+                html_content = render_to_string('emails/admission_confirmation.html', context)
+                
+                # Create email
+                subject = f"Welcome to {lead.tenant.name} - Admission Confirmed"
+                from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@school.com'
+                to_email = lead.parent_email
+                
+                email = EmailMultiAlternatives(
+                    subject=subject,
+                    body=f"Dear {lead.parent_name},\n\nCongratulations! {lead.student_name} has been admitted to {lead.tenant.name}.\n\nAdmission Number: {admission_number}\n\nPlease check your email for complete details.",
+                    from_email=from_email,
+                    to=[to_email]
+                )
+                email.attach_alternative(html_content, "text/html")
+                
+                # Send email
+                email.send(fail_silently=False)
+                
+                logger.info(f"Admission confirmation email sent to {to_email} for student {admission_number}")
+                
+            except Exception as e:
+                logger.error(f"Failed to send admission email: {str(e)}")
+                # Don't fail the conversion if email fails
+            
+            # Create interaction log
+            LeadInteraction.objects.create(
+                tenant=lead.tenant,
+                lead=lead,
+                interaction_type='NOTE',
+                notes=f"Lead converted to student. Admission Number: {admission_number}. Parent account created with username: {parent_user.username}",
+                staff=request.user.staff_profile if hasattr(request.user, 'staff_profile') else None
+            )
+            
+            return Response({
+                'message': 'Lead successfully converted to student',
+                'student_id': str(student.id),
+                'admission_number': admission_number,
+                'parent_username': parent_user.username,
+                'enrollment_id': str(enrollment.id),
+                'email_sent': True
+            }, status=status.HTTP_201_CREATED)
+            
+        except Section.DoesNotExist:
+            return Response(
+                {'error': 'Section not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error converting lead to student: {str(e)}")
+            return Response(
+                {'error': f'Failed to convert lead: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):
@@ -318,6 +438,41 @@ class PublicLeadViewSet(viewsets.ModelViewSet):
         
         lead = serializer.save(tenant=tenant)
         
-        # TODO: Send confirmation email to parent
+        # Send confirmation email to parent
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            subject = f"Thank you for your enquiry - {tenant.name}"
+            message = f"""Dear {lead.parent_name},
+
+Thank you for your interest in {tenant.name}.
+
+We have received your enquiry for admission of {lead.student_name} to {lead.grade_applying_for.name if lead.grade_applying_for else 'our school'}.
+
+Your enquiry number is: {lead.lead_number}
+
+Our admissions team will contact you within 24-48 hours to discuss the next steps.
+
+In the meantime, if you have any questions, please feel free to contact us.
+
+Best regards,
+{tenant.name}
+Admissions Office"""
+            
+            from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@school.com'
+            
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=[lead.parent_email],
+                fail_silently=True  # Don't fail the API call if email fails
+            )
+        except Exception as e:
+            # Log error but don't fail the request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send lead confirmation email: {str(e)}")
         
         return Response(serializer.data, status=status.HTTP_201_CREATED)

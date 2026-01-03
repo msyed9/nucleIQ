@@ -218,16 +218,219 @@ class FeeDefaulterViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'])
     def send_reminder(self, request, pk=None):
-        """Send reminder to a defaulter."""
+        """Send reminder to a defaulter via SMS or WhatsApp."""
+        from communication.services import SMSService, WhatsAppService
+        from communication.models import MessageLog
+        from students.models import Student
+        import logging
+        
+        logger = logging.getLogger(__name__)
         defaulter = self.get_object()
+        notification_type = request.data.get('notification_type', 'both')  # 'sms', 'whatsapp', or 'both'
         
-        # TODO: Integrate with WhatsApp/SMS API
+        # Get student details
+        student = defaulter.student
+        parent_phone = student.parent_phone or student.guardian_phone
         
+        if not parent_phone:
+            return Response(
+                {'error': 'No phone number available for this student'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        results = {'sms': None, 'whatsapp': None}
+        errors = []
+        
+        # Send WhatsApp notification if requested
+        if notification_type in ['whatsapp', 'both']:
+            try:
+                result = WhatsAppService.send_overdue_reminder(
+                    to_phone=parent_phone,
+                    student_name=student.full_name,
+                    amount=str(defaulter.pending_amount),
+                    due_date=defaulter.last_invoice.due_date.strftime('%d-%b-%Y') if defaulter.last_invoice else 'N/A'
+                )
+                
+                if result['success']:
+                    # Log the message
+                    MessageLog.objects.create(
+                        tenant=request.user.tenant,
+                        recipient=parent_phone,
+                        message_type='WHATSAPP',
+                        subject='Fee Overdue Reminder',
+                        content=result.get('message', ''),
+                        status='SENT',
+                        provider=result.get('provider', 'whatsapp'),
+                        provider_message_id=result.get('message_id', '')
+                    )
+                    results['whatsapp'] = 'sent'
+                else:
+                    errors.append(f"WhatsApp: {result.get('error', 'Unknown error')}")
+                    results['whatsapp'] = 'failed'
+                    
+            except Exception as e:
+                logger.error(f"Error sending WhatsApp to {parent_phone}: {str(e)}")
+                errors.append(f"WhatsApp: {str(e)}")
+                results['whatsapp'] = 'failed'
+        
+        # Send SMS notification if requested
+        if notification_type in ['sms', 'both']:
+            try:
+                message = f"Dear Parent, Fee of Rs.{defaulter.pending_amount} for {student.full_name} is overdue. Please pay at the earliest. - {request.user.tenant.name}"
+                
+                result = SMSService.send_sms(
+                    to_phone=parent_phone,
+                    message=message
+                )
+                
+                if result['success']:
+                    # Log the message
+                    MessageLog.objects.create(
+                        tenant=request.user.tenant,
+                        recipient=parent_phone,
+                        message_type='SMS',
+                        subject='Fee Overdue Reminder',
+                        content=message,
+                        status='SENT',
+                        provider=result.get('provider', 'sms'),
+                        provider_message_id=result.get('message_id', '')
+                    )
+                    results['sms'] = 'sent'
+                else:
+                    errors.append(f"SMS: {result.get('error', 'Unknown error')}")
+                    results['sms'] = 'failed'
+                    
+            except Exception as e:
+                logger.error(f"Error sending SMS to {parent_phone}: {str(e)}")
+                errors.append(f"SMS: {str(e)}")
+                results['sms'] = 'failed'
+        
+        # Update defaulter record
         defaulter.last_reminder_sent = timezone.now()
         defaulter.reminder_count += 1
         defaulter.save()
         
-        return Response({'message': 'Reminder sent'})
+        # Prepare response
+        if errors:
+            return Response({
+                'message': 'Reminder sent with some errors',
+                'results': results,
+                'errors': errors
+            }, status=status.HTTP_207_MULTI_STATUS)
+        else:
+            return Response({
+                'message': 'Reminder sent successfully',
+                'results': results
+            })
+    
+    @action(detail=False, methods=['post'])
+    def send_bulk_reminders(self, request):
+        """Send reminders to multiple defaulters."""
+        from communication.services import SMSService, WhatsAppService
+        from communication.models import MessageLog
+        from students.models import Student
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        notification_type = request.data.get('notification_type', 'both')  # 'sms', 'whatsapp', or 'both'
+        defaulter_ids = request.data.get('defaulter_ids', [])
+        
+        if not defaulter_ids:
+            # Send to all defaulters if no specific IDs provided
+            defaulters = self.get_queryset().filter(pending_amount__gt=0)
+        else:
+            defaulters = self.get_queryset().filter(id__in=defaulter_ids)
+        
+        total = defaulters.count()
+        success_count = 0
+        failed_count = 0
+        errors = []
+        
+        for defaulter in defaulters:
+            student = defaulter.student
+            parent_phone = student.parent_phone or student.guardian_phone
+            
+            if not parent_phone:
+                failed_count += 1
+                errors.append(f"{student.full_name}: No phone number")
+                continue
+            
+            notification_sent = False
+            
+            # Send WhatsApp notification if requested
+            if notification_type in ['whatsapp', 'both']:
+                try:
+                    result = WhatsAppService.send_overdue_reminder(
+                        to_phone=parent_phone,
+                        student_name=student.full_name,
+                        amount=str(defaulter.pending_amount),
+                        due_date=defaulter.last_invoice.due_date.strftime('%d-%b-%Y') if defaulter.last_invoice else 'N/A'
+                    )
+                    
+                    if result['success']:
+                        MessageLog.objects.create(
+                            tenant=request.user.tenant,
+                            recipient=parent_phone,
+                            message_type='WHATSAPP',
+                            subject='Fee Overdue Reminder',
+                            content=result.get('message', ''),
+                            status='SENT',
+                            provider=result.get('provider', 'whatsapp'),
+                            provider_message_id=result.get('message_id', '')
+                        )
+                        notification_sent = True
+                    else:
+                        errors.append(f"{student.full_name}: WhatsApp failed - {result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    logger.error(f"Error sending WhatsApp to {parent_phone}: {str(e)}")
+                    errors.append(f"{student.full_name}: WhatsApp error - {str(e)}")
+            
+            # Send SMS notification if requested
+            if notification_type in ['sms', 'both']:
+                try:
+                    message = f"Dear Parent, Fee of Rs.{defaulter.pending_amount} for {student.full_name} is overdue. Please pay at the earliest. - {request.user.tenant.name}"
+                    
+                    result = SMSService.send_sms(
+                        to_phone=parent_phone,
+                        message=message
+                    )
+                    
+                    if result['success']:
+                        MessageLog.objects.create(
+                            tenant=request.user.tenant,
+                            recipient=parent_phone,
+                            message_type='SMS',
+                            subject='Fee Overdue Reminder',
+                            content=message,
+                            status='SENT',
+                            provider=result.get('provider', 'sms'),
+                            provider_message_id=result.get('message_id', '')
+                        )
+                        notification_sent = True
+                    else:
+                        errors.append(f"{student.full_name}: SMS failed - {result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    logger.error(f"Error sending SMS to {parent_phone}: {str(e)}")
+                    errors.append(f"{student.full_name}: SMS error - {str(e)}")
+            
+            # Update defaulter record
+            if notification_sent:
+                defaulter.last_reminder_sent = timezone.now()
+                defaulter.reminder_count += 1
+                defaulter.save()
+                success_count += 1
+            else:
+                failed_count += 1
+        
+        return Response({
+            'message': f'Bulk reminders sent to {success_count} out of {total} defaulters',
+            'total': total,
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'errors': errors[:10]  # Limit to first 10 errors
+        })
 
 
 class SiblingDiscountViewSet(viewsets.ModelViewSet):

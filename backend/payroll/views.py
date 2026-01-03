@@ -172,16 +172,32 @@ class PayslipViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(payslips, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['post'])
-    def generate_pdf(self, request, pk=None):
-        """Generate PDF for a payslip."""
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        """Download PDF for a payslip."""
+        from django.http import HttpResponse
+        from .utils import PayslipPDFGenerator
+        
         payslip = self.get_object()
         
-        # TODO: Implement PDF generation
-        # from .utils import PayslipPDFGenerator
-        # pdf_file = PayslipPDFGenerator.generate_pdf(payslip)
-        
-        return Response({
-            'message': 'PDF generation not yet implemented',
-            'payslip_id': str(payslip.id)
-        })
+        try:
+            # Generate PDF
+            pdf_buffer = PayslipPDFGenerator.generate_pdf(payslip)
+            
+            # Create filename
+            staff_name = payslip.staff.get_full_name().replace(' ', '_')
+            month_name = payslip.payroll_cycle.get_month_name()
+            year = payslip.payroll_cycle.year
+            filename = f"Payslip_{staff_name}_{month_name}{year}.pdf"
+            
+            # Create HTTP response
+            response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Error generating PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

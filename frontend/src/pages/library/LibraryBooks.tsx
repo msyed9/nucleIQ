@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
   Container,
@@ -17,6 +18,7 @@ import {
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 
 const LibraryBooks: React.FC = () => {
+  const navigate = useNavigate();
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +116,7 @@ const LibraryBooks: React.FC = () => {
                   <TableRow key={i} hover>
                     {columns.map(c => <TableCell key={c}>{String(b[c] ?? '')}</TableCell>)}
                     <TableCell>
+                        <Button size="small" onClick={() => navigate(`/library/books/${b.id}/copies`)} variant="outlined">Manage Copies</Button>
                         <Button size="small" onClick={() => openEdit(b)}>Edit</Button>
                         <Button size="small" onClick={() => handleDelete(b.id)}>Delete</Button>
                       </TableCell>

@@ -7,7 +7,7 @@ import React, { forwardRef } from 'react';
 import { LucideIcon } from 'lucide-react';
 import './Input.css';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
     /** Input label */
     label?: string;
 

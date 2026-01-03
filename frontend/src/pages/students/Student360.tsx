@@ -14,14 +14,13 @@ import {
     DollarSign,
     TrendingUp,
     FileText,
-    Calendar,
     Heart,
     Users,
     BookOpen,
     CreditCard,
     Activity
 } from 'lucide-react';
-import { Button, Card, Badge, KPICard } from '@/design-system';
+import { Button, Card } from '@/design-system';
 import api from '../../services/api';
 import Loading from '../../components/common/Loading';
 import { formatDate } from '../../utils/helpers';

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import BarcodeScanner from '../../components/library/BarcodeScanner';
+import FineCalculator from '../../components/library/FineCalculator';
+import IssueReceipt from '../../components/library/IssueReceipt';
 import './LibraryManagement.css';
 
 interface Book {
@@ -50,6 +53,9 @@ const LibraryManagement: React.FC = () => {
     const [barcode, setBarcode] = useState('');
     const [memberId, setMemberId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedIssue, setSelectedIssue] = useState<BookIssue | null>(null);
+    const [lastIssuedData, setLastIssuedData] = useState<any>(null);
+    const [showReceipt, setShowReceipt] = useState(false);
     const queryClient = useQueryClient();
 
     // Fetch books
@@ -85,9 +91,11 @@ const LibraryManagement: React.FC = () => {
             const response = await axios.post('/api/library/issues/issue/', data);
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['issued-books'] });
             queryClient.invalidateQueries({ queryKey: ['books'] });
+            setLastIssuedData(data);
+            setShowReceipt(true);
             setBarcode('');
             setMemberId('');
             alert('Book issued successfully!');
@@ -189,6 +197,13 @@ const LibraryManagement: React.FC = () => {
                 <div className="tab-content">
                     <div className="issue-card">
                         <h2>Issue Book to Member</h2>
+
+                        {/* Barcode Scanner Component */}
+                        <BarcodeScanner
+                            onScan={(scannedBarcode) => setBarcode(scannedBarcode)}
+                            placeholder="Scan or enter book barcode"
+                        />
+
                         <form onSubmit={handleIssueBook} className="issue-form">
                             <div className="form-group">
                                 <label htmlFor="barcode">Book Barcode *</label>
@@ -197,9 +212,8 @@ const LibraryManagement: React.FC = () => {
                                     id="barcode"
                                     value={barcode}
                                     onChange={(e) => setBarcode(e.target.value)}
-                                    placeholder="Scan or enter barcode"
+                                    placeholder="Barcode from scanner"
                                     className="form-input"
-                                    autoFocus
                                 />
                             </div>
 
@@ -223,15 +237,59 @@ const LibraryManagement: React.FC = () => {
                                 </select>
                             </div>
 
+                            {/* Validation Messages */}
+                            {memberId && members && (
+                                <div className="validation-info">
+                                    {(() => {
+                                        const member = members.find(m => m.id === memberId);
+                                        if (!member) return null;
+
+                                        if (member.books_issued_count >= member.max_books_allowed) {
+                                            return (
+                                                <div className="alert alert-error">
+                                                    ⚠️ This member has reached the maximum book limit ({member.max_books_allowed})
+                                                </div>
+                                            );
+                                        }
+
+                                        if (member.total_fines_due > 0) {
+                                            return (
+                                                <div className="alert alert-warning">
+                                                    ⚠️ Outstanding fines: ₹{member.total_fines_due}
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className="alert alert-success">
+                                                ✅ Member eligible for book issue
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
                                 className="btn btn-primary"
-                                disabled={issueBookMutation.isPending}
+                                disabled={issueBookMutation.isPending || (() => {
+                                    if (!memberId) return false;
+                                    const member = members?.find(m => m.id === memberId);
+                                    return member ? member.books_issued_count >= member.max_books_allowed : false;
+                                })()}
                             >
                                 {issueBookMutation.isPending ? 'Issuing...' : '📤 Issue Book'}
                             </button>
                         </form>
                     </div>
+
+                    {/* Receipt Modal */}
+                    {showReceipt && lastIssuedData && (
+                        <IssueReceipt
+                            issueData={lastIssuedData}
+                            onClose={() => setShowReceipt(false)}
+                        />
+                    )}
 
                     {/* Available Books */}
                     <div className="books-section">
@@ -274,6 +332,61 @@ const LibraryManagement: React.FC = () => {
                 <div className="tab-content">
                     <div className="return-card">
                         <h2>Return Issued Books</h2>
+
+                        {/* Barcode Scanner for Returns */}
+                        <BarcodeScanner
+                            onScan={(scannedBarcode) => {
+                                const issue = issuedBooks?.find(i => i.copy === scannedBarcode);
+                                if (issue) {
+                                    setSelectedIssue(issue);
+                                } else {
+                                    alert('No issued book found with this barcode');
+                                }
+                            }}
+                            placeholder="Scan book barcode to return"
+                        />
+
+                        {/* Selected Issue for Return */}
+                        {selectedIssue && (
+                            <div className="return-preview">
+                                <h3>Book Ready for Return</h3>
+                                <p><strong>Barcode:</strong> {selectedIssue.copy}</p>
+                                <p><strong>Member:</strong> Member #{selectedIssue.member}</p>
+                                <p><strong>Issued:</strong> {formatDate(selectedIssue.issued_date)}</p>
+                                <p><strong>Due:</strong> {formatDate(selectedIssue.due_date)}</p>
+
+                                {/* Fine Calculator */}
+                                <FineCalculator
+                                    dueDate={selectedIssue.due_date}
+                                    finePerDay={5}
+                                    allowWaive={true}
+                                    onWaive={() => {
+                                        // Handle waive fine logic here
+                                        alert('Fine waived - admin approval required');
+                                    }}
+                                />
+
+                                <div className="return-actions">
+                                    <button
+                                        className="btn btn-return"
+                                        onClick={() => {
+                                            handleReturnBook(selectedIssue.id);
+                                            setSelectedIssue(null);
+                                        }}
+                                        disabled={returnBookMutation.isPending}
+                                    >
+                                        {returnBookMutation.isPending ? 'Processing...' : '📥 Confirm Return'}
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setSelectedIssue(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {issuedLoading ? (
                             <div className="loading">Loading...</div>
                         ) : issuedBooks && issuedBooks.length > 0 ? (
@@ -306,10 +419,10 @@ const LibraryManagement: React.FC = () => {
                                                 <td>
                                                     <button
                                                         className="btn btn-return"
-                                                        onClick={() => handleReturnBook(issue.id)}
+                                                        onClick={() => setSelectedIssue(issue)}
                                                         disabled={returnBookMutation.isPending}
                                                     >
-                                                        📥 Return
+                                                        📥 Select
                                                     </button>
                                                 </td>
                                             </tr>

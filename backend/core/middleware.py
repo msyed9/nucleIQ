@@ -75,6 +75,27 @@ class TenantMiddleware(MiddlewareMixin):
         Process incoming request to detect and set tenant context.
         """
         tenant = None
+
+        # Skip tenant detection for Django admin to allow platform admin login
+        try:
+            if request.path.startswith('/admin/'):
+                # Ensure no tenant context is set for admin
+                set_current_tenant(None)
+                request.tenant = None
+                request.branding = None
+                # Clear any RLS context for admin requests
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT set_config('app.current_tenant_id', '', FALSE)")
+                except Exception:
+                    # Non-fatal - continue without RLS context
+                    logger.debug('Failed to clear RLS context for admin request')
+
+                logger.debug('Skipping tenant detection for admin path')
+                return None
+        except Exception:
+            # If request has no path or similar, continue with detection
+            pass
         
         try:
             # Strategy 1: Check X-Tenant-ID header

@@ -69,6 +69,8 @@ INSTALLED_APPS = [
     'security',
     'placement',
     'helpdesk',
+    'reports',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -303,3 +305,32 @@ RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+
+# SMS Provider Settings
+SMS_PROVIDER = config('SMS_PROVIDER', default='twilio')  # 'twilio', 'msg91', 'textlocal'
+
+# Twilio Settings
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
+
+# MSG91 Settings
+MSG91_AUTH_KEY = config('MSG91_AUTH_KEY', default='')
+MSG91_SENDER_ID = config('MSG91_SENDER_ID', default='')
+MSG91_ROUTE = config('MSG91_ROUTE', default='4')  # 4 for transactional
+
+# TextLocal Settings
+TEXTLOCAL_API_KEY = config('TEXTLOCAL_API_KEY', default='')
+TEXTLOCAL_SENDER = config('TEXTLOCAL_SENDER', default='TXTLCL')
+
+# WhatsApp Provider Settings
+WHATSAPP_PROVIDER = config('WHATSAPP_PROVIDER', default='twilio')  # 'twilio', 'official'
+
+# Twilio WhatsApp Settings (uses same Twilio credentials as above)
+TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='whatsapp:+14155238886')  # Twilio Sandbox
+
+# Official WhatsApp Business API Settings
+WHATSAPP_BUSINESS_ACCOUNT_ID = config('WHATSAPP_BUSINESS_ACCOUNT_ID', default='')
+WHATSAPP_ACCESS_TOKEN = config('WHATSAPP_ACCESS_TOKEN', default='')
+WHATSAPP_PHONE_NUMBER_ID = config('WHATSAPP_PHONE_NUMBER_ID', default='')
+WHATSAPP_VERIFY_TOKEN = config('WHATSAPP_VERIFY_TOKEN', default='nucleiq_webhook_token')

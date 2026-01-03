@@ -310,7 +310,7 @@ const MessageComposer: React.FC = () => {
                                 className="form-control"
                             >
                                 <option value="">-- Select Template --</option>
-                                {templates.map(template => (
+                                {Array.isArray(templates) && templates.map(template => (
                                     <option key={template.id} value={template.id}>
                                         {template.name} ({template.category})
                                     </option>
@@ -392,7 +392,7 @@ const MessageComposer: React.FC = () => {
                             <div className="form-group">
                                 <label>Select Classes</label>
                                 <div className="checkbox-group">
-                                    {classes.map(cls => (
+                                    {Array.isArray(classes) && classes.map(cls => (
                                         <label key={cls.id} className="checkbox-label">
                                             <input
                                                 type="checkbox"

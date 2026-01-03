@@ -43,7 +43,7 @@ const StaffList: React.FC = () => {
             console.log('fetchStaff response', response?.data);
 
             // Handle different response structures
-            let staffData = [];
+            let staffData: any[] = [];
             if (Array.isArray(response.data)) {
                 // Direct array response
                 staffData = response.data;

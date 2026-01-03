@@ -57,3 +57,35 @@
         transform: rotate(360deg);
     }
 }
+/* Dark mode support - Class-based */
+.dark .loading-fullscreen,
+html.dark .loading-fullscreen {
+    background: rgba(18, 18, 18, 0.95);
+}
+
+.dark .loading-spinner,
+html.dark .loading-spinner {
+    border-color: #424242;
+    border-top-color: #42A5F5;
+}
+
+.dark .loading-text,
+html.dark .loading-text {
+    color: #B0BEC5;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light) .loading-fullscreen {
+        background: rgba(18, 18, 18, 0.95);
+    }
+
+    :root:not(.light) .loading-spinner {
+        border-color: #424242;
+        border-top-color: #42A5F5;
+    }
+
+    :root:not(.light) .loading-text {
+        color: #B0BEC5;
+    }
+}

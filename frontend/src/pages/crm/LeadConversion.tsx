@@ -145,48 +145,39 @@ const LeadConversion: React.FC = () => {
         try {
             const token = localStorage.getItem('token');
 
-            // Create student from lead
-            const studentData = {
-                first_name: selectedLead?.student_name.split(' ')[0],
-                last_name: selectedLead?.student_name.split(' ').slice(1).join(' '),
-                class_id: conversionData.class_id,
-                section_id: conversionData.section_id,
-                roll_number: conversionData.roll_number,
-                admission_date: conversionData.admission_date,
-                phone: selectedLead?.phone,
-                email: selectedLead?.email,
-                parent_name: selectedLead?.parent_name,
-            };
-
-            const studentResponse = await axios.post('/api/students/', studentData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // Update lead status to CONVERTED
-            await axios.patch(`/api/crm/leads/${selectedLead?.id}/`, {
-                status: 'CONVERTED',
-                converted_at: new Date().toISOString(),
-                remarks: conversionData.remarks,
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // Create fee assignment if fee structure selected
-            if (conversionData.fee_structure_id) {
-                await axios.post('/api/fees/assignments/', {
-                    student: studentResponse.data.id,
-                    fee_structure: conversionData.fee_structure_id,
-                    discount_percentage: conversionData.discount_percentage,
-                }, {
+            // Use the new convert_to_student endpoint
+            const response = await axios.post(
+                `/api/crm/leads/${selectedLead?.id}/convert_to_student/`,
+                {
+                    section_id: conversionData.section_id
+                },
+                {
                     headers: { Authorization: `Bearer ${token}` }
-                });
+                }
+            );
+
+            // Show success message with details
+            const { admission_number, parent_username, email_sent } = response.data;
+
+            let successMsg = `🎉 Lead converted successfully!\n\n`;
+            successMsg += `📝 Admission Number: ${admission_number}\n`;
+            successMsg += `👤 Parent Username: ${parent_username}\n`;
+
+            if (email_sent) {
+                successMsg += `📧 Welcome email sent to ${selectedLead?.email}`;
             }
 
-            setSuccess(`Lead converted successfully! Student ID: ${studentResponse.data.admission_number}`);
+            setSuccess(successMsg);
             setShowConversionModal(false);
             fetchLeads();
+
+            // Show detailed alert
+            alert(successMsg);
+
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to convert lead');
+            const errorMsg = err.response?.data?.error || 'Failed to convert lead';
+            setError(errorMsg);
+            console.error('Conversion error:', err.response?.data);
         } finally {
             setLoading(false);
         }

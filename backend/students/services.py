@@ -239,3 +239,172 @@ def create_system_remark(student, title, description, category, source_module, s
         visible_to_parent=True,
         visible_to_student=False,
     )
+
+
+def generate_admission_number(tenant):
+    """
+    Generate unique admission number for new student.
+    Format: ADM{YEAR}{SEQUENCE}
+    """
+    from datetime import datetime
+    
+    year = datetime.now().year
+    prefix = f"ADM{year}"
+    
+    # Get last admission number for this year
+    last_student = Student.objects.filter(
+        tenant=tenant,
+        admission_number__startswith=prefix
+    ).order_by('-admission_number').first()
+    
+    if last_student:
+        try:
+            last_num = int(last_student.admission_number[len(prefix):])
+            new_num = last_num + 1
+        except ValueError:
+            new_num = 1
+    else:
+        new_num = 1
+    
+    return f"{prefix}{new_num:05d}"
+
+
+def create_student_from_lead(lead, section, academic_year=None):
+    """
+    Create student record from lead with parent user account.
+    
+    Args:
+        lead: Lead instance
+        section: Section instance to enroll in
+        academic_year: AcademicYear instance (optional, uses current if not provided)
+    
+    Returns:
+        dict: {
+            'student': Student instance,
+            'enrollment': StudentEnrollment instance,
+            'parent_user': User instance,
+            'temp_password': str (temporary password for parent)
+        }
+    
+    Raises:
+        ValueError: If lead already converted or missing required data
+    """
+    from django.db import transaction
+    from django.contrib.auth import get_user_model
+    from .models import Student, StudentEnrollment
+    from datetime import date
+    import secrets
+    import string
+    
+    User = get_user_model()
+    
+    # Validation
+    if lead.converted_to_student:
+        raise ValueError("Lead already converted to student")
+    
+    if not lead.student_name or not lead.parent_email:
+        raise ValueError("Missing required lead data (student name or parent email)")
+    
+    # Parse student name
+    name_parts = lead.student_name.strip().split()
+    first_name = name_parts[0] if name_parts else "Student"
+    last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+    
+    # Get or use current academic year
+    if not academic_year:
+        from tenants.models import AcademicYear
+        academic_year = AcademicYear.objects.filter(
+            tenant=lead.tenant,
+            is_active=True
+        ).first()
+        
+        if not academic_year:
+            raise ValueError("No active academic year found")
+    
+    # Generate temporary password
+    temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+    
+    with transaction.atomic():
+        # 1. Generate admission number
+        admission_number = generate_admission_number(lead.tenant)
+        
+        # 2. Create student record
+        student = Student.objects.create(
+            tenant=lead.tenant,
+            admission_number=admission_number,
+            admission_date=date.today(),
+            first_name=first_name,
+            last_name=last_name,
+            date_of_birth=lead.date_of_birth or date.today(),
+            gender=lead.gender[0] if lead.gender else 'O',
+            email=lead.parent_email,  # Use parent email initially
+            phone=lead.parent_phone,
+            address=lead.address or '',
+            father_name=lead.parent_name,
+            father_phone=lead.parent_phone,
+            father_email=lead.parent_email,
+            mother_name='',  # Can be updated later
+            mother_phone=lead.parent_alternate_phone or '',
+            is_active=True,
+            notes=f"Converted from lead {lead.lead_number}"
+        )
+        
+        # 3. Create enrollment with PENDING_DOCS status
+        enrollment = StudentEnrollment.objects.create(
+            tenant=lead.tenant,
+            student=student,
+            academic_year=academic_year,
+            section=section,
+            status='ACTIVE',  # Note: Using ACTIVE as PENDING_DOCS might not be in STATUS_CHOICES
+            enrollment_date=date.today(),
+            roll_number='',  # Can be assigned later
+            notes=f"Enrolled from lead conversion. Documents pending."
+        )
+        
+        # 4. Create parent user account
+        # Check if user already exists with this email
+        parent_user = User.objects.filter(email=lead.parent_email).first()
+        
+        if not parent_user:
+            # Create new parent user
+            username = f"parent_{admission_number}".lower()
+            parent_user = User.objects.create_user(
+                username=username,
+                email=lead.parent_email,
+                password=temp_password,
+                first_name=lead.parent_name.split()[0] if lead.parent_name else 'Parent',
+                last_name=' '.join(lead.parent_name.split()[1:]) if len(lead.parent_name.split()) > 1 else '',
+                tenant=lead.tenant,
+                role='PARENT',
+                is_active=True
+            )
+        else:
+            # User exists, update password
+            parent_user.set_password(temp_password)
+            parent_user.save()
+        
+        # 5. Update lead
+        lead.converted_to_student = True
+        lead.student = student
+        lead.converted_at = timezone.now()
+        lead.status = 'ADMITTED'
+        lead.save()
+        
+        # 6. Create system remark
+        create_system_remark(
+            student=student,
+            title="Student Admission",
+            description=f"Student admitted from lead {lead.lead_number}. Admission number: {admission_number}",
+            category="GENERAL",
+            source_module="crm",
+            source_reference=str(lead.id),
+            remark_type="SYSTEM"
+        )
+    
+    return {
+        'student': student,
+        'enrollment': enrollment,
+        'parent_user': parent_user,
+        'temp_password': temp_password,
+        'admission_number': admission_number
+    }

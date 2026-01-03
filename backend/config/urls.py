@@ -61,6 +61,12 @@ urlpatterns = [
     path('api/security/', include('security.urls')),
     path('api/placement/', include('placement.urls')),
     path('api/helpdesk/', include('helpdesk.urls')),
+    
+    # Phase 7
+    path('api/reports/', include('reports.urls')),
+    
+    # Phase 8
+    path('api/notifications/', include('notifications.urls')),
 ]
 
 # Serve media files in development

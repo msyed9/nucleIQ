@@ -68,6 +68,48 @@ const PayslipView: React.FC = () => {
         }
     };
 
+    const downloadPDF = async () => {
+        if (!selectedPayslip) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/payroll/payslips/${selectedPayslip.id}/download_pdf/`,
+                {
+                    headers: getAuthHeaders(),
+                    responseType: 'blob'
+                }
+            );
+
+            // Extract filename from Content-Disposition header or create default
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = `Payslip_${selectedPayslip.staff_name.replace(' ', '_')}_${selectedPayslip.cycle_month}${selectedPayslip.cycle_year}.pdf`;
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err: any) {
+            console.error('Download error:', err);
+            setError(err.response?.data?.error || 'Failed to download payslip. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
@@ -121,7 +163,13 @@ const PayslipView: React.FC = () => {
                     <div className="payslip-detail">
                         <div className="payslip-title">
                             <h2>Payslip for {selectedPayslip.cycle_month} {selectedPayslip.cycle_year}</h2>
-                            <button className="btn-download">📥 Download PDF</button>
+                            <button
+                                className="btn-download"
+                                onClick={downloadPDF}
+                                disabled={loading}
+                            >
+                                {loading ? '⏳ Generating...' : '📥 Download PDF'}
+                            </button>
                         </div>
 
                         {/* Employee Info */}

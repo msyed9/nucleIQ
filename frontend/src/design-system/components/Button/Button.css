@@ -261,23 +261,46 @@
     }
 }
 
-/* Dark mode support */
+/* Dark mode support - Class-based */
+.dark .ds-button--ghost,
+html.dark .ds-button--ghost {
+    color: #B0BEC5;
+}
+
+.dark .ds-button--ghost:hover:not(:disabled),
+html.dark .ds-button--ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: #42A5F5;
+}
+
+.dark .ds-button--outline,
+html.dark .ds-button--outline {
+    color: #42A5F5;
+    border-color: #42A5F5;
+}
+
+.dark .ds-button--outline:hover:not(:disabled),
+html.dark .ds-button--outline:hover:not(:disabled) {
+    background: rgba(66, 165, 245, 0.1);
+}
+
+/* System preference fallback */
 @media (prefers-color-scheme: dark) {
-    .ds-button--ghost {
+    :root:not(.light) .ds-button--ghost {
         color: #B0BEC5;
     }
 
-    .ds-button--ghost:hover:not(:disabled) {
+    :root:not(.light) .ds-button--ghost:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.05);
         color: #42A5F5;
     }
 
-    .ds-button--outline {
+    :root:not(.light) .ds-button--outline {
         color: #42A5F5;
         border-color: #42A5F5;
     }
 
-    .ds-button--outline:hover:not(:disabled) {
+    :root:not(.light) .ds-button--outline:hover:not(:disabled) {
         background: rgba(66, 165, 245, 0.1);
     }
 }

@@ -32,6 +32,9 @@ interface Defaulter {
 const FeeDefaulters: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'active' | 'stopped'>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [notificationType, setNotificationType] = useState<'sms' | 'whatsapp' | 'both'>('both');
+    const [selectedDefaulters, setSelectedDefaulters] = useState<string[]>([]);
+    const [showBulkDialog, setShowBulkDialog] = useState(false);
     const queryClient = useQueryClient();
 
     // Fetch defaulters
@@ -82,16 +85,49 @@ const FeeDefaulters: React.FC = () => {
 
     // Send reminder mutation
     const sendReminderMutation = useMutation({
-        mutationFn: async (defaulterId: string) => {
-            const response = await axios.post(`/api/fees/defaulters/${defaulterId}/send_reminder/`);
+        mutationFn: async ({ defaulterId, notificationType }: { defaulterId: string, notificationType: string }) => {
+            const response = await axios.post(`/api/fees/defaulters/${defaulterId}/send_reminder/`, {
+                notification_type: notificationType
+            });
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['defaulters'] });
-            alert('Reminder sent successfully!');
+            const results = (data as any).results || {};
+            const messages: string[] = [];
+            if (results.sms === 'sent') messages.push('SMS sent');
+            if (results.whatsapp === 'sent') messages.push('WhatsApp sent');
+            if (data.errors && data.errors.length > 0) {
+                alert(`Reminder sent with warnings:\n${messages.join(', ')}\n\nWarnings:\n${data.errors.join('\n')}`);
+            } else {
+                alert(`Reminder sent successfully!\n${messages.join(', ')}`);
+            }
         },
-        onError: () => {
-            alert('Failed to send reminder');
+        onError: (error: any) => {
+            alert(`Failed to send reminder: ${error.response?.data?.error || error.message}`);
+        }
+    });
+
+    // Send bulk reminders mutation
+    const sendBulkRemindersMutation = useMutation({
+        mutationFn: async ({ defaulterIds, notificationType }: { defaulterIds: string[], notificationType: string }) => {
+            const response = await axios.post('/api/fees/defaulters/send_bulk_reminders/', {
+                defaulter_ids: defaulterIds.length > 0 ? defaulterIds : undefined,
+                notification_type: notificationType
+            });
+            return response.data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['defaulters'] });
+            setShowBulkDialog(false);
+            setSelectedDefaulters([]);
+
+            const message = `${data.message}\n\nSuccess: ${data.success_count}\nFailed: ${data.failed_count}`;
+            const errors = data.errors && data.errors.length > 0 ? `\n\nSample Errors:\n${data.errors.join('\n')}` : '';
+            alert(message + errors);
+        },
+        onError: (error: any) => {
+            alert(`Failed to send bulk reminders: ${error.response?.data?.error || error.message}`);
         }
     });
 
@@ -228,6 +264,102 @@ const FeeDefaulters: React.FC = () => {
                 </div>
             </div>
 
+            {/* Notification Controls */}
+            <div className="notification-controls">
+                <div className="notification-type-selector">
+                    <label>📱 Send Via:</label>
+                    <div className="radio-group">
+                        <label className="radio-label">
+                            <input
+                                type="radio"
+                                name="notificationType"
+                                value="sms"
+                                checked={notificationType === 'sms'}
+                                onChange={(e) => setNotificationType(e.target.value as 'sms' | 'whatsapp' | 'both')}
+                            />
+                            <span>SMS Only</span>
+                        </label>
+                        <label className="radio-label">
+                            <input
+                                type="radio"
+                                name="notificationType"
+                                value="whatsapp"
+                                checked={notificationType === 'whatsapp'}
+                                onChange={(e) => setNotificationType(e.target.value as 'sms' | 'whatsapp' | 'both')}
+                            />
+                            <span>WhatsApp Only</span>
+                        </label>
+                        <label className="radio-label">
+                            <input
+                                type="radio"
+                                name="notificationType"
+                                value="both"
+                                checked={notificationType === 'both'}
+                                onChange={(e) => setNotificationType(e.target.value as 'sms' | 'whatsapp' | 'both')}
+                            />
+                            <span>Both (SMS + WhatsApp)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="bulk-actions">
+                    <button
+                        className="btn btn-bulk-send"
+                        onClick={() => setShowBulkDialog(true)}
+                        disabled={sendBulkRemindersMutation.isPending}
+                    >
+                        {sendBulkRemindersMutation.isPending ? '📤 Sending...' : '📤 Send Bulk Reminders'}
+                    </button>
+                    {selectedDefaulters.length > 0 && (
+                        <span className="selection-count">
+                            {selectedDefaulters.length} selected
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* Bulk Send Confirmation Dialog */}
+            {showBulkDialog && (
+                <div className="modal-overlay" onClick={() => setShowBulkDialog(false)}>
+                    <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>📤 Send Bulk Reminders</h2>
+                            <button className="close-btn" onClick={() => setShowBulkDialog(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <p>
+                                {selectedDefaulters.length > 0
+                                    ? `Send reminders to ${selectedDefaulters.length} selected defaulters?`
+                                    : `Send reminders to all ${filteredDefaulters?.length || 0} defaulters?`}
+                            </p>
+                            <p className="notification-info">
+                                Notification type: <strong>{notificationType.toUpperCase()}</strong>
+                            </p>
+                            <div className="warning-message">
+                                ⚠️ This action will send notifications immediately and cannot be undone.
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setShowBulkDialog(false)}>
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => {
+                                    sendBulkRemindersMutation.mutate({
+                                        defaulterIds: selectedDefaulters,
+                                        notificationType
+                                    });
+                                }}
+                                disabled={sendBulkRemindersMutation.isPending}
+                            >
+                                {sendBulkRemindersMutation.isPending ? 'Sending...' : 'Send Reminders'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Defaulters Table */}
             {isLoading ? (
                 <div className="loading-state">
@@ -240,6 +372,19 @@ const FeeDefaulters: React.FC = () => {
                         <table className="defaulters-table">
                             <thead>
                                 <tr>
+                                    <th>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedDefaulters.length === filteredDefaulters.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedDefaulters(filteredDefaulters.map(d => d.id));
+                                                } else {
+                                                    setSelectedDefaulters([]);
+                                                }
+                                            }}
+                                        />
+                                    </th>
                                     <th>Student</th>
                                     <th>Contact</th>
                                     <th>Amount Due</th>
@@ -257,6 +402,19 @@ const FeeDefaulters: React.FC = () => {
 
                                     return (
                                         <tr key={defaulter.id} className={defaulter.access_stopped ? 'stopped-row' : ''}>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedDefaulters.includes(defaulter.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedDefaulters([...selectedDefaulters, defaulter.id]);
+                                                        } else {
+                                                            setSelectedDefaulters(selectedDefaulters.filter(id => id !== defaulter.id));
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
                                             <td>
                                                 <div className="student-info">
                                                     {student.photo && (
@@ -325,9 +483,12 @@ const FeeDefaulters: React.FC = () => {
                                                 <div className="action-buttons">
                                                     <button
                                                         className="btn-icon btn-reminder"
-                                                        onClick={() => sendReminderMutation.mutate(defaulter.id)}
+                                                        onClick={() => sendReminderMutation.mutate({
+                                                            defaulterId: defaulter.id,
+                                                            notificationType
+                                                        })}
                                                         disabled={sendReminderMutation.isPending}
-                                                        title="Send Reminder"
+                                                        title={`Send Reminder via ${notificationType.toUpperCase()}`}
                                                     >
                                                         📨
                                                     </button>

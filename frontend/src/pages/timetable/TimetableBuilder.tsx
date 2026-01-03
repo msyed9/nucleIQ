@@ -288,7 +288,7 @@ const TimetableBuilder: React.FC = () => {
             );
 
             if (!availabilityResponse.data.is_available) {
-                const conflicts = [];
+                const conflicts: string[] = [];
                 if (availabilityResponse.data.teacher_conflicts?.length > 0) {
                     conflicts.push('Teacher is already scheduled at this time');
                 }

@@ -76,11 +76,11 @@ const ClassView: React.FC = () => {
         }
     };
 
-    const getScheduleForDay = (day: string) => {
+    /* const getScheduleForDay = (day: string) => {
         return schedule
             .filter((slot) => slot.day === day)
             .sort((a, b) => a.start_time.localeCompare(b.start_time));
-    };
+    }; */
 
     const selectedSectionData = sections.find((s) => s.id === selectedSection);
 

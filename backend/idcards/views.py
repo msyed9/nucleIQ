@@ -144,7 +144,73 @@ class IDCardGenerationViewSet(viewsets.ModelViewSet):
             status='PENDING'
         )
         
-        # TODO: Trigger async task to generate cards
+        # Trigger async task
+        from .tasks import generate_cards_async
+        task = generate_cards_async.delay(str(new_generation.id))
         
         serializer = self.get_serializer(new_generation)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            **serializer.data,
+            'task_id': task.id
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['post'])
+    def generate_bulk(self, request):
+        """Generate ID cards in bulk with filters."""
+        design_id = request.data.get('design_id')
+        card_type = request.data.get('card_type', 'STUDENT')
+        filters = request.data.get('filters', {})
+        
+        if not design_id:
+            return Response(
+                {'error': 'design_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from .models import IDCardDesign
+            design = IDCardDesign.objects.get(
+                id=design_id,
+                tenant=request.user.tenant
+            )
+        except IDCardDesign.DoesNotExist:
+            return Response(
+                {'error': 'Design not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Create generation record
+        generation = IDCardGeneration.objects.create(
+            tenant=request.user.tenant,
+            design=design,
+            card_type=card_type,
+            filters=filters,
+            generated_by=request.user,
+            status='PENDING'
+        )
+        
+        # Trigger async task
+        from .tasks import generate_cards_async
+        task = generate_cards_async.delay(str(generation.id))
+        
+        serializer = self.get_serializer(generation)
+        return Response({
+            **serializer.data,
+            'task_id': task.id,
+            'status_url': f'/api/idcards/generations/{generation.id}/'
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['get'])
+    def task_status(self, request, pk=None):
+        """Get task status for a generation."""
+        generation = self.get_object()
+        
+        return Response({
+            'id': generation.id,
+            'status': generation.status,
+            'total_cards': generation.total_cards,
+            'error_message': generation.error_message,
+            'output_file': generation.output_file.url if generation.output_file else None,
+            'created_at': generation.created_at,
+        })
+

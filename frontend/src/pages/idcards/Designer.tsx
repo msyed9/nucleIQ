@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import api from '../../services/api';
 import interact from 'interactjs';
 import { useTranslation } from 'react-i18next';
-import QRCode from 'react-qr-code';
+import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 import './Designer.css';
 
@@ -51,6 +51,46 @@ interface Template {
     preview_image?: string;
 }
 
+// QR Code Image Component
+const QRCodeImage: React.FC<{
+    element: Element;
+    qrCodeDataUrls: { [key: string]: string };
+    setQrCodeDataUrls: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+}> = ({ element, qrCodeDataUrls, setQrCodeDataUrls }) => {
+    useEffect(() => {
+        const generateQR = async () => {
+            try {
+                const dataUrl = await QRCode.toDataURL(element.data || 'Sample', {
+                    errorCorrectionLevel: 'H',
+                    color: {
+                        dark: element.qrColor || '#000000',
+                        light: element.qrBackground || '#FFFFFF'
+                    },
+                    width: Math.min((element.width * 10), (element.height * 10))
+                });
+                setQrCodeDataUrls(prev => ({ ...prev, [element.id]: dataUrl }));
+            } catch (err) {
+                console.error('Error generating QR code:', err);
+            }
+        };
+        generateQR();
+    }, [element.data, element.qrColor, element.qrBackground, element.width, element.height, element.id, setQrCodeDataUrls]);
+
+    return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: element.qrBackground || '#FFFFFF' }}>
+            {qrCodeDataUrls[element.id] ? (
+                <img
+                    src={qrCodeDataUrls[element.id]}
+                    alt="QR Code"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+            ) : (
+                <div className="qr-placeholder">Generating QR...</div>
+            )}
+        </div>
+    );
+};
+
 const IDCardDesigner: React.FC = () => {
     const [design, setDesign] = useState<Design>({
         version: '1.0',
@@ -62,7 +102,9 @@ const IDCardDesigner: React.FC = () => {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [loading, setLoading] = useState(true);
     const [designName, setDesignName] = useState('My Custom Design');
+    const [cardType, setCardType] = useState<'STUDENT' | 'STAFF'>('STUDENT');
     const [uploadedImages, setUploadedImages] = useState<{ [key: string]: string }>({});
+    const [qrCodeDataUrls, setQrCodeDataUrls] = useState<{ [key: string]: string }>({});
     const { t } = useTranslation();
     const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -74,9 +116,20 @@ const IDCardDesigner: React.FC = () => {
     const fetchTemplates = async () => {
         try {
             const response = await api.get('/idcards/templates/');
-            setTemplates(response.data);
+            // Ensure we always set an array
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setTemplates(data);
+            } else if (data && Array.isArray(data.results)) {
+                // Handle paginated response
+                setTemplates(data.results);
+            } else {
+                console.warn('Unexpected API response format:', data);
+                setTemplates([]);
+            }
         } catch (error) {
             console.error('Error loading templates:', error);
+            setTemplates([]); // Ensure templates is always an array
         } finally {
             setLoading(false);
         }
@@ -218,7 +271,7 @@ const IDCardDesigner: React.FC = () => {
         try {
             const response = await api.post('/idcards/designs/', {
                 name: designName,
-                card_type: 'STUDENT',
+                card_type: cardType,
                 orientation: 'VERTICAL',
                 width_mm: 85.6,
                 height_mm: 53.98,
@@ -278,8 +331,12 @@ const IDCardDesigner: React.FC = () => {
 
     const selectedEl = design.elements.find(el => el.id === selectedElement);
 
-    // Group templates by category
-    const templatesByCategory = templates.reduce((acc, template) => {
+    // Filter templates by card type and group by category
+    const filteredTemplates = Array.isArray(templates)
+        ? templates.filter(t => t.card_type === cardType)
+        : [];
+
+    const templatesByCategory = filteredTemplates.reduce((acc, template) => {
         if (!acc[template.category]) {
             acc[template.category] = [];
         }
@@ -300,6 +357,34 @@ const IDCardDesigner: React.FC = () => {
                         className="design-name-input"
                         placeholder={t('designer.design_name_placeholder')}
                     />
+                    <div className="card-type-toggle" style={{ marginLeft: '1rem', display: 'flex', gap: '0.5rem' }}>
+                        <button
+                            className={cardType === 'STUDENT' ? 'active' : ''}
+                            onClick={() => setCardType('STUDENT')}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                border: cardType === 'STUDENT' ? '2px solid #1976D2' : '1px solid #ccc',
+                                background: cardType === 'STUDENT' ? '#E3F2FD' : 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            👨‍🎓 Student
+                        </button>
+                        <button
+                            className={cardType === 'STAFF' ? 'active' : ''}
+                            onClick={() => setCardType('STAFF')}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                border: cardType === 'STAFF' ? '2px solid #1976D2' : '1px solid #ccc',
+                                background: cardType === 'STAFF' ? '#E3F2FD' : 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            👨‍💼 Staff
+                        </button>
+                    </div>
                 </div>
                 <div className="tool-buttons">
                     <button onClick={() => addElement('text')} title={t('designer.add_text')}>
@@ -447,15 +532,11 @@ const IDCardDesigner: React.FC = () => {
                                     )
                                 )}
                                 {element.type === 'qrcode' && (
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: element.qrBackground || '#FFFFFF' }}>
-                                        <QRCode
-                                            value={element.data || 'Sample'}
-                                            size={Math.min((element.width * 10) - 10, (element.height * 10) - 10)}
-                                            fgColor={element.qrColor || '#000000'}
-                                            bgColor={element.qrBackground || '#FFFFFF'}
-                                            level="H"
-                                        />
-                                    </div>
+                                    <QRCodeImage
+                                        element={element}
+                                        qrCodeDataUrls={qrCodeDataUrls}
+                                        setQrCodeDataUrls={setQrCodeDataUrls}
+                                    />
                                 )}
                                 {element.type === 'barcode' && (
                                     <div className="barcode-placeholder">
@@ -525,7 +606,11 @@ const IDCardDesigner: React.FC = () => {
                                             onChange={e => updateElementProperty(selectedEl.id, 'text', e.target.value)}
                                             rows={3}
                                         />
-                                        <small>Use placeholders: {'{StudentName}'}, {'{Class}'}, {'{AdmissionNumber}'}</small>
+                                        <small>
+                                            {cardType === 'STUDENT'
+                                                ? 'Use placeholders: {StudentName}, {Class}, {AdmissionNumber}, {BloodGroup}'
+                                                : 'Use placeholders: {StaffName}, {EmployeeID}, {Designation}, {Department}, {BloodGroup}'}
+                                        </small>
                                     </div>
 
                                     <div className="property-group">
@@ -603,7 +688,11 @@ const IDCardDesigner: React.FC = () => {
                                             value={selectedEl.data}
                                             onChange={e => updateElementProperty(selectedEl.id, 'data', e.target.value)}
                                         />
-                                        <small>Use placeholders like {'{AdmissionNumber}'}</small>
+                                        <small>
+                                            {cardType === 'STUDENT'
+                                                ? 'Use placeholders like {AdmissionNumber}'
+                                                : 'Use placeholders like {EmployeeID}'}
+                                        </small>
                                     </div>
 
                                     <div className="property-group">
@@ -636,7 +725,11 @@ const IDCardDesigner: React.FC = () => {
                                             value={selectedEl.src}
                                             onChange={e => updateElementProperty(selectedEl.id, 'src', e.target.value)}
                                         />
-                                        <small>Use {'{StudentPhoto}'} for student photo</small>
+                                        <small>
+                                            {cardType === 'STUDENT'
+                                                ? 'Use {StudentPhoto} for student photo'
+                                                : 'Use {StaffPhoto} for staff photo'}
+                                        </small>
                                     </div>
                                     <div className="property-group">
                                         <label>Upload Image</label>
@@ -660,7 +753,11 @@ const IDCardDesigner: React.FC = () => {
                                             value={selectedEl.data}
                                             onChange={e => updateElementProperty(selectedEl.id, 'data', e.target.value)}
                                         />
-                                        <small>Use {'{AdmissionNumber}'}</small>
+                                        <small>
+                                            {cardType === 'STUDENT'
+                                                ? 'Use {AdmissionNumber}'
+                                                : 'Use {EmployeeID}'}
+                                        </small>
                                     </div>
                                 </div>
                             )}

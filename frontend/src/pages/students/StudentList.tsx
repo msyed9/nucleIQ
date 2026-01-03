@@ -9,12 +9,10 @@ import { useTranslation } from 'react-i18next';
 import {
     Plus,
     Search,
-    Filter,
     Download,
     Eye,
     Edit,
-    Trash2,
-    MoreVertical
+    Trash2
 } from 'lucide-react';
 import { Button, Card, Input, Badge, Select, Checkbox, Modal } from '@/design-system';
 import Loading from '../../components/common/Loading';
@@ -52,7 +50,7 @@ const StudentList: React.FC = () => {
     const fetchStudents = async () => {
         try {
             const response = await api.get('/students/students/');
-            let studentData = [];
+            let studentData: any[] = [];
 
             if (Array.isArray(response.data)) {
                 studentData = response.data;
@@ -98,6 +96,21 @@ const StudentList: React.FC = () => {
         }
     };
 
+    const filteredStudents = students.filter((student) => {
+        const matchesSearch =
+            student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesClass = !classFilter || student.current_class === classFilter;
+
+        const matchesStatus =
+            statusFilter === 'all' ||
+            (statusFilter === 'active' && student.is_active) ||
+            (statusFilter === 'inactive' && !student.is_active);
+
+        return matchesSearch && matchesClass && matchesStatus;
+    });
+
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
@@ -134,20 +147,7 @@ const StudentList: React.FC = () => {
         }
     };
 
-    const filteredStudents = students.filter((student) => {
-        const matchesSearch =
-            student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesClass = !classFilter || student.current_class === classFilter;
-
-        const matchesStatus =
-            statusFilter === 'all' ||
-            (statusFilter === 'active' && student.is_active) ||
-            (statusFilter === 'inactive' && !student.is_active);
-
-        return matchesSearch && matchesClass && matchesStatus;
-    });
 
     const allSelected = filteredStudents.length > 0 && selectedStudents.size === filteredStudents.length;
     const someSelected = selectedStudents.size > 0 && selectedStudents.size < filteredStudents.length;

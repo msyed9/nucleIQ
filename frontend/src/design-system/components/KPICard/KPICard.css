@@ -125,26 +125,53 @@
     }
 }
 
-/* Dark mode */
+/* Dark mode - Class-based */
+.dark .ds-kpi-card,
+html.dark .ds-kpi-card {
+    background: #1E1E1E;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark .ds-kpi-card--hoverable:hover,
+html.dark .ds-kpi-card--hoverable:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+.dark .ds-kpi-card__value,
+html.dark .ds-kpi-card__value {
+    color: #FFFFFF;
+}
+
+.dark .ds-kpi-card__label,
+html.dark .ds-kpi-card__label {
+    color: #B0BEC5;
+}
+
+.dark .ds-kpi-card__trend-label,
+html.dark .ds-kpi-card__trend-label {
+    color: #90A4AE;
+}
+
+/* System preference fallback */
 @media (prefers-color-scheme: dark) {
-    .ds-kpi-card {
+    :root:not(.light) .ds-kpi-card {
         background: #1E1E1E;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .ds-kpi-card--hoverable:hover {
+    :root:not(.light) .ds-kpi-card--hoverable:hover {
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     }
 
-    .ds-kpi-card__value {
+    :root:not(.light) .ds-kpi-card__value {
         color: #FFFFFF;
     }
 
-    .ds-kpi-card__label {
+    :root:not(.light) .ds-kpi-card__label {
         color: #B0BEC5;
     }
 
-    .ds-kpi-card__trend-label {
+    :root:not(.light) .ds-kpi-card__trend-label {
         color: #90A4AE;
     }
 }
