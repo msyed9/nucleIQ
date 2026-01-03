@@ -32,11 +32,17 @@ from .serializers import (
 User = get_user_model()
 
 
+from .serializers import UserProfileSerializer
+
+
+from .serializers import UserProfileSerializer, CustomTokenObtainPairSerializer
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Custom JWT token obtain view with additional user data.
     """
-    
+    serializer_class = CustomTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
         """Override to include user profile in response."""
         response = super().post(request, *args, **kwargs)
@@ -52,6 +58,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             # Add user profile to response
             serializer = UserProfileSerializer(user)
             response.data['user'] = serializer.data
+            # Also include tenant id explicitly for frontend convenience
+            tenant_id = None
+            try:
+                tenant_id = serializer.data.get('tenant')
+            except Exception:
+                tenant_id = None
+            response.data['tenant'] = tenant_id
         
         return response
     

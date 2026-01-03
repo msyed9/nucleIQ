@@ -16,19 +16,26 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-        // Add tenant header if available. Prefer explicit `current_tenant`,
-        // fall back to `user.tenant` stored after login.
+        // Add tenant header if available and user is NOT a platform admin.
         try {
-            const tenant = localStorage.getItem('current_tenant');
-            if (tenant) {
-                config.headers['X-Tenant-ID'] = tenant;
-            } else {
-                const userRaw = localStorage.getItem('user');
-                if (userRaw) {
-                    const user = JSON.parse(userRaw);
-                    if (user && user.tenant) {
-                        config.headers['X-Tenant-ID'] = String(user.tenant);
+            const isPlatformAdmin = localStorage.getItem('is_platform_admin') === 'true';
+            if (!isPlatformAdmin) {
+                const tenant = localStorage.getItem('current_tenant');
+                if (tenant) {
+                    config.headers['X-Tenant-ID'] = tenant;
+                } else {
+                    const userRaw = localStorage.getItem('user');
+                    if (userRaw) {
+                        const user = JSON.parse(userRaw);
+                        if (user && user.tenant) {
+                            config.headers['X-Tenant-ID'] = String(user.tenant);
+                        }
                     }
+                }
+            } else {
+                // ensure no tenant header is sent for platform admins
+                if (config.headers && config.headers['X-Tenant-ID']) {
+                    delete config.headers['X-Tenant-ID'];
                 }
             }
         } catch (e) {

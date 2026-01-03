@@ -32,10 +32,21 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${access}`;
         }
 
-        // Add tenant header if available
-        const tenant = localStorage.getItem('current_tenant');
-        if (tenant) {
-            config.headers['X-Tenant-ID'] = tenant;
+        // Add tenant header if available and user is NOT a platform admin
+        try {
+            const isPlatformAdmin = localStorage.getItem('is_platform_admin') === 'true';
+            if (!isPlatformAdmin) {
+                const tenant = localStorage.getItem('current_tenant');
+                if (tenant) {
+                    config.headers['X-Tenant-ID'] = tenant;
+                }
+            } else {
+                if (config.headers && config.headers['X-Tenant-ID']) {
+                    delete config.headers['X-Tenant-ID'];
+                }
+            }
+        } catch (e) {
+            // ignore
         }
 
         return config;

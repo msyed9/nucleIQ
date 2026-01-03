@@ -9,6 +9,23 @@ from .models import (
     User, UserPreference, Role, Permission, 
     RolePermission, UserRole, ImpersonationLog
 )
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Add custom claims
+        try:
+            if getattr(user, 'tenant_id', None):
+                token['tenant_id'] = str(user.tenant_id)
+            else:
+                token['tenant_id'] = None
+            token['is_platform_admin'] = bool(getattr(user, 'is_platform_admin', False))
+        except Exception:
+            pass
+        return token
 
 
 class UserPreferenceSerializer(serializers.ModelSerializer):
