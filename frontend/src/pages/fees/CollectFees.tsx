@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import ExportButton from '../../components/common/ExportButton';
+import { ExportColumn } from '../../utils/exportUtils';
 import './CollectFees.css';
 
 interface Invoice {
@@ -99,6 +101,38 @@ const CollectFees: React.FC = () => {
         invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Export column configuration
+    const exportColumns: ExportColumn[] = [
+        { key: 'invoice_number', label: 'Invoice Number' },
+        { key: 'student_name', label: 'Student Name' },
+        {
+            key: 'invoice_date',
+            label: 'Invoice Date',
+            format: (value) => new Date(value).toLocaleDateString('en-IN')
+        },
+        {
+            key: 'due_date',
+            label: 'Due Date',
+            format: (value) => new Date(value).toLocaleDateString('en-IN')
+        },
+        {
+            key: 'total_amount',
+            label: 'Total Amount (₹)',
+            format: (value) => Number(value).toFixed(2)
+        },
+        {
+            key: 'paid_amount',
+            label: 'Paid Amount (₹)',
+            format: (value) => Number(value).toFixed(2)
+        },
+        {
+            key: 'balance_amount',
+            label: 'Balance Amount (₹)',
+            format: (value) => Number(value).toFixed(2)
+        },
+        { key: 'status', label: 'Status' }
+    ];
+
     const { t } = useTranslation();
 
     return (
@@ -108,10 +142,20 @@ const CollectFees: React.FC = () => {
                     <h1>💰 {t('fees.title', 'Fee Collection')}</h1>
                     <p className="subtitle">{t('fees.subtitle', 'Manage student fee payments')}</p>
                 </div>
-                <button className="btn-generate" onClick={handleGenerateMonthly}>
-                    <span className="btn-icon">📅</span>
-                    {t('fees.generate', 'Generate Monthly Invoices')}
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <ExportButton
+                        data={filteredInvoices}
+                        filename="fee_receipts"
+                        title="Fee Collection Report"
+                        columns={exportColumns}
+                        variant="outline"
+                        size="medium"
+                    />
+                    <button className="btn-generate" onClick={handleGenerateMonthly}>
+                        <span className="btn-icon">📅</span>
+                        {t('fees.generate', 'Generate Monthly Invoices')}
+                    </button>
+                </div>
             </div>
 
             <div className="stats-bar">

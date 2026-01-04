@@ -17,6 +17,8 @@ import {
 import { Button, Card, Input } from '@/design-system';
 import api from '../../services/api';
 import Loading from '../../components/common/Loading';
+import ExportButton from '../../components/common/ExportButton';
+import { ExportColumn } from '../../utils/exportUtils';
 import './Attendance.css';
 
 interface Student {
@@ -113,6 +115,30 @@ const MarkAttendance: React.FC = () => {
         absent: Object.values(attendance).filter((s) => s === 'ABSENT').length,
         late: Object.values(attendance).filter((s) => s === 'LATE').length,
     };
+
+    // Prepare data for export
+    const attendanceExportData = filteredStudents.map(student => ({
+        admission_number: student.admission_number,
+        full_name: student.full_name,
+        class_name: student.class_name,
+        section: student.section,
+        status: attendance[student.id] || 'PRESENT',
+        date: selectedDate
+    }));
+
+    // Export column configuration
+    const exportColumns: ExportColumn[] = [
+        { key: 'admission_number', label: 'Admission Number' },
+        { key: 'full_name', label: 'Student Name' },
+        { key: 'class_name', label: 'Class' },
+        { key: 'section', label: 'Section' },
+        { key: 'status', label: 'Attendance Status' },
+        {
+            key: 'date',
+            label: 'Date',
+            format: (value) => new Date(value).toLocaleDateString('en-IN')
+        }
+    ];
 
     if (loading) {
         return <Loading fullScreen text={t('attendance.loading', { defaultValue: 'Loading students...' })} />;
@@ -250,13 +276,14 @@ const MarkAttendance: React.FC = () => {
                         >
                             Mark All Present
                         </Button>
-                        <Button
+                        <ExportButton
+                            data={attendanceExportData}
+                            filename={`attendance_${selectedDate}`}
+                            title={`Attendance Report - ${selectedDate}`}
+                            columns={exportColumns}
                             variant="outline"
                             size="sm"
-                            iconLeft={Download}
-                        >
-                            Export
-                        </Button>
+                        />
                     </div>
                 </div>
             </Card>

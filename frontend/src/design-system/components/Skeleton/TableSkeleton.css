@@ -1,0 +1,35 @@
+/* Table Skeleton Styles */
+
+.ds-table-skeleton {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ds-table-skeleton__header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.ds-table-skeleton__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ds-table-skeleton__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.ds-table-skeleton__row:last-child {
+    border-bottom: none;
+}

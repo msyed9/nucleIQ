@@ -130,6 +130,8 @@ import SMSMessaging from './pages/notifications/SMSMessaging';
 
 // Phase 10 - Settings & Customization
 import SystemSettings from './pages/settings/SystemSettings';
+import PermissionsMatrixPage from './pages/settings/PermissionsMatrix';
+import RolesPermissions from './pages/settings/RolesPermissions';
 
 // Phase 11 - Search & Dashboard
 import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
@@ -148,6 +150,15 @@ import HelpdeskTickets from './pages/helpdesk/HelpdeskTickets';
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import BillingManagement from './pages/billing/BillingManagement';
 import StaffProfile from './pages/staff/StaffProfile';
+
+// Newly added for Sidebar Consistency
+import PettyCash from './pages/finance/PettyCash';
+import MessManagement from './pages/hostel/MessManagement';
+import HostelComplaints from './pages/hostel/Complaints';
+import ComplaintAnalytics from './pages/hostel/ComplaintAnalytics';
+import LibraryCirculation from './pages/library/LibraryCirculation';
+import VisitorLog from './pages/security/VisitorLog';
+import GatePasses from './pages/security/GatePasses';
 
 // Import i18n configuration
 import './i18n';
@@ -228,7 +239,9 @@ function App() {
                                             <Route path="/finance/salary-payments" element={<Layout><SalaryPayments /></Layout>} />
                                             <Route path="/finance/budgets" element={<Layout><BudgetManagement /></Layout>} />
                                             <Route path="/finance/bank-reconciliation" element={<Layout><BankReconciliation /></Layout>} />
+                                            <Route path="/finance/reconciliation" element={<Layout><BankReconciliation /></Layout>} /> {/* Sidebar Alias */}
                                             <Route path="/finance/reports" element={<Layout><FinancialReports /></Layout>} />
+                                            <Route path="/finance/petty-cash" element={<Layout><PettyCash /></Layout>} />
                                             <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
 
                                             {/* Phase 7 - Reports & Analytics */}
@@ -239,6 +252,8 @@ function App() {
                                             {/* Settings routes - specific routes before general */}
                                             <Route path="/settings/academic" element={<Layout><AcademicSetup /></Layout>} />
                                             <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
+                                            <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
+                                            <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
                                             <Route path="/settings" element={<Layout><Settings /></Layout>} />
                                             {/* User routes - specific routes before general */}
                                             <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
@@ -269,6 +284,7 @@ function App() {
                                             <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
                                             <Route path="/library/books/:bookId/copies" element={<Layout><BookCopies /></Layout>} />
                                             <Route path="/library/books" element={<Layout><LibraryBooks /></Layout>} />
+                                            <Route path="/library/circulation" element={<Layout><LibraryCirculation /></Layout>} />
                                             <Route path="/library/members" element={<Layout><LibraryMembers /></Layout>} />
                                             <Route path="/library/digital-resources" element={<Layout><DigitalResourcesLibrary /></Layout>} />
                                             <Route path="/library/reports" element={<Layout><LibraryReports /></Layout>} />
@@ -281,11 +297,16 @@ function App() {
                                             <Route path="/inventory/reports" element={<Layout><InventoryReports /></Layout>} />
                                             <Route path="/inventory/stock" element={<Layout><StockManager /></Layout>} />
                                             <Route path="/inventory/purchase-orders" element={<Layout><PurchaseOrders /></Layout>} />
+                                            <Route path="/inventory/orders" element={<Layout><PurchaseOrders /></Layout>} /> {/* Sidebar Alias */}
                                             <Route path="/inventory/stock-adjustment" element={<Layout><StockAdjustment /></Layout>} />
                                             <Route path="/inventory/vendors" element={<Layout><VendorManagement /></Layout>} />
 
                                             <Route path="/hostel" element={<Layout><HostelDashboard /></Layout>} />
                                             <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
+                                            <Route path="/hostel/allocations" element={<Layout><RoomAllocation /></Layout>} /> {/* Sidebar Alias */}
+                                            <Route path="/hostel/mess" element={<Layout><MessManagement /></Layout>} />
+                                            <Route path="/hostel/complaints" element={<Layout><HostelComplaints /></Layout>} />
+                                            <Route path="/hostel/complaints/analytics" element={<Layout><ComplaintAnalytics /></Layout>} />
                                             <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />
                                             <Route path="/transport" element={<Layout><TransportFleet /></Layout>} />
                                             <Route path="/transport/allocations" element={<Layout><TransportAllocations /></Layout>} />
@@ -313,6 +334,7 @@ function App() {
                                             <Route path="/crm/conversion" element={<Layout><LeadConversion /></Layout>} />
                                             <Route path="/crm/followups" element={<Layout><FollowupScheduler /></Layout>} />
                                             <Route path="/alumni" element={<Layout><AlumniPortal /></Layout>} />
+                                            <Route path="/alumni/directory" element={<Layout><AlumniPortal /></Layout>} /> {/* Sidebar Alias */}
                                             <Route path="/alumni/jobs" element={<Layout><JobBoard /></Layout>} />
                                             <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
                                             <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
@@ -327,8 +349,12 @@ function App() {
                                             {/* Admin & Security */}
                                             <Route path="/admin/certificates" element={<Layout><CertificateTemplates /></Layout>} />
                                             <Route path="/security/scanner" element={<Layout><GuardScanner /></Layout>} />
+                                            <Route path="/security/visitors" element={<Layout><VisitorLog /></Layout>} />
+                                            <Route path="/security/gate-passes" element={<Layout><GatePasses /></Layout>} />
                                             <Route path="/placement" element={<Layout><DriveDashboard /></Layout>} />
+                                            <Route path="/placement/drives" element={<Layout><DriveDashboard /></Layout>} /> {/* Sidebar Alias */}
                                             <Route path="/placement/apply" element={<Layout><PlacementApplication /></Layout>} />
+                                            <Route path="/placement/applications" element={<Layout><PlacementApplication /></Layout>} /> {/* Sidebar Alias */}
                                             <Route path="/certificates/request" element={<Layout><CertificateRequest /></Layout>} />
                                             <Route path="/security/pass-request" element={<Layout><PassRequest /></Layout>} />
                                             <Route path="/security/pass-approval" element={<Layout><PassApproval /></Layout>} />

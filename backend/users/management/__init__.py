@@ -1,3 +1,1 @@
-"""
-Management command package
-"""
+# Empty __init__.py file

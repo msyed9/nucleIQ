@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button, Card, Input, Badge, Select, Checkbox, Modal } from '@/design-system';
 import Loading from '../../components/common/Loading';
+import ExportButton from '../../components/common/ExportButton';
+import { ExportColumn } from '../../utils/exportUtils';
 import { formatDate } from '../../utils/helpers';
 import api from '../../services/api';
 import './Students.css';
@@ -147,6 +149,24 @@ const StudentList: React.FC = () => {
         }
     };
 
+    // Export column configuration
+    const exportColumns: ExportColumn[] = [
+        { key: 'admission_number', label: 'Admission Number' },
+        { key: 'full_name', label: 'Student Name' },
+        { key: 'current_class', label: 'Class' },
+        { key: 'section', label: 'Section' },
+        {
+            key: 'date_of_birth',
+            label: 'Date of Birth',
+            format: (value) => formatDate(value)
+        },
+        {
+            key: 'is_active',
+            label: 'Status',
+            format: (value) => value ? 'Active' : 'Inactive'
+        }
+    ];
+
 
 
     const allSelected = filteredStudents.length > 0 && selectedStudents.size === filteredStudents.length;
@@ -199,9 +219,13 @@ const StudentList: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <Button variant="outline" iconLeft={Download}>
-                        {t('common.export', { defaultValue: 'Export' })}
-                    </Button>
+                    <ExportButton
+                        data={filteredStudents}
+                        filename="students_list"
+                        title="Students List"
+                        columns={exportColumns}
+                        variant="outline"
+                    />
                     <Button variant="primary" iconLeft={Plus} onClick={() => navigate('/students/add')}>
                         {t('students.add', { defaultValue: 'Add Student' })}
                     </Button>

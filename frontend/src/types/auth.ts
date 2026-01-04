@@ -129,6 +129,10 @@ export interface AuthContextType {
   refreshToken: () => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreference>) => Promise<void>;
   checkPermission: (resource: string, action: string) => boolean;
+  hasPermission: (module: string, action: string) => boolean;
+  isRole: (roleCode: string) => boolean;
+  isSuperadmin: () => boolean;
+  getUserRoles: () => Role[];
 }
 
 export interface ThemeContextType {

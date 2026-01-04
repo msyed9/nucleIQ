@@ -47,7 +47,18 @@ import {
     HelpCircle,
     Award,
     LayoutTemplate,
-    Globe
+    Globe,
+    Shield,
+    Building2,
+    Utensils,
+    ShieldCheck,
+    Ticket,
+    Receipt,
+    Landmark,
+    FileCheck,
+    Heart,
+    Sunrise,
+    Activity
 } from 'lucide-react';
 import './Layout.css';
 
@@ -123,6 +134,15 @@ const menuItems: MenuItem[] = [
         ]
     },
     {
+        icon: Heart,
+        labelKey: 'nav.wellbeing',
+        label: 'Wellbeing',
+        children: [
+            { path: '/trackers/salah', icon: Sunrise, labelKey: 'nav.salah_tracker', label: 'Salah Tracker' },
+            { path: '/trackers/habits', icon: Activity, labelKey: 'nav.habit_tracker', label: 'Habit Tracker' },
+        ]
+    },
+    {
         icon: DollarSign,
         labelKey: 'nav.fees',
         label: 'Fees',
@@ -131,6 +151,8 @@ const menuItems: MenuItem[] = [
             { path: '/fees/configure', icon: SettingsIcon, labelKey: 'nav.fee_config', label: 'Configure' },
             { path: '/fees/defaulters', icon: AlertTriangle, labelKey: 'nav.fee_defaulters', label: 'Defaulters' },
             { path: '/finance', icon: PieChart, labelKey: 'nav.finance', label: 'Finance' },
+            { path: '/finance/petty-cash', icon: Receipt, labelKey: 'nav.petty_cash', label: 'Petty Cash' },
+            { path: '/finance/reconciliation', icon: Landmark, labelKey: 'nav.bank_reconciliation', label: 'Bank Reconciliation' },
             { path: '/finance/reports', icon: TrendingDown, labelKey: 'nav.financial_reports', label: 'Financial Reports' },
         ]
     },
@@ -139,10 +161,19 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.operations',
         label: 'Operations',
         children: [
-            { path: '/inventory/stock', icon: Package, labelKey: 'nav.inventory', label: 'Inventory' },
+            { path: '/inventory/stock', icon: Package, labelKey: 'nav.inventory_stock', label: 'Stock Management' },
+            { path: '/inventory/items', icon: List, labelKey: 'nav.inventory_items', label: 'Items & Products' },
+            { path: '/inventory/vendors', icon: Users, labelKey: 'nav.inventory_vendors', label: 'Vendor Management' },
+            { path: '/inventory/orders', icon: FileText, labelKey: 'nav.purchase_orders', label: 'Purchase Orders' },
             { path: '/transport', icon: Truck, labelKey: 'nav.transport', label: 'Transport' },
-            { path: '/hostel', icon: Home, labelKey: 'nav.hostel', label: 'Hostel' },
-            { path: '/library', icon: BookOpen, labelKey: 'nav.library', label: 'Library' },
+            { path: '/hostel/allocations', icon: Home, labelKey: 'nav.hostel_allocations', label: 'Hostel Allocations' },
+            { path: '/hostel/mess', icon: Utensils, labelKey: 'nav.mess_management', label: 'Mess Management' },
+            { path: '/hostel/complaints', icon: AlertTriangle, labelKey: 'nav.hostel_complaints', label: 'Hostel Complaints' },
+            { path: '/library/books', icon: BookOpen, labelKey: 'nav.library_books', label: 'Library Books' },
+            { path: '/library/circulation', icon: ClipboardCheck, labelKey: 'nav.library_circulation', label: 'Circulation' },
+            { path: '/library/members', icon: Users, labelKey: 'nav.library_members', label: 'Library Members' },
+            { path: '/security/visitors', icon: UserCheck, labelKey: 'nav.visitors', label: 'Visitor Log' },
+            { path: '/security/gate-passes', icon: Ticket, labelKey: 'nav.gate_passes', label: 'Gate Passes' },
             { path: '/store', icon: ShoppingCart, labelKey: 'nav.store', label: 'Store' },
         ]
     },
@@ -161,7 +192,11 @@ const menuItems: MenuItem[] = [
         label: 'Growth',
         children: [
             { path: '/crm', icon: TrendingUp, labelKey: 'nav.crm', label: 'CRM' },
-            { path: '/alumni', icon: Users, labelKey: 'nav.alumni', label: 'Alumni' },
+            { path: '/alumni/directory', icon: Users, labelKey: 'nav.alumni_directory', label: 'Alumni Directory' },
+            { path: '/alumni/jobs', icon: Briefcase, labelKey: 'nav.alumni_jobs', label: 'Job Board' },
+            { path: '/alumni/events', icon: Calendar, labelKey: 'nav.alumni_events', label: 'Events' },
+            { path: '/placement/drives', icon: Building2, labelKey: 'nav.placement_drives', label: 'Placement Drives' },
+            { path: '/placement/applications', icon: FileCheck, labelKey: 'nav.placement_applications', label: 'Applications' },
         ]
     },
     {
@@ -205,6 +240,7 @@ const menuItems: MenuItem[] = [
             { path: '/settings', icon: Settings, labelKey: 'nav.general_settings', label: 'General Settings' },
             { path: '/settings/system', icon: SettingsIcon, labelKey: 'nav.system_settings', label: 'System Settings' },
             { path: '/settings/academic', icon: GraduationCap, labelKey: 'nav.academic_setup', label: 'Academic Setup' },
+            { path: '/settings/permissions', icon: Shield, labelKey: 'nav.permissions', label: 'Permissions' },
         ]
     },
     { path: '/parent-portal', icon: Users, labelKey: 'nav.parent_portal', label: 'Parent Portal' },

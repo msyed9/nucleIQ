@@ -85,6 +85,8 @@ MIDDLEWARE = [
     
     # Custom middleware - MUST be after authentication
     'core.middleware.TenantMiddleware',
+    'users.middleware.PermissionMiddleware',
+    'users.middleware.RoleCheckMiddleware',
     'billing.middleware.SubscriptionEnforcementMiddleware',
 ]
 
@@ -101,6 +103,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'users.context_processors.permissions_processor',
             ],
         },
     },
@@ -162,6 +165,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'users.backends.RoleBasedAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -226,7 +235,6 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
         'OPTIONS': {
-            'CLIENT_CLASS': 'django.core.cache.backends.redis.RedisClient',
         },
         'KEY_PREFIX': 'nucleiq',
         'TIMEOUT': 300,

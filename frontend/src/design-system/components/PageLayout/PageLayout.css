@@ -1,0 +1,139 @@
+/* Page Layout Styles */
+
+.ds-page-layout {
+    padding: var(--spacing-8);
+    margin: 0 auto;
+}
+
+/* Max Width Variants */
+.ds-page-layout--sm {
+    max-width: 640px;
+}
+
+.ds-page-layout--md {
+    max-width: 768px;
+}
+
+.ds-page-layout--lg {
+    max-width: 1024px;
+}
+
+.ds-page-layout--xl {
+    max-width: 1400px;
+}
+
+.ds-page-layout--full {
+    max-width: 100%;
+}
+
+/* Header */
+.ds-page-layout__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-8);
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
+}
+
+.ds-page-layout__header-content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-4);
+    flex: 1;
+    min-width: 0;
+}
+
+/* Back Button */
+.ds-page-layout__back {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ds-page-layout__back:hover {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border-medium);
+    color: var(--color-text-primary);
+}
+
+.ds-page-layout__back:active {
+    transform: scale(0.95);
+}
+
+/* Title Group */
+.ds-page-layout__title-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.ds-page-layout__title {
+    font-family: var(--font-family-primary);
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-2) 0;
+    line-height: 1.2;
+}
+
+.ds-page-layout__subtitle {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Actions */
+.ds-page-layout__actions {
+    display: flex;
+    gap: var(--spacing-3);
+    flex-wrap: wrap;
+}
+
+/* Content */
+.ds-page-layout__content {
+    /* Content inherits spacing from children */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-page-layout {
+        padding: var(--spacing-4);
+    }
+
+    .ds-page-layout__header {
+        margin-bottom: var(--spacing-6);
+    }
+
+    .ds-page-layout__title {
+        font-size: 1.75rem;
+    }
+
+    .ds-page-layout__subtitle {
+        font-size: 0.875rem;
+    }
+
+    .ds-page-layout__actions {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .ds-page-layout {
+        padding: var(--spacing-4) var(--spacing-3);
+    }
+
+    .ds-page-layout__title {
+        font-size: 1.5rem;
+    }
+}

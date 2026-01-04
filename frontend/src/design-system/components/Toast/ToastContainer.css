@@ -1,0 +1,73 @@
+/* Toast Container Styles */
+
+.ds-toast-container {
+    position: fixed;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    pointer-events: none;
+}
+
+.ds-toast-container>* {
+    pointer-events: auto;
+}
+
+/* Positioning */
+.ds-toast-container--top-right {
+    top: 0;
+    right: 0;
+}
+
+.ds-toast-container--top-left {
+    top: 0;
+    left: 0;
+}
+
+.ds-toast-container--bottom-right {
+    bottom: 0;
+    right: 0;
+    flex-direction: column-reverse;
+}
+
+.ds-toast-container--bottom-left {
+    bottom: 0;
+    left: 0;
+    flex-direction: column-reverse;
+}
+
+.ds-toast-container--top-center {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.ds-toast-container--bottom-center {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: column-reverse;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ds-toast-container {
+        padding: 0.5rem;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+
+    .ds-toast-container--top-right,
+    .ds-toast-container--top-left,
+    .ds-toast-container--top-center {
+        top: 0;
+    }
+
+    .ds-toast-container--bottom-right,
+    .ds-toast-container--bottom-left,
+    .ds-toast-container--bottom-center {
+        bottom: 0;
+    }
+}

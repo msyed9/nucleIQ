@@ -5,7 +5,8 @@ Exams Admin Configuration
 from django.contrib import admin
 from .models import (
     ExamTerm, Exam, ExamSchedule, Topic, LearningOutcome, QuestionBank,
-    GradeConfiguration, GradeScale, ExamResult
+    GradeConfiguration, GradeScale, ExamResult, OnlineExam, OnlineExamSession,
+    OnlineExamAnswer
 )
 
 
@@ -107,3 +108,82 @@ class ExamResultAdmin(admin.ModelAdmin):
             'fields': ('status', 'remarks', 'entered_by', 'published_at')
         }),
     )
+
+
+@admin.register(OnlineExam)
+class OnlineExamAdmin(admin.ModelAdmin):
+    list_display = ['name', 'subject', 'grade_level', 'status', 'start_datetime', 'duration_minutes', 'total_marks']
+    list_filter = ['status', 'subject', 'grade_level', 'proctoring_level']
+    search_fields = ['name', 'instructions']
+    filter_horizontal = ['sections', 'questions']
+    raw_id_fields = ['exam', 'subject', 'grade_level']
+    ordering = ['-start_datetime']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'exam', 'subject', 'grade_level', 'sections')
+        }),
+        ('Questions', {
+            'fields': ('questions', 'total_marks', 'passing_marks')
+        }),
+        ('Schedule', {
+            'fields': ('start_datetime', 'end_datetime', 'duration_minutes')
+        }),
+        ('Settings', {
+            'fields': ('status', 'shuffle_questions', 'shuffle_options', 'show_results_immediately', 'allow_review')
+        }),
+        ('Proctoring', {
+            'fields': ('proctoring_level', 'max_tab_switches', 'auto_submit_on_time_end')
+        }),
+        ('Instructions', {
+            'fields': ('instructions',)
+        }),
+    )
+
+
+class OnlineExamAnswerInline(admin.TabularInline):
+    model = OnlineExamAnswer
+    extra = 0
+    fields = ['question', 'selected_option', 'is_correct', 'marks_awarded', 'is_marked_for_review']
+    readonly_fields = ['is_correct', 'marks_awarded']
+    can_delete = False
+
+
+@admin.register(OnlineExamSession)
+class OnlineExamSessionAdmin(admin.ModelAdmin):
+    list_display = ['student', 'online_exam', 'status', 'started_at', 'submitted_at', 'score', 'percentage', 'is_pass']
+    list_filter = ['status', 'is_pass', 'online_exam']
+    search_fields = ['student__user__first_name', 'student__user__last_name', 'student__roll_number']
+    raw_id_fields = ['online_exam', 'student']
+    readonly_fields = ['started_at', 'submitted_at', 'score', 'percentage', 'is_pass', 'tab_switch_count']
+    ordering = ['-started_at']
+    inlines = [OnlineExamAnswerInline]
+    
+    fieldsets = (
+        ('Exam Information', {
+            'fields': ('online_exam', 'student', 'status')
+        }),
+        ('Timing', {
+            'fields': ('started_at', 'submitted_at', 'time_remaining_seconds')
+        }),
+        ('Results', {
+            'fields': ('score', 'percentage', 'is_pass')
+        }),
+        ('Proctoring', {
+            'fields': ('tab_switch_count', 'ip_address', 'user_agent', 'proctoring_violations')
+        }),
+    )
+
+
+@admin.register(OnlineExamAnswer)
+class OnlineExamAnswerAdmin(admin.ModelAdmin):
+    list_display = ['session', 'question_short', 'selected_option', 'is_correct', 'marks_awarded', 'is_marked_for_review']
+    list_filter = ['is_correct', 'is_marked_for_review', 'session__online_exam']
+    search_fields = ['session__student__user__first_name', 'question__question_text']
+    raw_id_fields = ['session', 'question']
+    readonly_fields = ['is_correct', 'marks_awarded', 'answered_at']
+    ordering = ['session', 'question']
+    
+    def question_short(self, obj):
+        return obj.question.question_text[:50] + '...' if len(obj.question.question_text) > 50 else obj.question.question_text
+    question_short.short_description = 'Question'

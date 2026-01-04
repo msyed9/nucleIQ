@@ -448,3 +448,106 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 'font_family': branding.font_family,
             }
         return None
+
+
+class PermissionMatrixSerializer(serializers.Serializer):
+    """
+    Serializer for permissions matrix data.
+    Returns structure suitable for the matrix UI.
+    """
+    groups = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+    
+    def get_groups(self, obj):
+        """Get permissions grouped by category."""
+        permissions = Permission.objects.all().order_by('group', 'sort_order', 'resource', 'action')
+        
+        grouped = {}
+        for perm in permissions:
+            group_name = perm.group or 'Other'
+            if group_name not in grouped:
+                grouped[group_name] = {
+                    'name': group_name,
+                    'permissions': []
+                }
+            
+            grouped[group_name]['permissions'].append({
+                'id': str(perm.id),
+                'resource': perm.resource,
+                'action': perm.action,
+                'code': perm.code,
+                'display_name': perm.display_name or f"{perm.resource}.{perm.action}",
+                'description': perm.description
+            })
+        
+        return list(grouped.values())
+    
+    def get_roles(self, obj):
+        """Get all roles with their permissions."""
+        # Get tenant from context
+        request = self.context.get('request')
+        tenant = request.user.tenant if request and hasattr(request.user, 'tenant') else None
+        
+        # Platform admins can see all roles
+        if request and (request.user.is_platform_admin or request.user.is_superuser):
+            roles = Role.objects.filter(is_active=True)
+        elif tenant:
+            roles = Role.objects.filter(tenant=tenant, is_active=True)
+        else:
+            roles = Role.objects.none()
+        
+        role_data = []
+        for role in roles:
+            # Get permission IDs for this role
+            permission_ids = list(
+                RolePermission.objects.filter(role=role)
+                .values_list('permission_id', flat=True)
+            )
+            
+            role_data.append({
+                'id': str(role.id),
+                'name': role.name,
+                'code': role.code,
+                'description': role.description,
+                'permission_ids': [str(pid) for pid in permission_ids]
+            })
+        
+        return role_data
+
+
+class BulkRolePermissionUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk updating role permissions."""
+    
+    role_id = serializers.UUIDField()
+    permission_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        allow_empty=True
+    )
+    
+    def validate_role_id(self, value):
+        """Validate that role exists and user has access to it."""
+        request = self.context.get('request')
+        
+        try:
+            role = Role.objects.get(id=value)
+        except Role.DoesNotExist:
+            raise serializers.ValidationError("Role not found.")
+        
+        # Check tenant access
+        if not (request.user.is_platform_admin or request.user.is_superuser):
+            if role.tenant != request.user.tenant:
+                raise serializers.ValidationError("You don't have access to this role.")
+        
+        return value
+    
+    def validate_permission_ids(self, value):
+        """Validate that all permissions exist."""
+        existing_permissions = set(
+            Permission.objects.filter(id__in=value).values_list('id', flat=True)
+        )
+        
+        for perm_id in value:
+            if perm_id not in existing_permissions:
+                raise serializers.ValidationError(f"Permission {perm_id} not found.")
+        
+        return value

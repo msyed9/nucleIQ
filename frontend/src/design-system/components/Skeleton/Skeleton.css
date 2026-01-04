@@ -1,0 +1,73 @@
+/* Skeleton Loading Styles */
+
+.ds-skeleton {
+    display: block;
+    background: linear-gradient(90deg,
+            var(--color-bg-secondary) 0%,
+            var(--color-bg-tertiary) 50%,
+            var(--color-bg-secondary) 100%);
+    background-size: 200% 100%;
+    animation: ds-skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius-base);
+}
+
+/* Variants */
+.ds-skeleton--text {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.ds-skeleton--text:last-child {
+    width: 80%;
+}
+
+.ds-skeleton--circular {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+}
+
+.ds-skeleton--rectangular {
+    border-radius: 0;
+}
+
+.ds-skeleton--rounded {
+    border-radius: var(--radius-lg);
+}
+
+/* Skeleton Group */
+.ds-skeleton-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Shimmer Animation */
+@keyframes ds-skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Dark Mode */
+.dark .ds-skeleton,
+html.dark .ds-skeleton {
+    background: linear-gradient(90deg,
+            var(--color-bg-secondary) 0%,
+            var(--color-bg-tertiary) 50%,
+            var(--color-bg-secondary) 100%);
+    background-size: 200% 100%;
+}
+
+/* Accessibility - Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    .ds-skeleton {
+        animation: none;
+        background: var(--color-bg-tertiary);
+    }
+}

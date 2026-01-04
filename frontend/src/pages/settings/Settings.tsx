@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import {
     Settings as SettingsIcon,
@@ -14,13 +15,16 @@ import {
     Globe,
     Palette,
     Database,
-    Save
+    Save,
+    Shield,
+    UserCog
 } from 'lucide-react';
 import { Button, Card, Input, Select, Checkbox } from '@/design-system';
 
 type SettingsTab = 'general' | 'academic' | 'users' | 'notifications' | 'security' | 'appearance' | 'system';
 
 const Settings: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [schoolName, setSchoolName] = useState('Demo Government School');
     const [schoolEmail, setSchoolEmail] = useState('school@example.com');
@@ -359,9 +363,137 @@ const Settings: React.FC = () => {
                             <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
                                 Manage user permissions and roles
                             </p>
-                            <Button variant="primary" iconLeft={Users}>
-                                Manage Users
-                            </Button>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px' }}>
+                                <div 
+                                    onClick={() => navigate('/users/manage')}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        padding: '1rem',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        backgroundColor: 'var(--color-background)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-background)';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '8px',
+                                        backgroundColor: 'var(--color-primary-100)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Users size={24} style={{ color: 'var(--color-primary)' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 600 }}>
+                                            Manage Users
+                                        </h3>
+                                        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                            View, create, and edit user accounts
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div 
+                                    onClick={() => navigate('/settings/roles')}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        padding: '1rem',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        backgroundColor: 'var(--color-background)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-background)';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '8px',
+                                        backgroundColor: 'var(--color-success-100)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Shield size={24} style={{ color: 'var(--color-success)' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 600 }}>
+                                            Roles & Permissions
+                                        </h3>
+                                        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                            Configure roles and assign permissions
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div 
+                                    onClick={() => navigate('/settings/permissions')}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        padding: '1rem',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        backgroundColor: 'var(--color-background)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border)';
+                                        e.currentTarget.style.backgroundColor = 'var(--color-background)';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '8px',
+                                        backgroundColor: 'var(--color-warning-100)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <UserCog size={24} style={{ color: 'var(--color-warning)' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 600 }}>
+                                            Permission Matrix
+                                        </h3>
+                                        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                            Advanced permission matrix view
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </Card>
                     )}
 

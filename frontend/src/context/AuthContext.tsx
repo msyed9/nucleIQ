@@ -10,6 +10,7 @@ import type {
     LoginCredentials,
     UserPreference,
     AuthContextType,
+    Role,
 } from '../types/auth';
 import { authAPI, userAPI } from '../lib/api';
 
@@ -162,6 +163,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return user.permissions.includes(permissionCode);
     }, [user]);
 
+    const hasPermission = useCallback((module: string, action: string): boolean => {
+        return checkPermission(module, action);
+    }, [checkPermission]);
+
+    const isRole = useCallback((roleCode: string): boolean => {
+        if (!user) return false;
+        return user.roles.some(role => role.code === roleCode && role.is_active);
+    }, [user]);
+
+    const isSuperadmin = useCallback((): boolean => {
+        if (!user) return false;
+        return user.is_platform_admin;
+    }, [user]);
+
+    const getUserRoles = useCallback((): Role[] => {
+        if (!user) return [];
+        return user.roles.filter(role => role.is_active);
+    }, [user]);
+
     const value: AuthContextType = {
         user,
         tokens,
@@ -172,6 +192,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         refreshToken,
         updatePreferences,
         checkPermission,
+        hasPermission,
+        isRole,
+        isSuperadmin,
+        getUserRoles,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
