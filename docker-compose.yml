@@ -147,11 +147,25 @@ services:
     networks:
       - nucleiq_network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: nucleiq_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - nucleiq_network
+
 volumes:
   postgres_data:
   redis_data:
   static_volume:
   media_volume:
+  pgadmin_data:
 
 networks:
   nucleiq_network:

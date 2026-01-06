@@ -35,9 +35,11 @@ interface StudentProfileData {
     academic_summary: any;
     financial_summary: any;
     health_summary: any;
+    attendance_details: any;
+    fee_details: any;
 }
 
-type TabType = 'academic' | 'financial' | 'health' | 'documents';
+type TabType = 'academic' | 'financial' | 'health' | 'documents' | 'attendance';
 
 const Student360: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -45,7 +47,7 @@ const Student360: React.FC = () => {
     const { t } = useTranslation();
     const [data, setData] = useState<StudentProfileData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabType>('academic');
+    const [activeTab, setActiveTab] = useState<TabType>('attendance');
 
     useEffect(() => {
         fetchProfile();
@@ -86,11 +88,12 @@ const Student360: React.FC = () => {
         );
     }
 
-    const { student, kpis, recent_activity, health_summary } = data;
+    const { student, kpis, recent_activity, health_summary, attendance_details, fee_details } = data;
 
     const tabs = [
-        { id: 'academic' as TabType, label: t('student.academic', { defaultValue: 'Academic' }), icon: BookOpen },
+        { id: 'attendance' as TabType, label: t('student.attendance', { defaultValue: 'Attendance' }), icon: CheckCircle },
         { id: 'financial' as TabType, label: t('student.financial', { defaultValue: 'Financial' }), icon: CreditCard },
+        { id: 'academic' as TabType, label: t('student.academic', { defaultValue: 'Academic' }), icon: BookOpen },
         { id: 'health' as TabType, label: t('student.health', { defaultValue: 'Health' }), icon: Heart },
         { id: 'documents' as TabType, label: t('student.documents', { defaultValue: 'Documents' }), icon: FileText },
     ];
@@ -180,10 +183,10 @@ const Student360: React.FC = () => {
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                            <Button variant="outline" iconLeft={Edit}>
+                            <Button variant="outline" iconLeft={Edit} onClick={() => navigate(`/students/${id}/edit`)}>
                                 {t('common.edit', { defaultValue: 'Edit' })}
                             </Button>
-                            <Button variant="outline" iconLeft={Printer}>
+                            <Button variant="outline" iconLeft={Printer} onClick={() => window.print()}>
                                 {t('common.print', { defaultValue: 'Print' })}
                             </Button>
                         </div>
@@ -353,6 +356,341 @@ const Student360: React.FC = () => {
             }}>
                 {/* Main Content */}
                 <div>
+                    {activeTab === 'attendance' && (
+                        <Card
+                            header={<h3 style={{ margin: 0 }}>Attendance Details</h3>}
+                            padding="lg"
+                        >
+                            {attendance_details ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {/* Attendance Stats Grid */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                                        gap: '1rem'
+                                    }}>
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-primary-700)'
+                                            }}>
+                                                {attendance_details.total_days || 0}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Total Days
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(76, 175, 80, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-success)'
+                                            }}>
+                                                {attendance_details.present_days || 0}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Present
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(244, 67, 54, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-danger)'
+                                            }}>
+                                                {attendance_details.absent_days || 0}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Absent
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(255, 193, 7, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-warning)'
+                                            }}>
+                                                {attendance_details.late_days || 0}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Late
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Percentage Bar */}
+                                    <div>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                                                Attendance Percentage
+                                            </span>
+                                            <span style={{
+                                                fontSize: '1.25rem',
+                                                fontWeight: 700,
+                                                color: attendance_details.percentage >= 75 ? 'var(--color-success)' : 'var(--color-danger)'
+                                            }}>
+                                                {attendance_details.percentage || 0}%
+                                            </span>
+                                        </div>
+                                        <div style={{
+                                            height: '12px',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: '6px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                height: '100%',
+                                                width: `${attendance_details.percentage || 0}%`,
+                                                background: attendance_details.percentage >= 75
+                                                    ? 'linear-gradient(90deg, var(--color-success), #81C784)'
+                                                    : 'linear-gradient(90deg, var(--color-danger), #E57373)',
+                                                transition: 'width 0.3s ease'
+                                            }} />
+                                        </div>
+                                        {attendance_details.percentage < 75 && (
+                                            <p style={{
+                                                marginTop: '0.5rem',
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-danger)',
+                                                fontWeight: 500
+                                            }}>
+                                                ⚠️ Below minimum required attendance (75%)
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)' }}>
+                                    No attendance records available
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
+                    {activeTab === 'financial' && (
+                        <Card
+                            header={<h3 style={{ margin: 0 }}>Fee Details</h3>}
+                            padding="lg"
+                        >
+                            {fee_details ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {/* Fee Summary Cards */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                        gap: '1rem'
+                                    }}>
+                                        <div style={{
+                                            padding: '1.25rem',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: '4px solid var(--color-primary-500)'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginBottom: '0.5rem'
+                                            }}>
+                                                Total Fee
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.75rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-text-primary)'
+                                            }}>
+                                                ₹{fee_details.total_fee?.toLocaleString() || 0}
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1.25rem',
+                                            background: 'rgba(76, 175, 80, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: '4px solid var(--color-success)'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginBottom: '0.5rem'
+                                            }}>
+                                                Paid Amount
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.75rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-success)'
+                                            }}>
+                                                ₹{fee_details.paid_amount?.toLocaleString() || 0}
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1.25rem',
+                                            background: fee_details.pending_amount > 0 ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: `4px solid ${fee_details.pending_amount > 0 ? 'var(--color-danger)' : 'var(--color-success)'}`
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginBottom: '0.5rem'
+                                            }}>
+                                                Pending Amount
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.75rem',
+                                                fontWeight: 700,
+                                                color: fee_details.pending_amount > 0 ? 'var(--color-danger)' : 'var(--color-success)'
+                                            }}>
+                                                ₹{fee_details.pending_amount?.toLocaleString() || 0}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Discount Information */}
+                                    {fee_details.discount_percentage > 0 && (
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(33, 150, 243, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: '4px solid var(--color-info)'
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}>
+                                                <div>
+                                                    <div style={{
+                                                        fontSize: '0.875rem',
+                                                        color: 'var(--color-text-secondary)'
+                                                    }}>
+                                                        Discount Applied
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '1.25rem',
+                                                        fontWeight: 600,
+                                                        color: 'var(--color-info)',
+                                                        marginTop: '0.25rem'
+                                                    }}>
+                                                        {fee_details.discount_percentage}% off
+                                                    </div>
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '1.5rem',
+                                                    fontWeight: 700,
+                                                    color: 'var(--color-info)'
+                                                }}>
+                                                    ₹{fee_details.discount_amount?.toLocaleString() || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Payment Progress */}
+                                    <div>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                                                Payment Progress
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.875rem',
+                                                fontWeight: 600,
+                                                color: 'var(--color-text-secondary)'
+                                            }}>
+                                                {100 - (fee_details.pending_percentage || 0)}% Paid
+                                            </span>
+                                        </div>
+                                        <div style={{
+                                            height: '12px',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: '6px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                height: '100%',
+                                                width: `${100 - (fee_details.pending_percentage || 0)}%`,
+                                                background: 'linear-gradient(90deg, var(--color-success), #81C784)',
+                                                transition: 'width 0.3s ease'
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Alert if pending */}
+                                    {fee_details.pending_amount > 0 && (
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(255, 193, 7, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: '4px solid var(--color-warning)'
+                                        }}>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-warning)',
+                                                fontWeight: 500
+                                            }}>
+                                                ⚠️ Fee payment pending: ₹{fee_details.pending_amount.toLocaleString()}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)' }}>
+                                    No fee records available
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
                     {activeTab === 'academic' && (
                         <Card
                             header={<h3 style={{ margin: 0 }}>Academic Performance</h3>}
@@ -364,23 +702,12 @@ const Student360: React.FC = () => {
                         </Card>
                     )}
 
-                    {activeTab === 'financial' && (
-                        <Card
-                            header={<h3 style={{ margin: 0 }}>Financial Summary</h3>}
-                            padding="lg"
-                        >
-                            <p style={{ color: 'var(--color-text-secondary)' }}>
-                                Financial records will be displayed here.
-                            </p>
-                        </Card>
-                    )}
-
                     {activeTab === 'health' && (
                         <Card
                             header={<h3 style={{ margin: 0 }}>Health Summary</h3>}
                             padding="lg"
                         >
-                            {health_summary.bmi ? (
+                            {health_summary?.bmi ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <p><strong>Height:</strong> {health_summary.height_cm} cm</p>
                                     <p><strong>Weight:</strong> {health_summary.weight_kg} kg</p>

@@ -12,6 +12,7 @@ dj-database-url==2.2.0
 djangorestframework-simplejwt==5.3.1
 django-allauth==65.3.0
 argon2-cffi==23.1.0
+cryptography==42.0.5
 setuptools  # Required for razorpay
 
 # Celery & Background Tasks
@@ -22,6 +23,9 @@ django-celery-results==2.5.1
 
 # API Documentation
 drf-spectacular==0.28.0
+
+# Audit Trail
+django-simple-history==3.7.0
 
 # Environment & Configuration
 python-decouple==3.8
@@ -46,6 +50,8 @@ twilio==9.0.4
 
 # Reports & Analytics
 xlsxwriter==3.1.9
+pandas==2.2.0
+openpyxl==3.1.2
 
 # Production Server
 gunicorn==23.0.0

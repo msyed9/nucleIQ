@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 from config.admin import admin_site  # Import custom admin
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -14,6 +15,9 @@ from drf_spectacular.views import (
 )
 
 urlpatterns = [
+    # Root URL - Redirect to Admin (Platform Owner access)
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    
     # Admin - Using custom admin site
     path('admin/', admin_site.urls),
     
@@ -29,8 +33,9 @@ urlpatterns = [
     path('api/dashboard/', include('dashboard.urls')),
     path('api/search/', include('search.urls')),
     path('api/students/', include('students.urls')),
+    path('api/parent/', include('students.parent_urls')),  # Parent Portal
     path('api/analytics/', include('analytics.urls')),
-    path('api/idcards/', include('idcards.urls')),
+    # path('api/idcards/', include('idcards.urls')),  # Moved to students app
     path('api/staff/', include('staff.urls')),
     path('api/attendance/', include('attendance.urls')),
     path('api/fees/', include('fees.urls')),
@@ -50,7 +55,7 @@ urlpatterns = [
     path('api/hostel/', include('hostel.urls')),
     path('api/salah/', include('salah_tracker.urls')),
     path('api/habits/', include('habit_tracker.urls')),
-    path('api/alumni/', include('alumni.urls')),
+    # path('api/alumni/', include('alumni.urls')),  # Moved to students app
     path('api/lms/', include('lms.urls')),
     
     # Mobile API
@@ -65,8 +70,8 @@ urlpatterns = [
     # Phase 7
     path('api/reports/', include('reports.urls')),
     
-    # Phase 8
-    path('api/notifications/', include('notifications.urls')),
+    # Phase 8 - Notifications moved to communication app
+    # path('api/notifications/', include('notifications.urls')),
 ]
 
 # Serve media files in development

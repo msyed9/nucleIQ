@@ -1,0 +1,445 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Platform Analytics Dashboard{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .analytics-dashboard {
+        padding: 20px;
+        background: #f5f5f5;
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .metric-card.success { border-left: 4px solid #4CAF50; }
+    .metric-card.warning { border-left: 4px solid #FF9800; }
+    .metric-card.danger { border-left: 4px solid #F44336; }
+    .metric-card.info { border-left: 4px solid #2196F3; }
+    
+    .metric-label {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .metric-subtext {
+        color: #999;
+        font-size: 12px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+    
+    .analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .analytics-table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #666;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .analytics-table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .analytics-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    
+    .dashboard-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .dashboard-header h1 {
+        margin: 0 0 10px 0;
+        color: #333;
+    }
+    
+    .dashboard-header p {
+        color: #666;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-dashboard">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>🚀 Platform Analytics Dashboard</h1>
+        <p>Real-time insights into tenant usage, API performance, and system health</p>
+    </div>
+    
+    <!-- Overview Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card info">
+            <div class="metric-label">Total Tenants</div>
+            <div class="metric-value">{{ total_tenants }}</div>
+            <div class="metric-subtext">{{ active_tenants }} active</div>
+        </div>
+        
+        <div class="metric-card success">
+            <div class="metric-label">New Signups (7d)</div>
+            <div class="metric-value">{{ new_tenants_7d }}</div>
+            <div class="metric-subtext">{{ new_tenants_30d }} in last 30 days</div>
+        </div>
+        
+        <div class="metric-card info">
+            <div class="metric-label">API Calls Today</div>
+            <div class="metric-value">{{ api_usage_today|floatformat:0 }}</div>
+            <div class="metric-subtext">{{ api_usage_7d|floatformat:0 }} in last 7 days</div>
+        </div>
+        
+        <div class="metric-card {% if error_rate > 5 %}danger{% elif error_rate > 2 %}warning{% else %}success{% endif %}">
+            <div class="metric-label">Error Rate</div>
+            <div class="metric-value">{{ error_rate }}%</div>
+            <div class="metric-subtext">{{ api_errors_today }} errors today</div>
+        </div>
+        
+        <div class="metric-card {% if avg_response_time > 1000 %}danger{% elif avg_response_time > 500 %}warning{% else %}success{% endif %}">
+            <div class="metric-label">Avg Response Time</div>
+            <div class="metric-value">{{ avg_response_time|floatformat:0 }}ms</div>
+            <div class="metric-subtext">Last 24 hours</div>
+        </div>
+        
+        <div class="metric-card {% if avg_health_score < 50 %}danger{% elif avg_health_score < 70 %}warning{% else %}success{% endif %}">
+            <div class="metric-label">Avg Health Score</div>
+            <div class="metric-value">{{ avg_health_score|floatformat:0 }}/100</div>
+            <div class="metric-subtext">{{ unhealthy_tenants }} unhealthy tenants</div>
+        </div>
+        
+        <div class="metric-card info">
+            <div class="metric-label">Total Users</div>
+            <div class="metric-value">{{ total_users }}</div>
+            <div class="metric-subtext">{{ active_users_today }} active today</div>
+        </div>
+        
+        <div class="metric-card {% if critical_alerts > 0 %}danger{% elif unresolved_alerts > 0 %}warning{% else %}success{% endif %}">
+            <div class="metric-label">Active Alerts</div>
+            <div class="metric-value">{{ unresolved_alerts }}</div>
+            <div class="metric-subtext">{{ critical_alerts }} critical</div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="charts-grid">
+        <!-- API Usage Trend -->
+        <div class="chart-container">
+            <div class="chart-title">📊 API Usage Trend (Last 7 Days)</div>
+            <canvas id="apiUsageChart" height="200"></canvas>
+        </div>
+        
+        <!-- Tenant Growth -->
+        <div class="chart-container">
+            <div class="chart-title">📈 Tenant Growth (Last 30 Days)</div>
+            <canvas id="tenantGrowthChart" height="200"></canvas>
+        </div>
+        
+        <!-- Health Score Distribution -->
+        <div class="chart-container">
+            <div class="chart-title">💚 Health Score Distribution</div>
+            <canvas id="healthDistributionChart" height="200"></canvas>
+        </div>
+        
+        <!-- Top API Users -->
+        <div class="chart-container">
+            <div class="chart-title">🔥 Top API Users (Last 7 Days)</div>
+            <canvas id="topApiUsersChart" height="200"></canvas>
+        </div>
+    </div>
+    
+    <!-- Module Usage -->
+    <div class="chart-container">
+        <div class="chart-title">📦 Module Usage (Last 7 Days)</div>
+        <canvas id="moduleUsageChart" height="150"></canvas>
+    </div>
+    
+    <!-- Top Tenants by Usage -->
+    <div class="table-container">
+        <div class="chart-title">🏆 Top Tenants by API Usage (Today)</div>
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>API Calls</th>
+                    <th>Health Score</th>
+                    <th>Active Users</th>
+                    <th>Storage (MB)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for metric in top_tenants %}
+                <tr>
+                    <td><strong>{{ metric.tenant.name }}</strong></td>
+                    <td>{{ metric.api_calls|floatformat:0 }}</td>
+                    <td>
+                        <span class="badge {% if metric.health_score >= 80 %}badge-success{% elif metric.health_score >= 60 %}badge-info{% elif metric.health_score >= 40 %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ metric.health_score|floatformat:0 }}
+                        </span>
+                    </td>
+                    <td>{{ metric.dau }}</td>
+                    <td>{{ metric.storage_used_mb|floatformat:2 }}</td>
+                    <td>
+                        <span class="badge {% if metric.tenant.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                            {% if metric.tenant.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #999;">No data available</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Recent Alerts -->
+    <div class="table-container">
+        <div class="chart-title">⚠️ Recent Alerts</div>
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Title</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in recent_alerts %}
+                <tr>
+                    <td><strong>{{ alert.tenant.name }}</strong></td>
+                    <td>{{ alert.get_alert_type_display }}</td>
+                    <td>
+                        <span class="badge {% if alert.severity == 'CRITICAL' %}badge-danger{% elif alert.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                            {{ alert.severity }}
+                        </span>
+                    </td>
+                    <td>{{ alert.title }}</td>
+                    <td>{{ alert.created_at|timesince }} ago</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #999;">No recent alerts</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Recent Errors -->
+    <div class="table-container">
+        <div class="chart-title">🐛 Recent API Errors</div>
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Endpoint</th>
+                    <th>Status Code</th>
+                    <th>Error Message</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_errors %}
+                <tr>
+                    <td><strong>{{ log.tenant.name }}</strong></td>
+                    <td><code>{{ log.endpoint|truncatechars:50 }}</code></td>
+                    <td><span class="badge badge-danger">{{ log.status_code }}</span></td>
+                    <td>{{ log.error_message|truncatechars:80 }}</td>
+                    <td>{{ log.created_at|timesince }} ago</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #999;">No recent errors</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // API Usage Trend Chart
+    new Chart(document.getElementById('apiUsageChart'), {
+        type: 'line',
+        data: {
+            labels: {{ api_usage_by_day|safe }}.map(d => d.date),
+            datasets: [{
+                label: 'API Calls',
+                data: {{ api_usage_by_day|safe }}.map(d => d.count),
+                borderColor: '#2196F3',
+                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    // Tenant Growth Chart
+    new Chart(document.getElementById('tenantGrowthChart'), {
+        type: 'line',
+        data: {
+            labels: {{ tenant_growth|safe }}.map(d => d.date),
+            datasets: [{
+                label: 'Total Tenants',
+                data: {{ tenant_growth|safe }}.map(d => d.count),
+                borderColor: '#4CAF50',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    // Health Distribution Chart
+    new Chart(document.getElementById('healthDistributionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ health_distribution|safe }}.map(d => d.range),
+            datasets: [{
+                data: {{ health_distribution|safe }}.map(d => d.count),
+                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    
+    // Top API Users Chart
+    new Chart(document.getElementById('topApiUsersChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_api_users|safe }}.map(d => d.tenant__name),
+            datasets: [{
+                label: 'API Calls',
+                data: {{ top_api_users|safe }}.map(d => d.api_calls),
+                backgroundColor: '#FF9800'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    // Module Usage Chart
+    new Chart(document.getElementById('moduleUsageChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ module_usage|safe }}.map(d => d.module),
+            datasets: [{
+                label: 'Access Count',
+                data: {{ module_usage|safe }}.map(d => d.access_count),
+                backgroundColor: '#9C27B0'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true } }
+        }
+    });
+</script>
+{% endblock %}

@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
+    'simple_history',  # Audit trail
     
     # Local apps
     'core',
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'search',
     'students',
     'analytics',
-    'idcards',
+    # 'idcards',  # Moved to students app
     'staff',
     'attendance',
     'fees',
@@ -63,14 +64,14 @@ INSTALLED_APPS = [
     'hostel',
     'salah_tracker',
     'habit_tracker',
-    'alumni',
+    # 'alumni',  # Moved to students app
     'lms',
     'certificates',
     'security',
     'placement',
     'helpdesk',
     'reports',
-    'notifications',
+    # 'notifications',  # Using communication app instead
 ]
 
 MIDDLEWARE = [
@@ -82,6 +83,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',  # Audit trail - must be after auth
     
     # Custom middleware - MUST be after authentication
     'core.middleware.TenantMiddleware',

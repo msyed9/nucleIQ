@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import axios from 'axios';
+import { useToast, ToastContainer } from '@/design-system';
 import './TimetableBuilder.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -149,6 +150,7 @@ const TimetableBuilder: React.FC = () => {
         teacher: '',
         room: '',
     });
+    const { toasts, removeToast, success, error: showError, warning } = useToast();
 
     // Fetch initial data
     useEffect(() => {
@@ -254,7 +256,7 @@ const TimetableBuilder: React.FC = () => {
         );
 
         if (existingSlot) {
-            alert('A class is already scheduled at this time!');
+            warning('A class is already scheduled at this time!');
             return;
         }
 
@@ -299,7 +301,7 @@ const TimetableBuilder: React.FC = () => {
                     conflicts.push('Section already has a class at this time');
                 }
 
-                alert('Conflicts detected:\n' + conflicts.join('\n'));
+                warning('Conflicts detected: ' + conflicts.join(', '));
                 return;
             }
 
@@ -312,7 +314,7 @@ const TimetableBuilder: React.FC = () => {
 
             setTimetableSlots([...timetableSlots, response.data]);
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Error creating timetable slot');
+            showError(err.response?.data?.message || 'Error creating timetable slot');
         } finally {
             setLoading(false);
         }
@@ -337,7 +339,7 @@ const TimetableBuilder: React.FC = () => {
             });
             setTimetableSlots(timetableSlots.filter((s) => s.id !== slotId));
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Error deleting slot');
+            showError(err.response?.data?.message || 'Error deleting slot');
         }
     };
 
@@ -357,7 +359,7 @@ const TimetableBuilder: React.FC = () => {
             setShowModal(false);
             setEditingSlot(null);
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Error updating slot');
+            showError(err.response?.data?.message || 'Error updating slot');
         }
     };
 
@@ -371,180 +373,183 @@ const TimetableBuilder: React.FC = () => {
     };
 
     return (
-        <DndProvider backend={HTML5Backend}>
-            <div className="timetable-builder">
-                <div className="timetable-header">
-                    <h1>📅 Timetable Builder</h1>
-                    <p>Drag and drop to create your timetable</p>
-                </div>
-
-                {/* Filters */}
-                <div className="timetable-filters">
-                    <div className="filter-group">
-                        <label>Academic Year</label>
-                        <select
-                            value={selectedAcademicYear}
-                            onChange={(e) => setSelectedAcademicYear(e.target.value)}
-                        >
-                            <option value="">Select Academic Year</option>
-                            {academicYears.map((year) => (
-                                <option key={year.id} value={year.id}>
-                                    {year.name}
-                                </option>
-                            ))}
-                        </select>
+        <>
+            <ToastContainer toasts={toasts} onDismiss={removeToast} position="top-right" />
+            <DndProvider backend={HTML5Backend}>
+                <div className="timetable-builder">
+                    <div className="timetable-header">
+                        <h1>📅 Timetable Builder</h1>
+                        <p>Drag and drop to create your timetable</p>
                     </div>
 
-                    <div className="filter-group">
-                        <label>Section</label>
-                        <select
-                            value={selectedSection}
-                            onChange={(e) => setSelectedSection(e.target.value)}
-                            disabled={!selectedAcademicYear}
-                        >
-                            <option value="">Select Section</option>
-                            {sections.map((section) => (
-                                <option key={section.id} value={section.id}>
-                                    {section.grade_level?.name} - {section.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
+                    {/* Filters */}
+                    <div className="timetable-filters">
+                        <div className="filter-group">
+                            <label>Academic Year</label>
+                            <select
+                                value={selectedAcademicYear}
+                                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                            >
+                                <option value="">Select Academic Year</option>
+                                {academicYears.map((year) => (
+                                    <option key={year.id} value={year.id}>
+                                        {year.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                {/* Subject Palette */}
-                {selectedSection && (
-                    <div className="subject-palette">
-                        <h3>Subjects</h3>
-                        <div className="palette-items">
-                            {subjects.map((subject) => (
-                                <DraggableSlot
-                                    key={subject.id}
-                                    slot={{
-                                        subject: subject.id,
-                                        subject_name: subject.name,
-                                        teacher: '',
-                                        teacher_name: '',
-                                        room: '',
-                                        day_of_week: '',
-                                        start_time: '',
-                                        end_time: '',
-                                        period_number: 0,
-                                    }}
-                                    onEdit={() => { }}
-                                    onDelete={() => { }}
-                                />
-                            ))}
+                        <div className="filter-group">
+                            <label>Section</label>
+                            <select
+                                value={selectedSection}
+                                onChange={(e) => setSelectedSection(e.target.value)}
+                                disabled={!selectedAcademicYear}
+                            >
+                                <option value="">Select Section</option>
+                                {sections.map((section) => (
+                                    <option key={section.id} value={section.id}>
+                                        {section.grade_level?.name} - {section.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
-                )}
 
-                {/* Timetable Grid */}
-                {selectedSection && (
-                    <div className="timetable-grid-container">
-                        {loading && <div className="loading-overlay">Loading...</div>}
-                        {error && <div className="error-message">{error}</div>}
+                    {/* Subject Palette */}
+                    {selectedSection && (
+                        <div className="subject-palette">
+                            <h3>Subjects</h3>
+                            <div className="palette-items">
+                                {subjects.map((subject) => (
+                                    <DraggableSlot
+                                        key={subject.id}
+                                        slot={{
+                                            subject: subject.id,
+                                            subject_name: subject.name,
+                                            teacher: '',
+                                            teacher_name: '',
+                                            room: '',
+                                            day_of_week: '',
+                                            start_time: '',
+                                            end_time: '',
+                                            period_number: 0,
+                                        }}
+                                        onEdit={() => { }}
+                                        onDelete={() => { }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                        <table className="timetable-grid">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    {DAYS.map((day) => (
-                                        <th key={day}>{day}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {TIME_SLOTS.map((timeSlot, idx) => (
-                                    <tr key={idx}>
-                                        <td className="time-cell">
-                                            {timeSlot.period !== 0 ? (
-                                                <>
-                                                    <div className="period-number">P{timeSlot.period}</div>
-                                                    <div className="time-range">
-                                                        {timeSlot.start} - {timeSlot.end}
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="break-label">{timeSlot.label}</div>
-                                            )}
-                                        </td>
+                    {/* Timetable Grid */}
+                    {selectedSection && (
+                        <div className="timetable-grid-container">
+                            {loading && <div className="loading-overlay">Loading...</div>}
+                            {error && <div className="error-message">{error}</div>}
+
+                            <table className="timetable-grid">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
                                         {DAYS.map((day) => (
-                                            <DroppableCell
-                                                key={`${day}-${idx}`}
-                                                day={day}
-                                                timeSlot={timeSlot}
-                                                slot={getSlotForCell(day, timeSlot)}
-                                                onDrop={handleDrop}
-                                                onEdit={handleEdit}
-                                                onDelete={handleDelete}
-                                            />
+                                            <th key={day}>{day}</th>
                                         ))}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-
-                {/* Edit Modal */}
-                {showModal && editingSlot && (
-                    <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                            <h2>Edit Timetable Slot</h2>
-
-                            <div className="form-group">
-                                <label>Subject</label>
-                                <select
-                                    value={formData.subject}
-                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                >
-                                    {subjects.map((subject) => (
-                                        <option key={subject.id} value={subject.id}>
-                                            {subject.name}
-                                        </option>
+                                </thead>
+                                <tbody>
+                                    {TIME_SLOTS.map((timeSlot, idx) => (
+                                        <tr key={idx}>
+                                            <td className="time-cell">
+                                                {timeSlot.period !== 0 ? (
+                                                    <>
+                                                        <div className="period-number">P{timeSlot.period}</div>
+                                                        <div className="time-range">
+                                                            {timeSlot.start} - {timeSlot.end}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="break-label">{timeSlot.label}</div>
+                                                )}
+                                            </td>
+                                            {DAYS.map((day) => (
+                                                <DroppableCell
+                                                    key={`${day}-${idx}`}
+                                                    day={day}
+                                                    timeSlot={timeSlot}
+                                                    slot={getSlotForCell(day, timeSlot)}
+                                                    onDrop={handleDrop}
+                                                    onEdit={handleEdit}
+                                                    onDelete={handleDelete}
+                                                />
+                                            ))}
+                                        </tr>
                                     ))}
-                                </select>
-                            </div>
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-                            <div className="form-group">
-                                <label>Teacher</label>
-                                <select
-                                    value={formData.teacher}
-                                    onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-                                >
-                                    <option value="">Select Teacher</option>
-                                    {teachers.map((teacher) => (
-                                        <option key={teacher.id} value={teacher.id}>
-                                            {teacher.first_name} {teacher.last_name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                    {/* Edit Modal */}
+                    {showModal && editingSlot && (
+                        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <h2>Edit Timetable Slot</h2>
 
-                            <div className="form-group">
-                                <label>Room</label>
-                                <input
-                                    type="text"
-                                    value={formData.room}
-                                    onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-                                    placeholder="e.g., Room 101"
-                                />
-                            </div>
+                                <div className="form-group">
+                                    <label>Subject</label>
+                                    <select
+                                        value={formData.subject}
+                                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                    >
+                                        {subjects.map((subject) => (
+                                            <option key={subject.id} value={subject.id}>
+                                                {subject.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                            <div className="modal-actions">
-                                <button onClick={() => setShowModal(false)} className="btn-cancel">
-                                    Cancel
-                                </button>
-                                <button onClick={handleSaveSlot} className="btn-save">
-                                    Save
-                                </button>
+                                <div className="form-group">
+                                    <label>Teacher</label>
+                                    <select
+                                        value={formData.teacher}
+                                        onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
+                                    >
+                                        <option value="">Select Teacher</option>
+                                        {teachers.map((teacher) => (
+                                            <option key={teacher.id} value={teacher.id}>
+                                                {teacher.first_name} {teacher.last_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Room</label>
+                                    <input
+                                        type="text"
+                                        value={formData.room}
+                                        onChange={(e) => setFormData({ ...formData, room: e.target.value })}
+                                        placeholder="e.g., Room 101"
+                                    />
+                                </div>
+
+                                <div className="modal-actions">
+                                    <button onClick={() => setShowModal(false)} className="btn-cancel">
+                                        Cancel
+                                    </button>
+                                    <button onClick={handleSaveSlot} className="btn-save">
+                                        Save
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </DndProvider>
+                    )}
+                </div>
+            </DndProvider>
+        </>
     );
 };
 

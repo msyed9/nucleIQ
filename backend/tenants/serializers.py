@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AcademicYear, GradeLevel, Section, Department, Holiday, TenantSettings
+from .models import AcademicYear, GradeLevel, Section, Department, Holiday, TenantSettings, TenantBranding
 
 class AcademicYearSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,6 +63,9 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
             'minimum_attendance_percentage', 'late_arrival_threshold_minutes',
             # Exam Settings
             'result_publish_delay_days', 'allow_online_exams', 'exam_proctoring_enabled',
+            # Student Admission Settings
+            'auto_generate_admission_number', 'admission_number_format',
+            'admission_number_prefix', 'admission_number_sequence',
             # Email Configuration
             'email_enabled', 'smtp_host', 'smtp_port', 'smtp_username',
             'smtp_use_tls', 'from_email',
@@ -100,4 +103,23 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
     def get_notification_config(self, obj):
         """Get notification configuration."""
         return obj.get_notification_config()
+
+
+class TenantBrandingSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TenantBranding model.
+    Allows tenants to customize their branding.
+    """
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    
+    class Meta:
+        model = TenantBranding
+        fields = [
+            'id', 'tenant', 'tenant_name',
+            'logo_url', 'favicon_url', 'login_background_url', 'email_header_image',
+            'primary_color', 'secondary_color', 'sidebar_color',
+            'font_family', 'gallery_images', 'custom_css',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']
 

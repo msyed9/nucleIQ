@@ -3,14 +3,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsTenantUser
-from .models import AcademicYear, GradeLevel, Section, Department, Holiday, TenantSettings
+from .models import AcademicYear, GradeLevel, Section, Department, Holiday, TenantSettings, TenantBranding
 from .serializers import (
     AcademicYearSerializer, 
     GradeLevelSerializer, 
     SectionSerializer, 
     DepartmentSerializer,
     HolidaySerializer,
-    TenantSettingsSerializer
+    TenantSettingsSerializer,
+    TenantBrandingSerializer
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime, timedelta
@@ -150,4 +151,66 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
         """
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['patch'], url_path='update')
+    def update_settings(self, request):
+        """
+        Custom action to update settings via /api/tenants/settings/update/
+        This allows updating without needing to know the settings ID.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class TenantBrandingViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for TenantBranding.
+    Allows tenant admins to customize their branding.
+    """
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = TenantBrandingSerializer
+    http_method_names = ['get', 'put', 'patch']  # Only allow read and update
+    
+    def get_queryset(self):
+        return TenantBranding.objects.filter(tenant=self.request.user.tenant)
+    
+    def get_object(self):
+        """
+        Get or create tenant branding for the current tenant.
+        """
+        branding, created = TenantBranding.objects.get_or_create(
+            tenant=self.request.user.tenant
+        )
+        return branding
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Override list to return single branding object instead of array.
+        """
+        branding = self.get_object()
+        serializer = self.get_serializer(branding)
+        return Response(serializer.data)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Update tenant branding.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update tenant branding.
+        """
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
 

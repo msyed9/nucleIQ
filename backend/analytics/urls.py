@@ -1,25 +1,18 @@
 """
-URL Configuration for Analytics
+URL Configuration for Analytics API
 """
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    PlatformAnalyticsViewSet,
-    TenantMetricViewSet,
-    UsageLogViewSet,
-    TenantHealthAlertViewSet,
-    ChurnPredictionViewSet,
-    UpsellOpportunityViewSet
-)
+
+# Note: Analytics ViewSets can be added here when needed for API access
+# The admin dashboard is accessed via /admin/analytics/platform-dashboard/
 
 router = DefaultRouter()
-router.register(r'platform', PlatformAnalyticsViewSet, basename='platform-analytics')
-router.register(r'metrics', TenantMetricViewSet, basename='tenant-metric')
-router.register(r'logs', UsageLogViewSet, basename='usage-log')
-router.register(r'alerts', TenantHealthAlertViewSet, basename='health-alert')
-router.register(r'churn', ChurnPredictionViewSet, basename='churn-prediction')
-router.register(r'upsell', UpsellOpportunityViewSet, basename='upsell-opportunity')
+
+# Placeholder for future analytics API endpoints
+# router.register(r'metrics', TenantMetricViewSet, basename='tenant-metric')
+# router.register(r'logs', UsageLogViewSet, basename='usage-log')
 
 urlpatterns = [
     path('', include(router.urls)),

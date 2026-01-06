@@ -1,215 +1,242 @@
 """
-Analytics API Views
+Analytics Dashboard Views for Platform Admin
 """
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from core.permissions import IsPlatformAdmin
-from .models import (
-    TenantMetric,
-    UsageLog,
-    TenantHealthAlert,
-    ChurnPrediction,
-    UpsellOpportunity
-)
-from .serializers import (
-    TenantMetricSerializer,
-    UsageLogSerializer,
-    TenantHealthAlertSerializer,
-    ChurnPredictionSerializer,
-    UpsellOpportunitySerializer,
-    PlatformOverviewSerializer,
-    HealthDistributionSerializer,
-    ModulePopularitySerializer
-)
-from .services import PlatformAnalyticsService
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render
+from django.db.models import Count, Sum, Avg, Q, F
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+
+from tenants.models import Tenant
+from .models import TenantMetric, UsageLog, TenantHealthAlert, ChurnPrediction
+from users.models import User
 
 
-class PlatformAnalyticsViewSet(viewsets.ViewSet):
+@staff_member_required
+def platform_analytics_dashboard(request):
     """
-    ViewSet for platform-wide analytics (Super Admin only).
+    Comprehensive analytics dashboard for platform administrators.
+    Shows tenant usage, API metrics, health scores, and trends.
     """
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
     
-    @action(detail=False, methods=['get'])
-    def overview(self, request):
-        """Get platform overview metrics."""
-        service = PlatformAnalyticsService()
-        data = service.get_platform_overview()
-        
-        serializer = PlatformOverviewSerializer(data)
-        return Response(serializer.data)
+    # Date ranges
+    today = timezone.now().date()
+    last_7_days = today - timedelta(days=7)
+    last_30_days = today - timedelta(days=30)
     
-    @action(detail=False, methods=['get'])
-    def health_distribution(self, request):
-        """Get tenant health score distribution."""
-        service = PlatformAnalyticsService()
-        distribution = service.get_tenant_health_distribution()
-        
-        serializer = HealthDistributionSerializer(distribution)
-        return Response(serializer.data)
+    # ============================================
+    # OVERVIEW METRICS
+    # ============================================
+    total_tenants = Tenant.objects.count()
+    active_tenants = Tenant.objects.filter(is_active=True).count()
+    trial_tenants = Tenant.objects.filter(plan='TRIAL').count()
+    paid_tenants = Tenant.objects.filter(plan__in=['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']).count()
     
-    @action(detail=False, methods=['get'])
-    def module_popularity(self, request):
-        """Get module usage statistics."""
-        service = PlatformAnalyticsService()
-        popularity = service.get_module_popularity()
-        
-        serializer = ModulePopularitySerializer(popularity, many=True)
-        return Response(serializer.data)
-
-
-class TenantMetricViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for tenant metrics."""
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-    serializer_class = TenantMetricSerializer
-    queryset = TenantMetric.objects.all()
+    # Recent signups
+    new_tenants_7d = Tenant.objects.filter(created_at__gte=timezone.now() - timedelta(days=7)).count()
+    new_tenants_30d = Tenant.objects.filter(created_at__gte=timezone.now() - timedelta(days=30)).count()
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter by tenant if provided
-        tenant_id = self.request.query_params.get('tenant_id')
-        if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
-        
-        # Filter by date range
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
-        if start_date:
-            queryset = queryset.filter(date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(date__lte=end_date)
-        
-        return queryset.order_by('-date')
-
-
-class UsageLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for usage logs."""
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-    serializer_class = UsageLogSerializer
-    queryset = UsageLog.objects.all()
+    # Total users across all tenants
+    total_users = User.objects.exclude(is_platform_admin=True).count()
+    active_users_today = User.objects.filter(
+        last_login__gte=timezone.now() - timedelta(days=1)
+    ).exclude(is_platform_admin=True).count()
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter by tenant
-        tenant_id = self.request.query_params.get('tenant_id')
-        if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
-        
-        # Filter by action type
-        action_type = self.request.query_params.get('action_type')
-        if action_type:
-            queryset = queryset.filter(action_type=action_type)
-        
-        # Filter errors only
-        if self.request.query_params.get('errors_only') == 'true':
-            queryset = queryset.filter(is_error=True)
-        
-        return queryset.order_by('-created_at')[:1000]  # Limit to 1000 recent logs
-
-
-class TenantHealthAlertViewSet(viewsets.ModelViewSet):
-    """ViewSet for health alerts."""
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-    serializer_class = TenantHealthAlertSerializer
-    queryset = TenantHealthAlert.objects.all()
+    # ============================================
+    # API USAGE METRICS
+    # ============================================
+    api_usage_today = UsageLog.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=1),
+        action_type='API_CALL'
+    ).count()
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter by resolution status
-        if self.request.query_params.get('unresolved_only') == 'true':
-            queryset = queryset.filter(is_resolved=False)
-        
-        # Filter by severity
-        severity = self.request.query_params.get('severity')
-        if severity:
-            queryset = queryset.filter(severity=severity)
-        
-        return queryset.order_by('-created_at')
+    api_usage_7d = UsageLog.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=7),
+        action_type='API_CALL'
+    ).count()
     
-    @action(detail=True, methods=['post'])
-    def resolve(self, request, pk=None):
-        """Mark alert as resolved."""
-        alert = self.get_object()
-        
-        from django.utils import timezone
-        alert.is_resolved = True
-        alert.resolved_at = timezone.now()
-        alert.resolution_notes = request.data.get('notes', '')
-        alert.save()
-        
-        serializer = self.get_serializer(alert)
-        return Response(serializer.data)
-
-
-class ChurnPredictionViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for churn predictions."""
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-    serializer_class = ChurnPredictionSerializer
-    queryset = ChurnPrediction.objects.all()
+    # API errors
+    api_errors_today = UsageLog.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=1),
+        is_error=True
+    ).count()
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter by risk level
-        risk_level = self.request.query_params.get('risk_level')
-        if risk_level:
-            queryset = queryset.filter(risk_level=risk_level)
-        
-        # Get latest predictions only
-        if self.request.query_params.get('latest_only') == 'true':
-            from datetime import date
-            queryset = queryset.filter(prediction_date=date.today())
-        
-        return queryset.order_by('-prediction_date', '-churn_probability')
-
-
-class UpsellOpportunityViewSet(viewsets.ModelViewSet):
-    """ViewSet for upsell opportunities."""
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-    serializer_class = UpsellOpportunitySerializer
-    queryset = UpsellOpportunity.objects.all()
+    error_rate = (api_errors_today / api_usage_today * 100) if api_usage_today > 0 else 0
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter by contact status
-        if self.request.query_params.get('not_contacted_only') == 'true':
-            queryset = queryset.filter(is_contacted=False)
-        
-        # Filter by conversion status
-        if self.request.query_params.get('not_converted_only') == 'true':
-            queryset = queryset.filter(is_converted=False)
-        
-        return queryset.order_by('-created_at')
+    # Average response time
+    avg_response_time = UsageLog.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=1),
+        response_time_ms__isnull=False
+    ).aggregate(avg_time=Avg('response_time_ms'))['avg_time'] or 0
     
-    @action(detail=True, methods=['post'])
-    def mark_contacted(self, request, pk=None):
-        """Mark opportunity as contacted."""
-        opportunity = self.get_object()
-        
-        from django.utils import timezone
-        opportunity.is_contacted = True
-        opportunity.contacted_at = timezone.now()
-        opportunity.save()
-        
-        serializer = self.get_serializer(opportunity)
-        return Response(serializer.data)
+    # ============================================
+    # TENANT HEALTH METRICS
+    # ============================================
+    latest_metrics = TenantMetric.objects.filter(
+        date__gte=last_7_days
+    ).values('tenant').annotate(
+        avg_health=Avg('health_score'),
+        total_api_calls=Sum('api_calls'),
+        total_errors=Sum('error_count')
+    )
     
-    @action(detail=True, methods=['post'])
-    def mark_converted(self, request, pk=None):
-        """Mark opportunity as converted."""
-        opportunity = self.get_object()
+    avg_health_score = TenantMetric.objects.filter(
+        date=today
+    ).aggregate(avg=Avg('health_score'))['avg'] or 0
+    
+    # Unhealthy tenants (health score < 50)
+    unhealthy_tenants = TenantMetric.objects.filter(
+        date=today,
+        health_score__lt=50
+    ).count()
+    
+    # ============================================
+    # CHURN RISK
+    # ============================================
+    high_risk_tenants = ChurnPrediction.objects.filter(
+        prediction_date=today,
+        risk_level='HIGH'
+    ).count()
+    
+    # ============================================
+    # ALERTS
+    # ============================================
+    unresolved_alerts = TenantHealthAlert.objects.filter(
+        is_resolved=False
+    ).count()
+    
+    critical_alerts = TenantHealthAlert.objects.filter(
+        is_resolved=False,
+        severity='CRITICAL'
+    ).count()
+    
+    # ============================================
+    # CHART DATA - API Usage by Day (Last 7 days)
+    # ============================================
+    api_usage_by_day = []
+    for i in range(7):
+        date = today - timedelta(days=6-i)
+        count = UsageLog.objects.filter(
+            created_at__date=date,
+            action_type='API_CALL'
+        ).count()
+        api_usage_by_day.append({
+            'date': date.strftime('%m/%d'),
+            'count': count
+        })
+    
+    # ============================================
+    # CHART DATA - Tenant Growth (Last 30 days)
+    # ============================================
+    tenant_growth = []
+    for i in range(30):
+        date = today - timedelta(days=29-i)
+        count = Tenant.objects.filter(created_at__date__lte=date).count()
+        tenant_growth.append({
+            'date': date.strftime('%m/%d'),
+            'count': count
+        })
+    
+    # ============================================
+    # CHART DATA - API Usage by Tenant (Top 10)
+    # ============================================
+    top_api_users = UsageLog.objects.filter(
+        created_at__gte=last_7_days,
+        action_type='API_CALL'
+    ).values('tenant__name').annotate(
+        api_calls=Count('id')
+    ).order_by('-api_calls')[:10]
+    
+    # ============================================
+    # CHART DATA - Health Score Distribution
+    # ============================================
+    health_distribution = [
+        {
+            'range': 'Excellent (80-100)',
+            'count': TenantMetric.objects.filter(date=today, health_score__gte=80).count()
+        },
+        {
+            'range': 'Good (60-79)',
+            'count': TenantMetric.objects.filter(date=today, health_score__gte=60, health_score__lt=80).count()
+        },
+        {
+            'range': 'Fair (40-59)',
+            'count': TenantMetric.objects.filter(date=today, health_score__gte=40, health_score__lt=60).count()
+        },
+        {
+            'range': 'Poor (<40)',
+            'count': TenantMetric.objects.filter(date=today, health_score__lt=40).count()
+        }
+    ]
+    
+    # ============================================
+    # CHART DATA - Module Usage
+    # ============================================
+    module_usage = UsageLog.objects.filter(
+        created_at__gte=last_7_days,
+        action_type='MODULE_ACCESS'
+    ).values('module').annotate(
+        access_count=Count('id')
+    ).order_by('-access_count')[:10]
+    
+    # ============================================
+    # RECENT ACTIVITY
+    # ============================================
+    recent_errors = UsageLog.objects.filter(
+        is_error=True
+    ).select_related('tenant', 'user').order_by('-created_at')[:10]
+    
+    recent_alerts = TenantHealthAlert.objects.filter(
+        is_resolved=False
+    ).select_related('tenant').order_by('-created_at')[:10]
+    
+    # ============================================
+    # TOP TENANTS BY USAGE
+    # ============================================
+    top_tenants = TenantMetric.objects.filter(
+        date=today
+    ).select_related('tenant').order_by('-api_calls')[:10]
+    
+    context = {
+        # Overview
+        'total_tenants': total_tenants,
+        'active_tenants': active_tenants,
+        'trial_tenants': trial_tenants,
+        'paid_tenants': paid_tenants,
+        'new_tenants_7d': new_tenants_7d,
+        'new_tenants_30d': new_tenants_30d,
+        'total_users': total_users,
+        'active_users_today': active_users_today,
         
-        from django.utils import timezone
-        opportunity.is_converted = True
-        opportunity.converted_at = timezone.now()
-        opportunity.save()
+        # API Metrics
+        'api_usage_today': api_usage_today,
+        'api_usage_7d': api_usage_7d,
+        'api_errors_today': api_errors_today,
+        'error_rate': round(error_rate, 2),
+        'avg_response_time': round(avg_response_time, 2),
         
-        serializer = self.get_serializer(opportunity)
-        return Response(serializer.data)
+        # Health Metrics
+        'avg_health_score': round(avg_health_score, 2),
+        'unhealthy_tenants': unhealthy_tenants,
+        'high_risk_tenants': high_risk_tenants,
+        
+        # Alerts
+        'unresolved_alerts': unresolved_alerts,
+        'critical_alerts': critical_alerts,
+        
+        # Chart Data
+        'api_usage_by_day': api_usage_by_day,
+        'tenant_growth': tenant_growth,
+        'top_api_users': list(top_api_users),
+        'health_distribution': health_distribution,
+        'module_usage': list(module_usage),
+        
+        # Recent Activity
+        'recent_errors': recent_errors,
+        'recent_alerts': recent_alerts,
+        'top_tenants': top_tenants,
+    }
+    
+    return render(request, 'admin/analytics/platform_dashboard.html', context)

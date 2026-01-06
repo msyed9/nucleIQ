@@ -143,9 +143,9 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Library seeding skipped/failed: {e}'))
 
-        # ID Cards: template and design
+        # ID Cards: template and design - now in students app
         try:
-            from idcards.models import IDCardTemplate, IDCardDesign, IDCardGeneration
+            from students.models import IDCardTemplate, IDCardDesign, IDCardGeneration
             tpl, _ = IDCardTemplate.objects.get_or_create(tenant=tenant, name='Default Student Card', defaults={'card_type': 'STUDENT', 'orientation': 'VERTICAL', 'design_json': {'bg':'#1976D2'}, 'is_global': False})
             design, _ = IDCardDesign.objects.get_or_create(tenant=tenant, name='NMS Default', defaults={'card_type': 'STUDENT', 'orientation': 'VERTICAL', 'design_json': {'logo': tenant.branding.logo_url if hasattr(tenant,'branding') else ''}})
             gen, _ = IDCardGeneration.objects.get_or_create(tenant=tenant, design=design, defaults={'card_type': 'STUDENT', 'filters': {}, 'total_cards': len(students_created), 'status': 'PENDING'})

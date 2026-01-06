@@ -268,3 +268,24 @@ class PermissionChecker:
             raise PermissionDenied(
                 f"You do not have permission to {action} {resource}"
             )
+
+
+class CanViewFullAadhar(permissions.BasePermission):
+    """
+    Permission class to check if user can view full unmasked Aadhar numbers.
+    Only users with 'student_module' and 'view_full_aadhar' permission can view.
+    """
+    
+    message = "You do not have permission to view full Aadhar numbers."
+    
+    def has_permission(self, request, view):
+        """Check if user has view_full_aadhar permission."""
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Platform admins and superusers can view
+        if request.user.is_platform_admin or request.user.is_superuser:
+            return True
+        
+        # Check specific permission
+        return check_permission(request.user, 'student_module', 'view_full_aadhar')

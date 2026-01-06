@@ -27,7 +27,9 @@ class Student360Service:
                 'kpis': {...},
                 'recent_activity': [...],
                 'siblings': [...],
-                'family_summary': {...}
+                'family_summary': {...},
+                'attendance_details': {...},
+                'fee_details': {...}
             }
         """
         return {
@@ -39,6 +41,8 @@ class Student360Service:
             'academic_summary': self._get_academic_summary(),
             'financial_summary': self._get_financial_summary(),
             'health_summary': self._get_health_summary(),
+            'attendance_details': self._get_attendance_details(),
+            'fee_details': self._get_fee_details(),
         }
     
     def _get_student_basic(self):
@@ -179,23 +183,234 @@ class Student360Service:
         
         return {}
     
-    # Helper methods (placeholders - would integrate with actual modules)
+    # Helper methods - Real data integration
     
     def _get_attendance_percentage(self):
-        """Calculate attendance percentage."""
-        # from attendance.models import Attendance
-        # Would calculate from actual attendance records
-        return 95.5  # Placeholder
+        """Calculate attendance percentage from real data."""
+        try:
+            from attendance.models import AttendanceRecord
+            from django.db.models import Count, Q
+            from datetime import date, timedelta
+            
+            # Get current enrollment
+            enrollment = self.student.get_current_enrollment()
+            if not enrollment:
+                return 0.0
+            
+            # Get current academic year
+            academic_year = enrollment.academic_year
+            
+            # Calculate for current academic year
+            attendance_records = AttendanceRecord.objects.filter(
+                tenant=self.student.tenant,
+                record_type='STUDENT',
+                student=self.student,
+                academic_year=academic_year
+            )
+            
+            total_days = attendance_records.count()
+            if total_days == 0:
+                return 0.0
+            
+            present_days = attendance_records.filter(
+                Q(status='PRESENT') | Q(status='LATE')
+            ).count()
+            
+            return round((present_days / total_days) * 100, 2)
+            
+        except Exception as e:
+            print(f"Error calculating attendance: {e}")
+            return 0.0
+    
+    def _get_attendance_details(self):
+        """Get detailed attendance statistics."""
+        try:
+            from attendance.models import AttendanceRecord
+            from django.db.models import Count, Q
+            
+            enrollment = self.student.get_current_enrollment()
+            if not enrollment:
+                return {
+                    'total_days': 0,
+                    'present_days': 0,
+                    'absent_days': 0,
+                    'late_days': 0,
+                    'half_days': 0,
+                    'percentage': 0.0
+                }
+            
+            academic_year = enrollment.academic_year
+            
+            # Get all attendance records
+            records = AttendanceRecord.objects.filter(
+                tenant=self.student.tenant,
+                record_type='STUDENT',
+                student=self.student,
+                academic_year=academic_year
+            )
+            
+            total_days = records.count()
+            present_days = records.filter(status='PRESENT').count()
+            absent_days = records.filter(status='ABSENT').count()
+            late_days = records.filter(status='LATE').count()
+            half_days = records.filter(status='HALF_DAY').count()
+            
+            percentage = round((present_days + late_days) / total_days * 100, 2) if total_days > 0 else 0.0
+            
+            return {
+                'total_days': total_days,
+                'present_days': present_days,
+                'absent_days': absent_days,
+                'late_days': late_days,
+                'half_days': half_days,
+                'percentage': percentage
+            }
+            
+        except Exception as e:
+            print(f"Error getting attendance details: {e}")
+            return {
+                'total_days': 0,
+                'present_days': 0,
+                'absent_days': 0,
+                'late_days': 0,
+                'half_days': 0,
+                'percentage': 0.0
+            }
     
     def _get_fee_balance(self):
-        """Get pending fee balance."""
-        # from fees.models import FeePayment
-        # Would calculate from actual fee records
-        return 5000.0  # Placeholder
+        """Get pending fee balance from real data."""
+        try:
+            from fees.models import FeeInvoice
+            from django.db.models import Sum
+            
+            # Get all pending invoices for this student
+            invoices = FeeInvoice.objects.filter(
+                tenant=self.student.tenant,
+                student=self.student,
+                status__in=['PENDING', 'PARTIAL']
+            )
+            
+            # Calculate total pending amount
+            total_amount = invoices.aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
+            
+            paid_amount = invoices.aggregate(
+                paid=Sum('paid_amount')
+            )['paid'] or 0
+            
+            balance = float(total_amount - paid_amount)
+            return balance
+            
+        except Exception as e:
+            print(f"Error calculating fee balance: {e}")
+            return 0.0
+    
+    def _get_fee_details(self):
+        """Get detailed fee information."""
+        try:
+            from fees.models import FeeInvoice, FeeAllocation
+            from django.db.models import Sum
+            
+            enrollment = self.student.get_current_enrollment()
+            if not enrollment:
+                return {
+                    'total_fee': 0.0,
+                    'paid_amount': 0.0,
+                    'pending_amount': 0.0,
+                    'discount_percentage': 0.0,
+                    'discount_amount': 0.0,
+                    'pending_percentage': 0.0
+                }
+            
+            academic_year = enrollment.academic_year
+            
+            # Get fee allocations for this student
+            allocations = FeeAllocation.objects.filter(
+                tenant=self.student.tenant,
+                student=self.student,
+                academic_year=academic_year,
+                is_active=True
+            )
+            
+            # Calculate total allocated fee
+            total_allocated = sum(
+                allocation.get_final_amount() 
+                for allocation in allocations
+            )
+            
+            # Get discount percentage (average of all allocations)
+            discount_pct = allocations.aggregate(
+                avg_discount=Sum('discount_percentage')
+            )['avg_discount'] or 0
+            
+            # Get invoices
+            invoices = FeeInvoice.objects.filter(
+                tenant=self.student.tenant,
+                student=self.student,
+                academic_year=academic_year
+            )
+            
+            total_amount = invoices.aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
+            
+            paid_amount = invoices.aggregate(
+                paid=Sum('paid_amount')
+            )['paid'] or 0
+            
+            pending_amount = float(total_amount - paid_amount)
+            pending_percentage = round(
+                (pending_amount / total_amount * 100) if total_amount > 0 else 0, 
+                2
+            )
+            
+            # Calculate discount amount
+            discount_amount = sum(
+                allocation.amount - allocation.get_final_amount()
+                for allocation in allocations
+            )
+            
+            return {
+                'total_fee': float(total_amount),
+                'paid_amount': float(paid_amount),
+                'pending_amount': pending_amount,
+                'discount_percentage': float(discount_pct),
+                'discount_amount': float(discount_amount),
+                'pending_percentage': pending_percentage
+            }
+            
+        except Exception as e:
+            print(f"Error getting fee details: {e}")
+            return {
+                'total_fee': 0.0,
+                'paid_amount': 0.0,
+                'pending_amount': 0.0,
+                'discount_percentage': 0.0,
+                'discount_amount': 0.0,
+                'pending_percentage': 0.0
+            }
     
     def _get_fee_balance_for_student(self, student):
         """Get fee balance for specific student."""
-        return 5000.0  # Placeholder
+        try:
+            from fees.models import FeeInvoice
+            from django.db.models import Sum
+            
+            invoices = FeeInvoice.objects.filter(
+                tenant=student.tenant,
+                student=student,
+                status__in=['PENDING', 'PARTIAL']
+            )
+            
+            total_amount = invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+            paid_amount = invoices.aggregate(paid=Sum('paid_amount'))['paid'] or 0
+            
+            return float(total_amount - paid_amount)
+            
+        except Exception as e:
+            print(f"Error calculating fee balance for student: {e}")
+            return 0.0
     
     def _get_upcoming_exams_count(self):
         """Get count of upcoming exams."""
@@ -243,30 +458,72 @@ def create_system_remark(student, title, description, category, source_module, s
 
 def generate_admission_number(tenant):
     """
-    Generate unique admission number for new student.
-    Format: ADM{YEAR}{SEQUENCE}
+    Generate unique admission number based on tenant settings.
+    Supports configurable formats like:
+    - ADM{YEAR}{SEQUENCE:04d} -> ADM20240001
+    - {PREFIX}{SEQUENCE:05d} -> STU00001
+    - {YEAR}-{SEQUENCE:03d} -> 2024-001
     """
     from datetime import datetime
+    from django.db import transaction
     
-    year = datetime.now().year
-    prefix = f"ADM{year}"
+    # Get tenant settings
+    try:
+        settings = tenant.settings
+    except:
+        # Fallback to default if settings don't exist
+        settings = None
     
-    # Get last admission number for this year
-    last_student = Student.objects.filter(
-        tenant=tenant,
-        admission_number__startswith=prefix
-    ).order_by('-admission_number').first()
-    
-    if last_student:
-        try:
-            last_num = int(last_student.admission_number[len(prefix):])
-            new_num = last_num + 1
-        except ValueError:
-            new_num = 1
+    if settings and settings.auto_generate_admission_number:
+        # Use configured format
+        format_str = settings.admission_number_format
+        
+        # Get current sequence and increment
+        with transaction.atomic():
+            settings.refresh_from_db()
+            sequence = settings.admission_number_sequence
+            settings.admission_number_sequence = sequence + 1
+            settings.save(update_fields=['admission_number_sequence'])
+        
+        # Replace placeholders
+        year = datetime.now().year
+        admission_number = format_str.replace('{YEAR}', str(year))
+        admission_number = admission_number.replace('{PREFIX}', settings.admission_number_prefix)
+        
+        # Handle sequence formatting (e.g., {SEQUENCE:04d})
+        import re
+        sequence_pattern = r'\{SEQUENCE:(\d+)d\}'
+        match = re.search(sequence_pattern, admission_number)
+        if match:
+            width = int(match.group(1))
+            admission_number = re.sub(sequence_pattern, str(sequence).zfill(width), admission_number)
+        else:
+            # Simple {SEQUENCE} replacement
+            admission_number = admission_number.replace('{SEQUENCE}', str(sequence))
+        
+        return admission_number
     else:
-        new_num = 1
-    
-    return f"{prefix}{new_num:05d}"
+        # Fallback to old method
+        year = datetime.now().year
+        prefix = f"ADM{year}"
+        
+        # Get last admission number for this year
+        last_student = Student.objects.filter(
+            tenant=tenant,
+            admission_number__startswith=prefix
+        ).order_by('-admission_number').first()
+        
+        if last_student:
+            try:
+                last_num = int(last_student.admission_number[len(prefix):])
+                new_num = last_num + 1
+            except ValueError:
+                new_num = 1
+        else:
+            new_num = 1
+        
+        return f"{prefix}{new_num:05d}"
+
 
 
 def create_student_from_lead(lead, section, academic_year=None):

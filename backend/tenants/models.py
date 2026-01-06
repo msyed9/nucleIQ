@@ -1163,6 +1163,31 @@ class TenantSettings(BaseModel):
         help_text="Minutes after which arrival is considered late"
     )
     
+    # Student Admission Settings
+    auto_generate_admission_number = models.BooleanField(
+        default=False,
+        help_text="Whether to auto-generate admission numbers"
+    )
+    
+    admission_number_format = models.CharField(
+        max_length=100,
+        default='ADM{YEAR}{SEQUENCE:04d}',
+        help_text="Format for admission number (e.g., 'ADM{YEAR}{SEQUENCE:04d}' -> ADM20240001)"
+    )
+    
+    admission_number_prefix = models.CharField(
+        max_length=20,
+        default='ADM',
+        blank=True,
+        help_text="Prefix for admission numbers"
+    )
+    
+    admission_number_sequence = models.IntegerField(
+        default=1,
+        help_text="Current sequence number for admission numbers"
+    )
+
+    
     # Exam Settings
     result_publish_delay_days = models.IntegerField(
         default=7,

@@ -29,6 +29,7 @@ interface Student {
     current_class: string;
     section: string;
     date_of_birth: string;
+    age?: number;
     is_active: boolean;
     photo?: string;
 }
@@ -41,17 +42,31 @@ const StudentList: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [classFilter, setClassFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [genderFilter, setGenderFilter] = useState('');
+    const [sectionFilter, setSectionFilter] = useState('');
+    const [sections, setSections] = useState<any[]>([]);
+    const [sortBy, setSortBy] = useState('');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         fetchStudents();
-    }, []);
+        fetchSections();
+    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder]);
 
     const fetchStudents = async () => {
         try {
-            const response = await api.get('/students/students/');
+            const params: any = {};
+            if (searchTerm) params.search = searchTerm;
+            if (sectionFilter) params.section = sectionFilter;
+            if (genderFilter) params.gender = genderFilter;
+            if (statusFilter === 'active') params.is_active = true;
+            else if (statusFilter === 'inactive') params.is_active = false;
+            if (sortBy) params.ordering = sortOrder === 'desc' ? `-${sortBy}` : sortBy;
+
+            const response = await api.get('/students/students/', { params });
             let studentData: any[] = [];
 
             if (Array.isArray(response.data)) {
@@ -61,6 +76,7 @@ const StudentList: React.FC = () => {
             }
 
             setStudents(studentData);
+            setSelectedStudents(new Set());
         } catch (error) {
             console.error('Error fetching students:', error);
             // Mock data
@@ -98,24 +114,43 @@ const StudentList: React.FC = () => {
         }
     };
 
-    const filteredStudents = students.filter((student) => {
-        const matchesSearch =
-            student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
+    const fetchSections = async () => {
+        try {
+            const res = await api.get('/tenants/sections/');
+            const sectionsData = Array.isArray(res.data) ? res.data : res.data?.results || [];
+            setSections(sectionsData);
+        } catch (error) {
+            console.error('Error fetching sections:', error);
+        }
+    };
 
-        const matchesClass = !classFilter || student.current_class === classFilter;
+    const handleSort = (column: string) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('asc');
+        }
+    };
 
-        const matchesStatus =
-            statusFilter === 'all' ||
-            (statusFilter === 'active' && student.is_active) ||
-            (statusFilter === 'inactive' && !student.is_active);
-
-        return matchesSearch && matchesClass && matchesStatus;
-    });
+    const handleBulkDelete = async () => {
+        if (selectedStudents.size === 0) return;
+        if (!confirm(`Delete ${selectedStudents.size} student(s)?`)) return;
+        
+        try {
+            await Promise.all(
+                Array.from(selectedStudents).map(id => api.delete(`/students/students/${id}/`))
+            );
+            fetchStudents();
+        } catch (error) {
+            console.error('Bulk delete failed:', error);
+            alert('Failed to delete some students');
+        }
+    };
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
+            setSelectedStudents(new Set(students.map(s => s.id)));
         } else {
             setSelectedStudents(new Set());
         }
@@ -140,7 +175,7 @@ const StudentList: React.FC = () => {
         if (studentToDelete) {
             try {
                 await api.delete(`/students/students/${studentToDelete}/`);
-                setStudents(students.filter(s => s.id !== studentToDelete));
+                fetchStudents();
                 setShowDeleteModal(false);
                 setStudentToDelete(null);
             } catch (error) {
@@ -169,8 +204,8 @@ const StudentList: React.FC = () => {
 
 
 
-    const allSelected = filteredStudents.length > 0 && selectedStudents.size === filteredStudents.length;
-    const someSelected = selectedStudents.size > 0 && selectedStudents.size < filteredStudents.length;
+    const allSelected = students.length > 0 && selectedStudents.size === students.length;
+    const someSelected = selectedStudents.size > 0 && selectedStudents.size < students.length;
 
     const classOptions = [
         { value: '', label: 'All Classes' },
@@ -220,7 +255,7 @@ const StudentList: React.FC = () => {
 
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <ExportButton
-                        data={filteredStudents}
+                        data={students}
                         filename="students_list"
                         title="Students List"
                         columns={exportColumns}
@@ -236,7 +271,7 @@ const StudentList: React.FC = () => {
             <Card padding="lg" style={{ marginBottom: '1.5rem' }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                     gap: '1rem',
                     alignItems: 'end'
                 }}>
@@ -249,10 +284,29 @@ const StudentList: React.FC = () => {
                     />
 
                     <Select
-                        options={classOptions}
-                        value={classFilter}
-                        onChange={setClassFilter}
-                        placeholder="Filter by class"
+                        options={[
+                            { value: '', label: 'All Sections' },
+                            ...sections.map(s => ({
+                                value: s.id.toString(),
+                                label: `${s.grade_level_name} - ${s.name}`
+                            }))
+                        ]}
+                        value={sectionFilter}
+                        onChange={setSectionFilter}
+                        placeholder="Filter by section"
+                        fullWidth
+                    />
+
+                    <Select
+                        options={[
+                            { value: '', label: 'All Genders' },
+                            { value: 'M', label: 'Male' },
+                            { value: 'F', label: 'Female' },
+                            { value: 'O', label: 'Other' }
+                        ]}
+                        value={genderFilter}
+                        onChange={setGenderFilter}
+                        placeholder="Filter by gender"
                         fullWidth
                     />
 
@@ -263,6 +317,19 @@ const StudentList: React.FC = () => {
                         placeholder="Filter by status"
                         fullWidth
                     />
+
+                    <Button 
+                        variant="outline" 
+                        onClick={() => {
+                            setSearchTerm('');
+                            setSectionFilter('');
+                            setGenderFilter('');
+                            setStatusFilter('all');
+                            setSortBy('');
+                        }}
+                    >
+                        Clear Filters
+                    </Button>
                 </div>
 
                 {selectedStudents.size > 0 && (
@@ -285,10 +352,7 @@ const StudentList: React.FC = () => {
                             {selectedStudents.size} student(s) selected
                         </span>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <Button variant="outline" size="sm">
-                                Bulk Edit
-                            </Button>
-                            <Button variant="danger" size="sm">
+                            <Button variant="danger" size="sm" onClick={handleBulkDelete}>
                                 Delete Selected
                             </Button>
                         </div>
@@ -310,11 +374,15 @@ const StudentList: React.FC = () => {
                                     textAlign: 'left',
                                     width: '50px'
                                 }}>
-                                    <Checkbox
-                                        checked={allSelected}
-                                        indeterminate={someSelected}
-                                        onChange={(e) => handleSelectAll(e.target.checked)}
-                                    />
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', pointerEvents: 'auto', cursor: 'pointer' }}>
+                                        <Checkbox
+                                            checked={allSelected}
+                                            indeterminate={someSelected}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                            tabIndex={0}
+                                            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                        />
+                                    </div>
                                 </th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                                     Photo
@@ -332,6 +400,9 @@ const StudentList: React.FC = () => {
                                     Section
                                 </th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                                    Age
+                                </th>
+                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                                     Date of Birth
                                 </th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
@@ -343,8 +414,8 @@ const StudentList: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredStudents.length > 0 ? (
-                                filteredStudents.map((student) => (
+                            {students.length > 0 ? (
+                                students.map((student) => (
                                     <tr
                                         key={student.id}
                                         style={{
@@ -364,10 +435,14 @@ const StudentList: React.FC = () => {
                                         }}
                                     >
                                         <td style={{ padding: '1rem' }}>
-                                            <Checkbox
-                                                checked={selectedStudents.has(student.id)}
-                                                onChange={(e) => handleSelectStudent(student.id, e.target.checked)}
-                                            />
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', pointerEvents: 'auto', cursor: 'pointer' }}>
+                                                <Checkbox
+                                                    checked={selectedStudents.has(student.id)}
+                                                    onChange={(e) => handleSelectStudent(student.id, e.target.checked)}
+                                                    tabIndex={0}
+                                                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                                />
+                                            </div>
                                         </td>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{
@@ -401,6 +476,9 @@ const StudentList: React.FC = () => {
                                         </td>
                                         <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                                             {student.section}
+                                        </td>
+                                        <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                            {student.age || 'N/A'}
                                         </td>
                                         <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                                             {formatDate(student.date_of_birth)}
@@ -439,7 +517,7 @@ const StudentList: React.FC = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} style={{
+                                    <td colSpan={10} style={{
                                         padding: '3rem',
                                         textAlign: 'center',
                                         color: 'var(--color-text-tertiary)'
@@ -467,7 +545,7 @@ const StudentList: React.FC = () => {
                         color: 'var(--color-text-secondary)',
                         margin: 0
                     }}>
-                        Showing {filteredStudents.length} of {students.length} students
+                        Showing {students.length} students
                     </p>
                 </div>
             </Card>

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useTenantBranding } from '../../contexts/TenantBrandingContext';
 import {
     LayoutDashboard,
     Users,
@@ -58,7 +59,8 @@ import {
     FileCheck,
     Heart,
     Sunrise,
-    Activity
+    Activity,
+    Palette
 } from 'lucide-react';
 import './Layout.css';
 
@@ -240,6 +242,7 @@ const menuItems: MenuItem[] = [
             { path: '/settings', icon: Settings, labelKey: 'nav.general_settings', label: 'General Settings' },
             { path: '/settings/system', icon: SettingsIcon, labelKey: 'nav.system_settings', label: 'System Settings' },
             { path: '/settings/academic', icon: GraduationCap, labelKey: 'nav.academic_setup', label: 'Academic Setup' },
+            { path: '/settings/branding', icon: Palette, labelKey: 'nav.branding', label: 'Branding' },
             { path: '/settings/permissions', icon: Shield, labelKey: 'nav.permissions', label: 'Permissions' },
         ]
     },
@@ -258,6 +261,7 @@ const menuItems: MenuItem[] = [
 const Sidebar: React.FC = () => {
     const location = useLocation();
     const { t } = useTranslation();
+    const { branding, loading } = useTenantBranding();
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
     const toggleMenu = (labelKey: string) => {
@@ -277,11 +281,19 @@ const Sidebar: React.FC = () => {
     };
 
     return (
-        <aside className="sidebar">
+        <aside className="sidebar" style={branding?.sidebar_color ? { backgroundColor: branding.sidebar_color } : {}}>
             <div className="sidebar-header">
                 <h1 className="sidebar-logo">
-                    <GraduationCap size={32} style={{ color: 'var(--color-primary-600)' }} />
-                    <span>NucleIQ</span>
+                    {branding?.logo_url ? (
+                        <img
+                            src={branding.logo_url}
+                            alt={branding.tenant_name || 'Logo'}
+                            style={{ height: '32px', width: 'auto', maxWidth: '150px' }}
+                        />
+                    ) : (
+                        <GraduationCap size={32} style={{ color: 'var(--color-primary-600)' }} />
+                    )}
+                    <span>{branding?.tenant_name || 'NucleIQ'}</span>
                 </h1>
             </div>
 
