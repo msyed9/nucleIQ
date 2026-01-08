@@ -51,6 +51,8 @@ interface FeeAllocation {
     student_name: string;
     fee_structure: number;
     category_name: string;
+    structure_amount: string;
+    class_level_name?: string;
     custom_amount: string | null;
     discount_amount: string | null;
     discount_reason: string;
@@ -127,6 +129,15 @@ const FeeConfiguration: React.FC = () => {
         discount_percentage: '10',
         is_active: true
     });
+
+    // Bulk Class Allocation
+    const [showBulkAllocationModal, setShowBulkAllocationModal] = useState(false);
+    const [bulkAllocationForm, setBulkAllocationForm] = useState({
+        class_level: '',
+        fee_structure: '',
+        overwrite_existing: false
+    });
+    const [bulkAllocationLoading, setBulkAllocationLoading] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -359,6 +370,91 @@ const FeeConfiguration: React.FC = () => {
         }
     };
 
+    // Bulk allocate fee structure to all students in a class
+    const handleBulkAllocateToClass = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!bulkAllocationForm.class_level || !bulkAllocationForm.fee_structure) {
+            alert(t('fees.select_class_and_structure', { defaultValue: 'Please select both class and fee structure' }));
+            return;
+        }
+
+        setBulkAllocationLoading(true);
+        try {
+            // Get all students in the selected class
+            const studentsResponse = await api.get(`/students/students/?class_level=${bulkAllocationForm.class_level}`);
+            const classStudents = studentsResponse.data.results || studentsResponse.data;
+
+            if (classStudents.length === 0) {
+                alert(t('fees.no_students_in_class', { defaultValue: 'No students found in the selected class' }));
+                setBulkAllocationLoading(false);
+                return;
+            }
+
+            // Allocate fee structure to each student
+            let successCount = 0;
+            let skipCount = 0;
+            let errorCount = 0;
+
+            for (const student of classStudents) {
+                try {
+                    // Check if allocation already exists
+                    const existingResponse = await api.get(
+                        `/fees/allocations/?student=${student.id}&fee_structure=${bulkAllocationForm.fee_structure}`
+                    );
+                    const existingAllocations = existingResponse.data.results || existingResponse.data;
+
+                    if (existingAllocations.length > 0 && !bulkAllocationForm.overwrite_existing) {
+                        skipCount++;
+                        continue;
+                    }
+
+                    // Create or update allocation
+                    if (existingAllocations.length > 0 && bulkAllocationForm.overwrite_existing) {
+                        await api.put(`/fees/allocations/${existingAllocations[0].id}/`, {
+                            student: student.id,
+                            fee_structure: bulkAllocationForm.fee_structure,
+                            is_active: true
+                        });
+                    } else {
+                        await api.post('/fees/allocations/', {
+                            student: student.id,
+                            fee_structure: bulkAllocationForm.fee_structure,
+                            is_active: true
+                        });
+                    }
+                    successCount++;
+                } catch (err) {
+                    console.error(`Error allocating for student ${student.id}:`, err);
+                    errorCount++;
+                }
+            }
+
+            alert(t('fees.bulk_allocation_complete', {
+                defaultValue: `Bulk allocation complete!\nAllocated: ${successCount}\nSkipped (existing): ${skipCount}\nErrors: ${errorCount}`
+            }));
+
+            setShowBulkAllocationModal(false);
+            setBulkAllocationForm({ class_level: '', fee_structure: '', overwrite_existing: false });
+            fetchData();
+        } catch (error) {
+            console.error('Error in bulk allocation:', error);
+            alert(t('fees.bulk_allocation_error', { defaultValue: 'Failed to perform bulk allocation' }));
+        } finally {
+            setBulkAllocationLoading(false);
+        }
+    };
+
+    // Calculate discount percentage
+    const calculateDiscountPercentage = (structureAmount: string, finalAmount: string): string => {
+        const base = parseFloat(structureAmount);
+        const final = parseFloat(finalAmount);
+        if (isNaN(base) || isNaN(final) || base === 0 || base === final) {
+            return '';
+        }
+        const discountPercent = ((base - final) / base) * 100;
+        return discountPercent.toFixed(1);
+    };
+
     if (loading) return <Loading fullScreen text={t('common.loading')} />;
 
     return (
@@ -497,45 +593,114 @@ const FeeConfiguration: React.FC = () => {
                 <Card>
                     <div className="card-header-with-action">
                         <h3>{t('fees.allocations_list', { defaultValue: 'Fee Allocations' })}</h3>
-                        <Button variant="primary" onClick={() => handleOpenAllocationModal()}>
-                            ➕ {t('fees.add_allocation', { defaultValue: 'Allocate Fee' })}
-                        </Button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <Button variant="outline" onClick={() => setShowBulkAllocationModal(true)}>
+                                🎯 {t('fees.bulk_allocate_class', { defaultValue: 'Bulk Allocate to Class' })}
+                            </Button>
+                            <Button variant="primary" onClick={() => handleOpenAllocationModal()}>
+                                ➕ {t('fees.add_allocation', { defaultValue: 'Allocate Fee' })}
+                            </Button>
+                        </div>
                     </div>
+
+                    {/* Class-wise Summary Section */}
+                    <div style={{ marginBottom: '20px', padding: '16px', background: '#f0f4ff', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#4338ca' }}>📊 {t('fees.class_summary', { defaultValue: 'Class-wise Allocation Summary' })}</h4>
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            {gradeLevels.map(grade => {
+                                const gradeAllocations = allocations.filter(a => a.class_level_name === grade.name);
+                                const count = gradeAllocations.length;
+                                return count > 0 ? (
+                                    <div key={grade.id} style={{
+                                        background: 'white',
+                                        padding: '8px 16px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #c7d2fe',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}>
+                                        <span style={{ fontWeight: '600', color: '#4338ca' }}>{grade.name}:</span>
+                                        <span style={{
+                                            background: '#4338ca',
+                                            color: 'white',
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.85rem'
+                                        }}>{count}</span>
+                                    </div>
+                                ) : null;
+                            })}
+                        </div>
+                    </div>
+
                     <div className="table-container">
                         <table className="data-table">
                             <thead>
                                 <tr>
                                     <th>{t('fees.student', { defaultValue: 'Student' })}</th>
                                     <th>{t('fees.category', { defaultValue: 'Category' })}</th>
-                                    <th>{t('fees.custom_amount', { defaultValue: 'Custom Amount' })}</th>
-                                    <th>{t('fees.discount', { defaultValue: 'Discount' })}</th>
+                                    <th>{t('fees.structure_amount', { defaultValue: 'Structure Amount' })}</th>
                                     <th>{t('fees.final_amount', { defaultValue: 'Final Amount' })}</th>
+                                    <th>{t('fees.discount_percent', { defaultValue: 'Discount %' })}</th>
                                     <th>{t('fees.scholarship', { defaultValue: 'Scholarship' })}</th>
                                     <th>{t('fees.status', { defaultValue: 'Status' })}</th>
                                     <th>{t('common.actions', { defaultValue: 'Actions' })}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {allocations.map((allocation) => (
-                                    <tr key={allocation.id}>
-                                        <td>{allocation.student_name}</td>
-                                        <td>{allocation.category_name}</td>
-                                        <td>{allocation.custom_amount ? `₹${Number(allocation.custom_amount).toLocaleString()}` : '-'}</td>
-                                        <td>{allocation.discount_amount ? `₹${Number(allocation.discount_amount).toLocaleString()}` : '-'}</td>
-                                        <td className="font-bold">₹{Number(allocation.final_amount).toLocaleString()}</td>
-                                        <td>{allocation.is_scholarship ? `✅ ${allocation.scholarship_percentage}%` : '❌'}</td>
-                                        <td>
-                                            <span className={`status-badge status-${allocation.is_active ? 'active' : 'inactive'}`}>
-                                                {allocation.is_active ? t('common.active') : t('common.inactive')}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <Button size="small" variant="outline" onClick={() => handleOpenAllocationModal(allocation)}>
-                                                ✏️ {t('common.edit')}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {allocations.map((allocation) => {
+                                    const discountPercent = calculateDiscountPercentage(
+                                        allocation.structure_amount || '0',
+                                        allocation.final_amount
+                                    );
+                                    const hasDiscount = discountPercent !== '' && parseFloat(discountPercent) > 0;
+
+                                    return (
+                                        <tr key={allocation.id}>
+                                            <td>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontWeight: '600' }}>{allocation.student_name}</span>
+                                                    {allocation.class_level_name && (
+                                                        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                                            {allocation.class_level_name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>{allocation.category_name}</td>
+                                            <td>₹{Number(allocation.structure_amount || 0).toLocaleString()}</td>
+                                            <td className="font-bold">₹{Number(allocation.final_amount).toLocaleString()}</td>
+                                            <td>
+                                                {hasDiscount ? (
+                                                    <span style={{
+                                                        background: '#dcfce7',
+                                                        color: '#166534',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '12px',
+                                                        fontWeight: '600',
+                                                        fontSize: '0.85rem'
+                                                    }}>
+                                                        🏷️ {discountPercent}% OFF
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: '#9ca3af' }}>-</span>
+                                                )}
+                                            </td>
+                                            <td>{allocation.is_scholarship ? `✅ ${allocation.scholarship_percentage}%` : '❌'}</td>
+                                            <td>
+                                                <span className={`status-badge status-${allocation.is_active ? 'active' : 'inactive'}`}>
+                                                    {allocation.is_active ? t('common.active') : t('common.inactive')}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <Button size="small" variant="outline" onClick={() => handleOpenAllocationModal(allocation)}>
+                                                    ✏️ {t('common.edit')}
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -945,6 +1110,85 @@ const FeeConfiguration: React.FC = () => {
                                 </Button>
                                 <Button type="submit" variant="primary">
                                     {editingDiscount ? t('common.update') : t('common.create')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Allocation Modal */}
+            {showBulkAllocationModal && (
+                <div className="modal-overlay" onClick={() => setShowBulkAllocationModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>🎯 {t('fees.bulk_allocate_title', { defaultValue: 'Bulk Allocate Fee Structure to Class' })}</h2>
+                            <button className="modal-close" onClick={() => setShowBulkAllocationModal(false)}>✕</button>
+                        </div>
+                        <form onSubmit={handleBulkAllocateToClass}>
+                            <div className="modal-body">
+                                <div style={{
+                                    background: '#fef3c7',
+                                    border: '1px solid #f59e0b',
+                                    borderRadius: '8px',
+                                    padding: '12px 16px',
+                                    marginBottom: '20px'
+                                }}>
+                                    <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
+                                        ⚠️ {t('fees.bulk_allocate_warning', {
+                                            defaultValue: 'This will allocate the selected fee structure to ALL students in the chosen class.'
+                                        })}
+                                    </p>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>{t('fees.select_class', { defaultValue: 'Select Class' })}</label>
+                                    <select
+                                        value={bulkAllocationForm.class_level}
+                                        onChange={(e) => setBulkAllocationForm({ ...bulkAllocationForm, class_level: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">{t('fees.choose_class', { defaultValue: '-- Choose a Class --' })}</option>
+                                        {gradeLevels.map(grade => (
+                                            <option key={grade.id} value={grade.id}>{grade.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>{t('fees.select_fee_structure', { defaultValue: 'Select Fee Structure' })}</label>
+                                    <select
+                                        value={bulkAllocationForm.fee_structure}
+                                        onChange={(e) => setBulkAllocationForm({ ...bulkAllocationForm, fee_structure: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">{t('fees.choose_structure', { defaultValue: '-- Choose a Fee Structure --' })}</option>
+                                        {structures.filter(s => s.is_active).map(structure => (
+                                            <option key={structure.id} value={structure.id}>
+                                                {structure.category_name} - {gradeLevels.find(g => g.id === structure.class_level)?.name || structure.class_level} - ₹{Number(structure.amount).toLocaleString()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <label className="checkbox-label" style={{ marginTop: '16px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={bulkAllocationForm.overwrite_existing}
+                                        onChange={(e) => setBulkAllocationForm({ ...bulkAllocationForm, overwrite_existing: e.target.checked })}
+                                    />
+                                    {t('fees.overwrite_existing', { defaultValue: 'Overwrite existing allocations' })}
+                                </label>
+                            </div>
+                            <div className="modal-footer">
+                                <Button type="button" variant="outline" onClick={() => setShowBulkAllocationModal(false)}>
+                                    {t('common.cancel')}
+                                </Button>
+                                <Button type="submit" variant="primary" disabled={bulkAllocationLoading}>
+                                    {bulkAllocationLoading
+                                        ? t('common.processing', { defaultValue: 'Processing...' })
+                                        : t('fees.allocate_to_class', { defaultValue: 'Allocate to Class' })
+                                    }
                                 </Button>
                             </div>
                         </form>

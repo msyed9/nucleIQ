@@ -38,6 +38,13 @@ class FeeAllocationSerializer(serializers.ModelSerializer):
     
     student_name = serializers.CharField(source='student.get_full_name', read_only=True)
     category_name = serializers.CharField(source='fee_structure.category.name', read_only=True)
+    structure_amount = serializers.DecimalField(
+        source='fee_structure.amount',
+        max_digits=10,
+        decimal_places=2,
+        read_only=True
+    )
+    class_level_name = serializers.CharField(source='fee_structure.class_level', read_only=True)
     final_amount = serializers.DecimalField(
         source='get_final_amount',
         max_digits=10,
@@ -49,7 +56,8 @@ class FeeAllocationSerializer(serializers.ModelSerializer):
         model = FeeAllocation
         fields = [
             'id', 'tenant', 'student', 'student_name', 'fee_structure',
-            'category_name', 'custom_amount', 'discount_amount',
+            'category_name', 'structure_amount', 'class_level_name',
+            'custom_amount', 'discount_amount',
             'discount_reason', 'is_scholarship', 'scholarship_percentage',
             'final_amount', 'is_active', 'created_at', 'updated_at'
         ]
@@ -69,12 +77,16 @@ class FeeInvoiceSerializer(serializers.ModelSerializer):
     """Serializer for Fee Invoices."""
     
     student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_admission_number = serializers.CharField(source='student.admission_number', read_only=True)
+    student_class = serializers.CharField(source='student.current_class', read_only=True)
+    student_section = serializers.CharField(source='student.section', read_only=True)
     items = FeeInvoiceItemSerializer(many=True, read_only=True)
     
     class Meta:
         model = FeeInvoice
         fields = [
-            'id', 'tenant', 'student', 'student_name', 'invoice_number',
+            'id', 'tenant', 'student', 'student_name', 'student_admission_number',
+            'student_class', 'student_section', 'invoice_number',
             'academic_year', 'invoice_date', 'due_date', 'total_amount',
             'paid_amount', 'balance_amount', 'status',
             'is_sibling_consolidated', 'parent_invoice', 'remarks',
@@ -88,17 +100,23 @@ class FeeTransactionSerializer(serializers.ModelSerializer):
     
     student_name = serializers.CharField(source='invoice.student.get_full_name', read_only=True)
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    collected_by_name = serializers.SerializerMethodField()
     
     class Meta:
         model = FeeTransaction
         fields = [
             'id', 'tenant', 'invoice', 'invoice_number', 'student_name',
             'transaction_number', 'transaction_date', 'amount',
-            'payment_mode', 'payment_reference', 'collected_by',
+            'payment_mode', 'payment_reference', 'collected_by', 'collected_by_name',
             'remarks', 'receipt_number', 'receipt_pdf',
             'accounting_entry_created', 'created_at'
         ]
         read_only_fields = ['id', 'transaction_number', 'receipt_number', 'transaction_date', 'created_at']
+    
+    def get_collected_by_name(self, obj):
+        if obj.collected_by:
+            return obj.collected_by.get_full_name() if hasattr(obj.collected_by, 'get_full_name') else str(obj.collected_by)
+        return None
 
 
 class FeeDefaulterSerializer(serializers.ModelSerializer):

@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import ExportButton from '../../components/common/ExportButton';
 import { ExportColumn } from '../../utils/exportUtils';
+import FeeReceipt from '../../components/fees/FeeReceipt';
 import './CollectFees.css';
 
 interface Invoice {
@@ -10,12 +11,40 @@ interface Invoice {
     invoice_number: string;
     student: number;
     student_name: string;
+    student_admission_number?: string;
+    student_class?: string;
+    student_section?: string;
     invoice_date: string;
     due_date: string;
     total_amount: number;
     paid_amount: number;
     balance_amount: number;
     status: string;
+    items?: { description: string; amount: number }[];
+}
+
+interface ReceiptData {
+    receiptNumber: string;
+    transactionNumber: string;
+    studentName: string;
+    admissionNumber: string;
+    className: string;
+    section?: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    paymentDate: string;
+    paymentMode: string;
+    paymentReference?: string;
+    items: { description: string; amount: number }[];
+    totalAmount: number;
+    paidAmount: number;
+    balanceAmount: number;
+    collectedBy?: string;
+    schoolName: string;
+    schoolAddress: string;
+    schoolPhone?: string;
+    schoolEmail?: string;
+    schoolLogo?: string;
 }
 
 const CollectFees: React.FC = () => {
@@ -26,10 +55,23 @@ const CollectFees: React.FC = () => {
     const [paymentReference, setPaymentReference] = useState('');
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+    const [tenantSettings, setTenantSettings] = useState<any>(null);
 
     useEffect(() => {
         fetchPendingInvoices();
+        fetchTenantSettings();
     }, []);
+
+    const fetchTenantSettings = async () => {
+        try {
+            const response = await api.get('/tenants/settings/current/');
+            setTenantSettings(response.data);
+        } catch (error) {
+            console.error('Error fetching tenant settings:', error);
+        }
+    };
 
     const fetchPendingInvoices = async () => {
         try {
@@ -41,6 +83,7 @@ const CollectFees: React.FC = () => {
             setLoading(false);
         }
     };
+
 
     const handlePayment = async () => {
         if (!selectedInvoice || !paymentAmount) {
@@ -57,7 +100,40 @@ const CollectFees: React.FC = () => {
             });
 
             if (response.status === 201 || response.status === 200) {
-                alert('Payment recorded successfully! 🎉');
+                const transactionData = response.data;
+                const newBalanceAmount = Number(selectedInvoice.balance_amount) - parseFloat(paymentAmount);
+
+                // Generate receipt data
+                const generatedReceiptData: ReceiptData = {
+                    receiptNumber: transactionData.receipt_number || `RCP-${Date.now()}`,
+                    transactionNumber: transactionData.transaction_number || `TXN-${Date.now()}`,
+                    studentName: selectedInvoice.student_name,
+                    admissionNumber: selectedInvoice.student_admission_number || 'N/A',
+                    className: selectedInvoice.student_class || 'N/A',
+                    section: selectedInvoice.student_section,
+                    invoiceNumber: selectedInvoice.invoice_number,
+                    invoiceDate: selectedInvoice.invoice_date,
+                    paymentDate: new Date().toISOString(),
+                    paymentMode: paymentMode,
+                    paymentReference: paymentReference || undefined,
+                    items: selectedInvoice.items || [
+                        { description: 'Fee Payment', amount: Number(selectedInvoice.total_amount) }
+                    ],
+                    totalAmount: Number(selectedInvoice.total_amount),
+                    paidAmount: parseFloat(paymentAmount),
+                    balanceAmount: Math.max(0, newBalanceAmount),
+                    collectedBy: transactionData.collected_by_name || undefined,
+                    schoolName: tenantSettings?.school_name || tenantSettings?.tenant_name || 'School Name',
+                    schoolAddress: tenantSettings?.address || 'School Address',
+                    schoolPhone: tenantSettings?.phone || undefined,
+                    schoolEmail: tenantSettings?.email || undefined,
+                    schoolLogo: tenantSettings?.logo || undefined
+                };
+
+                setReceiptData(generatedReceiptData);
+                setShowReceipt(true);
+
+                // Reset form
                 setSelectedInvoice(null);
                 setPaymentAmount('');
                 setPaymentReference('');
@@ -65,6 +141,7 @@ const CollectFees: React.FC = () => {
             } else {
                 alert('Error recording payment');
             }
+
         } catch (error) {
             console.error('Error recording payment:', error);
             alert('Error recording payment');
@@ -318,6 +395,17 @@ const CollectFees: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Fee Receipt Modal */}
+            {showReceipt && receiptData && (
+                <FeeReceipt
+                    receiptData={receiptData}
+                    onClose={() => {
+                        setShowReceipt(false);
+                        setReceiptData(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
