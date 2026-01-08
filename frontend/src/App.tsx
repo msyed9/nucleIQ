@@ -140,7 +140,6 @@ import AuditLogs from './pages/admin/AuditLogs';
 
 // New pages added
 import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
-import StudentsApiList from './pages/students/StudentsList';
 import TransportAllocations from './pages/transport/TransportAllocations';
 import LibraryBooks from './pages/library/LibraryBooks';
 import BookCopies from './pages/library/BookCopies';
@@ -196,7 +195,6 @@ function App() {
                                             <Route path="/students/documents" element={<Layout><DocumentManager /></Layout>} />
                                             <Route path="/students/:id" element={<Layout><Student360 /></Layout>} />
                                             <Route path="/students" element={<Layout><StudentList /></Layout>} />
-                                            <Route path="/students/api" element={<Layout><StudentsApiList /></Layout>} />
                                             {/* ID Cards routes */}
                                             <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
                                             {/* Staff routes */}

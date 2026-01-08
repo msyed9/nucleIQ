@@ -33,7 +33,9 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'age']
+        # Tenant is set from the request in the view's `perform_create`.
+        # Mark it read-only so serializer validation does not require it in input.
+        read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'age', 'tenant']
     
     def get_siblings_count(self, obj):
         return obj.get_siblings().count()
@@ -149,5 +151,7 @@ class StudentEnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentEnrollment
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        # Tenant is set in the view's `perform_create`; make it read-only to avoid
+        # validation errors when it's not provided by the client.
+        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant']
 
