@@ -37,6 +37,12 @@ export interface UserPreference {
   is_rtl: boolean;
   created_at: string;
   updated_at: string;
+  // Font customization
+  font_family?: string;
+  font_size?: 'small' | 'medium' | 'large' | 'extra-large';
+  font_color?: string;
+  heading_color?: string;
+  link_color?: string;
 }
 
 export interface NotificationChannels {

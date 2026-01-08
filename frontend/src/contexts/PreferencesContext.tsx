@@ -12,6 +12,12 @@ export interface UserPreferences {
     notification_channels?: Record<string, boolean>;
     sidebar_collapsed?: boolean;
     dashboard_widgets?: any[];
+    // Font customization
+    font_family?: string;
+    font_size?: string;  // 'small' | 'medium' | 'large' | 'extra-large'
+    font_color?: string; // Custom text color (hex)
+    heading_color?: string; // Custom heading color (hex)
+    link_color?: string; // Custom link color (hex)
 }
 
 interface PreferencesContextType {

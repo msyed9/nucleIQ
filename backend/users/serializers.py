@@ -21,7 +21,8 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
         fields = [
             'theme_mode', 'density', 'language', 'notification_channels',
             'sidebar_collapsed', 'dashboard_widgets', 'timezone',
-            'date_format', 'time_format', 'is_rtl'
+            'date_format', 'time_format', 'is_rtl',
+            'font_family', 'font_size', 'font_color', 'heading_color', 'link_color'
         ]
     
     def validate_notification_channels(self, value):
