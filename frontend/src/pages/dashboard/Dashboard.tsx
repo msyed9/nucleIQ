@@ -6,6 +6,7 @@ import { formatNumber, formatCurrency } from '../../utils/helpers';
 import api from '../../services/api';
 import './Dashboard.css';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardStats {
     total_students: number;
@@ -14,14 +15,25 @@ interface DashboardStats {
     today_attendance: number;
 }
 
+interface PendingEnrollmentData {
+    pending_count: number;
+    academic_year?: {
+        id: string;
+        name: string;
+    };
+}
+
 const Dashboard: React.FC = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [pendingEnrollments, setPendingEnrollments] = useState<PendingEnrollmentData | null>(null);
     const [loading, setLoading] = useState(true);
     const [, setError] = useState('');
 
     useEffect(() => {
         fetchDashboardStats();
+        fetchPendingEnrollments();
     }, []);
 
     const fetchDashboardStats = async () => {
@@ -40,6 +52,19 @@ const Dashboard: React.FC = () => {
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPendingEnrollments = async () => {
+        try {
+            const response = await api.get('/students/enrollments/pending/');
+            setPendingEnrollments({
+                pending_count: response.data.pending_count || 0,
+                academic_year: response.data.academic_year
+            });
+        } catch (err) {
+            console.error('Failed to fetch pending enrollments', err);
+            setPendingEnrollments({ pending_count: 0 });
         }
     };
 
@@ -88,6 +113,37 @@ const Dashboard: React.FC = () => {
                     </div>
                 </Card>
             </div>
+
+            {/* Pending Enrollments Alert */}
+            {pendingEnrollments && pendingEnrollments.pending_count > 0 && (
+                <div
+                    className="pending-enrollments-card"
+                    style={{
+                        backgroundColor: '#fff3cd',
+                        borderLeft: '4px solid #ffc107',
+                        marginBottom: '1.5rem',
+                        padding: '1rem 1.5rem',
+                        borderRadius: '8px'
+                    }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 style={{ margin: 0, color: '#856404', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                ⚠️ Pending Enrollments
+                            </h3>
+                            <p style={{ margin: '0.5rem 0 0', color: '#856404' }}>
+                                <strong>{pendingEnrollments.pending_count}</strong> student(s) are not enrolled for {pendingEnrollments.academic_year?.name || 'the current academic year'}.
+                            </p>
+                        </div>
+                        <Button
+                            variant="primary"
+                            onClick={() => navigate('/students/enrollments')}
+                        >
+                            Enroll Now
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Actions */}
             <Card title={t('dashboard.quick_actions')} className="quick-actions-card">
@@ -138,3 +194,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+

@@ -33,6 +33,7 @@ api.interceptors.request.use(
                     }
                 }
             } else {
+                // ensure no tenant header is sent for platform admins
                 if (config.headers && config.headers['X-Tenant-ID']) {
                     delete config.headers['X-Tenant-ID'];
                 }

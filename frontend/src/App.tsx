@@ -5,15 +5,22 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import StudentList from './pages/students/StudentList';
 import AddStudent from './pages/students/AddStudent';
+import EditStudent from './pages/students/EditStudent';
+import Enrollments from './pages/students/Enrollments';
 import Student360 from './pages/students/Student360';
 import RemarksManager from './pages/students/RemarksManager';
 import DocumentManager from './pages/students/DocumentManager';
+import StudentAnalytics from './pages/students/StudentAnalytics';
 import IDCardDesigner from './pages/idcards/Designer';
 import StaffList from './pages/staff/StaffList';
 import AddStaff from './pages/staff/AddStaff';
 import CollectFees from './pages/fees/CollectFees';
 import FeeConfiguration from './pages/fees/FeeConfiguration';
 import MarkAttendance from './pages/attendance/MarkAttendance';
+import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
+import MobileCapture from './pages/attendance/MobileCapture';
+import AttendanceReports from './pages/attendance/AttendanceReports';
+import FaceEnrollment from './pages/attendance/FaceEnrollment';
 import UserList from './pages/users/UserList';
 import UserManagement from './pages/users/UserManagement';
 import ExpenseManager from './pages/finance/ExpenseManager';
@@ -34,6 +41,7 @@ import SalahTracker from './pages/trackers/SalahTracker';
 import HabitBoard from './pages/trackers/HabitBoard';
 import TransportFleet from './pages/transport/TransportFleet';
 import FeeDefaulters from './pages/fees/FeeDefaulters';
+import FeePaymentHistory from './pages/fees/FeePaymentHistory';
 import FinancialReports from './pages/finance/FinancialReports';
 import LibraryManagement from './pages/library/LibraryManagement';
 
@@ -90,6 +98,8 @@ import SalaryStructure from './pages/payroll/SalaryStructure';
 import LibraryMembers from './pages/library/LibraryMembers';
 import VehicleMaintenance from './pages/transport/VehicleMaintenance';
 import DigitalResourcesLibrary from './pages/library/DigitalResources';
+import BulkIDCards from './pages/idcards/BulkIDCards';
+import DataManagement from './pages/admin/DataManagement';
 import LibraryReports from './pages/library/LibraryReports';
 import LibrarySettings from './pages/library/LibrarySettings';
 import HostelFees from './pages/hostel/HostelFees';
@@ -130,16 +140,22 @@ import SMSMessaging from './pages/notifications/SMSMessaging';
 
 // Phase 10 - Settings & Customization
 import SystemSettings from './pages/settings/SystemSettings';
+import PermissionsMatrixPage from './pages/settings/PermissionsMatrix';
+import RolesPermissions from './pages/settings/RolesPermissions';
+import TenantBranding from './pages/settings/TenantBranding';
 
 // Phase 11 - Search & Dashboard
 import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
 
 // Phase 12 - Additional Features
 import ParentPortal from './pages/parent/ParentPortal';
+import ParentLogin from './pages/parent/ParentLogin';
+import ParentLayout from './components/layout/ParentLayout';
 import AuditLogs from './pages/admin/AuditLogs';
 
 // New pages added
 import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
+import StudentsApiList from './pages/students/StudentsList';
 import TransportAllocations from './pages/transport/TransportAllocations';
 import LibraryBooks from './pages/library/LibraryBooks';
 import BookCopies from './pages/library/BookCopies';
@@ -148,13 +164,23 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import BillingManagement from './pages/billing/BillingManagement';
 import StaffProfile from './pages/staff/StaffProfile';
 
+// Newly added for Sidebar Consistency
+import PettyCash from './pages/finance/PettyCash';
+import MessManagement from './pages/hostel/MessManagement';
+import HostelComplaints from './pages/hostel/Complaints';
+import ComplaintAnalytics from './pages/hostel/ComplaintAnalytics';
+import LibraryCirculation from './pages/library/LibraryCirculation';
+import VisitorLog from './pages/security/VisitorLog';
+import GatePasses from './pages/security/GatePasses';
+
 // Import i18n configuration
 import './i18n';
 
 // Import Preferences Context
 import { PreferencesProvider } from './contexts/PreferencesContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { TenantBrandingProvider } from './contexts/TenantBrandingContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Import theme CSS
 import './styles/theme.css';
@@ -180,6 +206,7 @@ function App() {
                     <Routes>
                         {/* Public Routes - No authentication required */}
                         <Route path="/login" element={<Login />} />
+                        <Route path="/parent/login" element={<ParentLogin />} />
                         <Route path="/" element={<Login />} />
 
                         {/* Protected Routes - Single PreferencesProvider wrapper */}
@@ -195,6 +222,7 @@ function App() {
                                             <Route path="/students/documents" element={<Layout><DocumentManager /></Layout>} />
                                             <Route path="/students/:id" element={<Layout><Student360 /></Layout>} />
                                             <Route path="/students" element={<Layout><StudentList /></Layout>} />
+                                            <Route path="/students/api" element={<Layout><StudentsApiList /></Layout>} />
                                             {/* ID Cards routes */}
                                             <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
                                             {/* Staff routes */}
@@ -229,123 +257,144 @@ function App() {
                                             <Route path="/finance/reports" element={<Layout><FinancialReports /></Layout>} />
                                             <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
 
-                                            {/* Phase 7 - Reports & Analytics */}
-                                            <Route path="/reports/builder" element={<Layout><ReportBuilder /></Layout>} />
-                                            <Route path="/reports/analytics" element={<Layout><AdvancedAnalytics /></Layout>} />
-                                            <Route path="/reports/scheduled" element={<Layout><ScheduledReports /></Layout>} />
-                                            <Route path="/reports" element={<Layout><ReportsDashboard /></Layout>} />
-                                            {/* Settings routes - specific routes before general */}
-                                            <Route path="/settings/academic" element={<Layout><AcademicSetup /></Layout>} />
-                                            <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
-                                            <Route path="/settings" element={<Layout><Settings /></Layout>} />
-                                            {/* User routes - specific routes before general */}
-                                            <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
-                                            <Route path="/users" element={<Layout><UserList /></Layout>} />
-                                            {/* Phase 11 & 12 routes */}
-                                            <Route path="/dashboard/enhanced" element={<Layout><EnhancedDashboard /></Layout>} />
-                                            <Route path="/parent-portal" element={<Layout><ParentPortal /></Layout>} />
-                                            <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
-                                            {/* Timetable routes */}
-                                            <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
-                                            <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />
-                                            <Route path="/timetable/class" element={<Layout><ClassView /></Layout>} />
+                                                {/* Phase 7 - Reports & Analytics */}
+                                                <Route path="/reports/builder" element={<Layout><ReportBuilder /></Layout>} />
+                                                <Route path="/reports/analytics" element={<Layout><AdvancedAnalytics /></Layout>} />
+                                                <Route path="/reports/scheduled" element={<Layout><ScheduledReports /></Layout>} />
+                                                <Route path="/reports" element={<Layout><ReportsDashboard /></Layout>} />
+                                                {/* Settings routes - specific routes before general */}
+                                                <Route path="/settings/academic" element={<Layout><AcademicSetup /></Layout>} />
+                                                <Route path="/settings/branding" element={<Layout><TenantBranding /></Layout>} />
+                                                <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
+                                                <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
+                                                <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
+                                                <Route path="/settings/data-management" element={<Layout><DataManagement /></Layout>} />
+                                                <Route path="/settings" element={<Layout><Settings /></Layout>} />
+                                                {/* User routes - specific routes before general */}
+                                                <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
+                                                <Route path="/users" element={<Layout><UserList /></Layout>} />
+                                                {/* Phase 11 & 12 routes */}
+                                                <Route path="/parent/portal" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                {/* Parent routes - ensure sidebar links have matching routes */}
+                                                <Route path="/parent/students" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/attendance" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/fees" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/academics" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/messages" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
+                                                {/* Timetable routes */}
+                                                <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
+                                                <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />
+                                                <Route path="/timetable/class" element={<Layout><ClassView /></Layout>} />
 
-                                            {/* Academics & LMS */}
-                                            <Route path="/assignments" element={<Layout><AssignmentList /></Layout>} />
-                                            <Route path="/assignments/submit" element={<Layout><AssignmentSubmission /></Layout>} />
-                                            <Route path="/assignments/grade" element={<Layout><AssignmentGrading /></Layout>} />
-                                            <Route path="/exams" element={<Layout><ExamScheduler /></Layout>} />
-                                            <Route path="/exams/results/entry" element={<Layout><ResultEntry /></Layout>} />
-                                            <Route path="/exams/results/analytics" element={<Layout><ResultAnalytics /></Layout>} />
-                                            <Route path="/exams/question-bank" element={<Layout><QuestionBank /></Layout>} />
-                                            <Route path="/exams/learning-outcomes" element={<Layout><LearningOutcomes /></Layout>} />
-                                            <Route path="/exams/online" element={<Layout><OnlineExamination /></Layout>} />
-                                            <Route path="/lms/classes" element={<Layout><LiveClassJoin /></Layout>} />
-                                            <Route path="/lms/digital" element={<Layout><DigitalResources /></Layout>} />
+                                                {/* Academics & LMS */}
+                                                <Route path="/assignments" element={<Layout><AssignmentList /></Layout>} />
+                                                <Route path="/assignments/submit" element={<Layout><AssignmentSubmission /></Layout>} />
+                                                <Route path="/assignments/grade" element={<Layout><AssignmentGrading /></Layout>} />
+                                                <Route path="/exams" element={<Layout><ExamScheduler /></Layout>} />
+                                                <Route path="/exams/results/entry" element={<Layout><ResultEntry /></Layout>} />
+                                                <Route path="/exams/results/analytics" element={<Layout><ResultAnalytics /></Layout>} />
+                                                <Route path="/exams/question-bank" element={<Layout><QuestionBank /></Layout>} />
+                                                <Route path="/exams/learning-outcomes" element={<Layout><LearningOutcomes /></Layout>} />
+                                                <Route path="/exams/online" element={<Layout><OnlineExamination /></Layout>} />
+                                                <Route path="/lms/classes" element={<Layout><LiveClassJoin /></Layout>} />
+                                                <Route path="/lms/digital" element={<Layout><DigitalResources /></Layout>} />
 
-                                            {/* Operations */}
-                                            <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
-                                            <Route path="/library/books/:bookId/copies" element={<Layout><BookCopies /></Layout>} />
-                                            <Route path="/library/books" element={<Layout><LibraryBooks /></Layout>} />
-                                            <Route path="/library/members" element={<Layout><LibraryMembers /></Layout>} />
-                                            <Route path="/library/digital-resources" element={<Layout><DigitalResourcesLibrary /></Layout>} />
-                                            <Route path="/library/reports" element={<Layout><LibraryReports /></Layout>} />
-                                            <Route path="/library/settings" element={<Layout><LibrarySettings /></Layout>} />
+                                                {/* Operations */}
+                                                <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
+                                                <Route path="/library/books/:bookId/copies" element={<Layout><BookCopies /></Layout>} />
+                                                <Route path="/library/books" element={<Layout><LibraryBooks /></Layout>} />
+                                                <Route path="/library/circulation" element={<Layout><LibraryCirculation /></Layout>} />
+                                                <Route path="/library/members" element={<Layout><LibraryMembers /></Layout>} />
+                                                <Route path="/library/digital-resources" element={<Layout><DigitalResourcesLibrary /></Layout>} />
+                                                <Route path="/library/reports" element={<Layout><LibraryReports /></Layout>} />
+                                                <Route path="/library/settings" element={<Layout><LibrarySettings /></Layout>} />
 
-                                            {/* Inventory Module - Complete */}
-                                            <Route path="/inventory/dashboard" element={<Layout><InventoryDashboard /></Layout>} />
-                                            <Route path="/inventory/items" element={<Layout><ItemMaster /></Layout>} />
-                                            <Route path="/inventory/transactions" element={<Layout><StockTransactions /></Layout>} />
-                                            <Route path="/inventory/reports" element={<Layout><InventoryReports /></Layout>} />
-                                            <Route path="/inventory/stock" element={<Layout><StockManager /></Layout>} />
-                                            <Route path="/inventory/purchase-orders" element={<Layout><PurchaseOrders /></Layout>} />
-                                            <Route path="/inventory/stock-adjustment" element={<Layout><StockAdjustment /></Layout>} />
-                                            <Route path="/inventory/vendors" element={<Layout><VendorManagement /></Layout>} />
+                                                {/* Inventory Module - Complete */}
+                                                <Route path="/inventory/dashboard" element={<Layout><InventoryDashboard /></Layout>} />
+                                                <Route path="/inventory/items" element={<Layout><ItemMaster /></Layout>} />
+                                                <Route path="/inventory/transactions" element={<Layout><StockTransactions /></Layout>} />
+                                                <Route path="/inventory/reports" element={<Layout><InventoryReports /></Layout>} />
+                                                <Route path="/inventory/stock" element={<Layout><StockManager /></Layout>} />
+                                                <Route path="/inventory/purchase-orders" element={<Layout><PurchaseOrders /></Layout>} />
+                                                <Route path="/inventory/orders" element={<Layout><PurchaseOrders /></Layout>} /> {/* Sidebar Alias */}
+                                                <Route path="/inventory/stock-adjustment" element={<Layout><StockAdjustment /></Layout>} />
+                                                <Route path="/inventory/vendors" element={<Layout><VendorManagement /></Layout>} />
 
-                                            <Route path="/hostel" element={<Layout><HostelDashboard /></Layout>} />
-                                            <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
-                                            <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />
-                                            <Route path="/transport" element={<Layout><TransportFleet /></Layout>} />
-                                            <Route path="/transport/allocations" element={<Layout><TransportAllocations /></Layout>} />
-                                            <Route path="/transport/routes" element={<Layout><RouteOptimization /></Layout>} />
-                                            <Route path="/transport/maintenance" element={<Layout><VehicleMaintenance /></Layout>} />
-                                            <Route path="/communication" element={<Layout><NoticeBoard /></Layout>} />
-                                            <Route path="/communication/messages" element={<Layout><MessageComposer /></Layout>} />
-                                            <Route path="/communication/templates" element={<Layout><TemplateManager /></Layout>} />
-                                            <Route path="/communication/delivery-reports" element={<Layout><DeliveryReports /></Layout>} />
+                                                <Route path="/hostel" element={<Layout><HostelDashboard /></Layout>} />
+                                                <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
+                                                <Route path="/hostel/allocations" element={<Layout><RoomAllocation /></Layout>} /> {/* Sidebar Alias */}
+                                                <Route path="/hostel/mess" element={<Layout><MessManagement /></Layout>} />
+                                                <Route path="/hostel/complaints" element={<Layout><HostelComplaints /></Layout>} />
+                                                <Route path="/hostel/complaints/analytics" element={<Layout><ComplaintAnalytics /></Layout>} />
+                                                <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />
+                                                <Route path="/transport" element={<Layout><TransportFleet /></Layout>} />
+                                                <Route path="/transport/allocations" element={<Layout><TransportAllocations /></Layout>} />
+                                                <Route path="/transport/routes" element={<Layout><RouteOptimization /></Layout>} />
+                                                <Route path="/transport/maintenance" element={<Layout><VehicleMaintenance /></Layout>} />
+                                                <Route path="/communication" element={<Layout><NoticeBoard /></Layout>} />
+                                                <Route path="/communication/messages" element={<Layout><MessageComposer /></Layout>} />
+                                                <Route path="/communication/templates" element={<Layout><TemplateManager /></Layout>} />
+                                                <Route path="/communication/delivery-reports" element={<Layout><DeliveryReports /></Layout>} />
 
-                                            {/* Phase 8 - Notifications & Communication */}
-                                            <Route path="/notifications/center" element={<Layout><NotificationCenter /></Layout>} />
-                                            <Route path="/notifications/email" element={<Layout><EmailCampaigns /></Layout>} />
-                                            <Route path="/notifications/sms" element={<Layout><SMSMessaging /></Layout>} />
+                                                {/* Phase 8 - Notifications & Communication */}
+                                                <Route path="/notifications/center" element={<Layout><NotificationCenter /></Layout>} />
+                                                <Route path="/notifications/email" element={<Layout><EmailCampaigns /></Layout>} />
+                                                <Route path="/notifications/sms" element={<Layout><SMSMessaging /></Layout>} />
 
-                                            {/* Finance & HR */}
-                                            <Route path="/hr/leaves" element={<Layout><LeaveManage /></Layout>} />
-                                            <Route path="/hr/leave-approval" element={<Layout><LeaveApproval /></Layout>} />
-                                            <Route path="/payroll/payslips" element={<Layout><PayslipView /></Layout>} />
-                                            <Route path="/payroll/salary-structure" element={<Layout><SalaryStructure /></Layout>} />
-                                            <Route path="/payroll/dashboard" element={<Layout><PayrollDashboard /></Layout>} />
+                                                {/* Finance & HR */}
+                                                <Route path="/hr/leaves" element={<Layout><LeaveManage /></Layout>} />
+                                                <Route path="/hr/leave-approval" element={<Layout><LeaveApproval /></Layout>} />
+                                                <Route path="/payroll/payslips" element={<Layout><PayslipView /></Layout>} />
+                                                <Route path="/payroll/salary-structure" element={<Layout><SalaryStructure /></Layout>} />
+                                                <Route path="/payroll/dashboard" element={<Layout><PayrollDashboard /></Layout>} />
 
-                                            {/* Business & Growth */}
-                                            <Route path="/crm" element={<Layout><LeadKanbanBoard /></Layout>} />
-                                            <Route path="/crm/conversion" element={<Layout><LeadConversion /></Layout>} />
-                                            <Route path="/crm/followups" element={<Layout><FollowupScheduler /></Layout>} />
-                                            <Route path="/alumni" element={<Layout><AlumniPortal /></Layout>} />
-                                            <Route path="/alumni/jobs" element={<Layout><JobBoard /></Layout>} />
-                                            <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
-                                            <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
-                                            <Route path="/cms/builder" element={<Layout><WebsiteBuilder /></Layout>} />
-                                            <Route path="/cms/website-builder" element={<Layout><WebsiteBuilder /></Layout>} />
-                                            <Route path="/cms/templates" element={<Layout><WebsiteBuilder /></Layout>} />
+                                                {/* Business & Growth */}
+                                                <Route path="/crm" element={<Layout><LeadKanbanBoard /></Layout>} />
+                                                <Route path="/crm/conversion" element={<Layout><LeadConversion /></Layout>} />
+                                                <Route path="/crm/followups" element={<Layout><FollowupScheduler /></Layout>} />
+                                                <Route path="/alumni" element={<Layout><AlumniPortal /></Layout>} />
+                                                <Route path="/alumni/directory" element={<Layout><AlumniPortal /></Layout>} /> {/* Sidebar Alias */}
+                                                <Route path="/alumni/jobs" element={<Layout><JobBoard /></Layout>} />
+                                                <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
+                                                <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
+                                                <Route path="/cms/builder" element={<Layout><WebsiteBuilder /></Layout>} />
+                                                <Route path="/cms/website-builder" element={<Layout><WebsiteBuilder /></Layout>} />
+                                                <Route path="/cms/templates" element={<Layout><WebsiteBuilder /></Layout>} />
 
-                                            {/* Character Trackers */}
-                                            <Route path="/trackers/salah" element={<Layout><SalahTracker /></Layout>} />
-                                            <Route path="/trackers/habits" element={<Layout><HabitBoard /></Layout>} />
+                                                {/* Character Trackers */}
+                                                <Route path="/trackers/salah" element={<Layout><SalahTracker /></Layout>} />
+                                                <Route path="/trackers/habits" element={<Layout><HabitBoard /></Layout>} />
 
-                                            {/* Admin & Security */}
-                                            <Route path="/admin/certificates" element={<Layout><CertificateTemplates /></Layout>} />
-                                            <Route path="/security/scanner" element={<Layout><GuardScanner /></Layout>} />
-                                            <Route path="/placement" element={<Layout><DriveDashboard /></Layout>} />
-                                            <Route path="/placement/apply" element={<Layout><PlacementApplication /></Layout>} />
-                                            <Route path="/certificates/request" element={<Layout><CertificateRequest /></Layout>} />
-                                            <Route path="/security/pass-request" element={<Layout><PassRequest /></Layout>} />
-                                            <Route path="/security/pass-approval" element={<Layout><PassApproval /></Layout>} />
-                                            <Route path="/helpdesk/create-ticket" element={<Layout><CreateTicket /></Layout>} />
-                                            <Route path="/helpdesk" element={<Layout><TicketBoard /></Layout>} />
-                                            <Route path="/helpdesk/tickets" element={<Layout><HelpdeskTickets /></Layout>} />
+                                                {/* Admin & Security */}
+                                                <Route path="/admin/certificates" element={<Layout><CertificateTemplates /></Layout>} />
+                                                <Route path="/security/scanner" element={<Layout><GuardScanner /></Layout>} />
+                                                <Route path="/security/visitors" element={<Layout><VisitorLog /></Layout>} />
+                                                <Route path="/security/gate-passes" element={<Layout><GatePasses /></Layout>} />
+                                                <Route path="/placement" element={<Layout><DriveDashboard /></Layout>} />
+                                                <Route path="/placement/drives" element={<Layout><DriveDashboard /></Layout>} /> {/* Sidebar Alias */}
+                                                <Route path="/placement/apply" element={<Layout><PlacementApplication /></Layout>} />
+                                                <Route path="/placement/applications" element={<Layout><PlacementApplication /></Layout>} /> {/* Sidebar Alias */}
+                                                <Route path="/certificates/request" element={<Layout><CertificateRequest /></Layout>} />
+                                                <Route path="/security/pass-request" element={<Layout><PassRequest /></Layout>} />
+                                                <Route path="/security/pass-approval" element={<Layout><PassApproval /></Layout>} />
+                                                <Route path="/helpdesk/create-ticket" element={<Layout><CreateTicket /></Layout>} />
+                                                <Route path="/helpdesk" element={<Layout><TicketBoard /></Layout>} />
+                                                <Route path="/helpdesk/tickets" element={<Layout><HelpdeskTickets /></Layout>} />
 
-                                            {/* Analytics & Billing */}
-                                            <Route path="/analytics" element={<Layout><AnalyticsDashboard /></Layout>} />
-                                            <Route path="/library" element={<Layout><LibraryManagement /></Layout>} />
-                                            <Route path="/billing" element={<Layout><BillingManagement /></Layout>} />
+                                                {/* Analytics & Billing */}
+                                                <Route path="/analytics" element={<Layout><AnalyticsDashboard /></Layout>} />
+                                                <Route path="/library" element={<Layout><LibraryManagement /></Layout>} />
+                                                <Route path="/billing" element={<Layout><BillingManagement /></Layout>} />
 
-                                            {/* enterprise */}
-                                            <Route path="/group/hq" element={<Layout><Headquarters /></Layout>} />
+                                                {/* enterprise */}
+                                                <Route path="/group/hq" element={<Layout><Headquarters /></Layout>} />
 
-                                            <Route path="/store" element={<Layout><ParentShop /></Layout>} />
-                                        </Routes>
-                                    </ThemeProvider>
-                                </PreferencesProvider>
+                                                <Route path="/store" element={<Layout><ParentShop /></Layout>} />
+                                            </Routes>
+                                        </ThemeProvider>
+                                    </PreferencesProvider>
+                                </TenantBrandingProvider>
                             </ProtectedRoute>
                         } />
                     </Routes>

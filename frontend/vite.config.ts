@@ -6,7 +6,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['chart.js', 'react-chartjs-2'],
+    include: ['chart.js', 'react-chartjs-2', 'xlsx', 'jspdf', 'jspdf-autotable'],
   },
   server: {
     host: '0.0.0.0',

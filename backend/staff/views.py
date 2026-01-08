@@ -263,6 +263,112 @@ class StaffAttendanceViewSet(viewsets.ModelViewSet):
             'message': f'Marked attendance for {created_count} staff members',
             'count': created_count
         })
+    
+    @action(detail=False, methods=['post'])
+    def import_biometric(self, request):
+        """
+        Import attendance from biometric device data.
+        
+        Expected format:
+        {
+            "records": [
+                {
+                    "employee_id": "EMP001",
+                    "date": "2026-01-04",
+                    "punch_in": "09:00:00",
+                    "punch_out": "17:30:00",
+                    "device_id": "BIO-001"
+                }
+            ]
+        }
+        """
+        records = request.data.get('records', [])
+        
+        if not records:
+            return Response(
+                {'error': 'No records provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from datetime import datetime, time
+        
+        imported_count = 0
+        errors = []
+        
+        for record in records:
+            try:
+                employee_id = record.get('employee_id')
+                date = record.get('date')
+                punch_in = record.get('punch_in')
+                punch_out = record.get('punch_out')
+                device_id = record.get('device_id', '')
+                
+                # Find staff by employee_id
+                try:
+                    staff = Staff.objects.get(
+                        tenant=request.user.tenant,
+                        employee_id=employee_id
+                    )
+                except Staff.DoesNotExist:
+                    errors.append(f"Staff with employee_id {employee_id} not found")
+                    continue
+                
+                # Parse times
+                punch_in_time = datetime.strptime(punch_in, '%H:%M:%S').time() if punch_in else None
+                punch_out_time = datetime.strptime(punch_out, '%H:%M:%S').time() if punch_out else None
+                
+                # Determine status
+                attendance_status = 'PRESENT'
+                is_late = False
+                
+                if punch_in_time:
+                    # Check if late (assuming 9:30 AM as standard time)
+                    standard_time = time(9, 30)
+                    if punch_in_time > standard_time:
+                        is_late = True
+                        attendance_status = 'LATE'
+                
+                # Calculate overtime
+                overtime_hours = 0
+                if punch_in_time and punch_out_time:
+                    work_hours = (datetime.combine(datetime.today(), punch_out_time) - 
+                                datetime.combine(datetime.today(), punch_in_time)).total_seconds() / 3600
+                    if work_hours > 8:  # Assuming 8 hours is standard
+                        overtime_hours = work_hours - 8
+                
+                # Create or update attendance
+                StaffAttendance.objects.update_or_create(
+                    tenant=request.user.tenant,
+                    staff=staff,
+                    date=date,
+                    defaults={
+                        'status': attendance_status,
+                        'biometric_punch_in': punch_in_time,
+                        'biometric_punch_out': punch_out_time,
+                        'biometric_device_id': device_id,
+                        'check_in_time': punch_in_time,
+                        'check_out_time': punch_out_time,
+                        'is_late': is_late,
+                        'overtime_hours': overtime_hours,
+                        'marked_by': request.user
+                    }
+                )
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"Error processing record: {str(e)}")
+        
+        response_data = {
+            'message': f'Imported {imported_count} attendance records',
+            'imported_count': imported_count,
+            'total_records': len(records)
+        }
+        
+        if errors:
+            response_data['errors'] = errors
+        
+        return Response(response_data)
+
 
 
 class StaffLeaveViewSet(viewsets.ModelViewSet):

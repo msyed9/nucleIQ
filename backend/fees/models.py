@@ -91,6 +91,38 @@ class FeeStructure(BaseModel):
         help_text="Day of month when fee is due (for recurring fees)"
     )
     
+    # Term-based collection configuration
+    number_of_terms = models.IntegerField(
+        default=1,
+        help_text="Number of terms/installments for collection (1-12)"
+    )
+    
+    # JSON field to store term month configuration
+    # Example: {"term_1": [4], "term_2": [7], "term_3": [10]} for quarterly
+    # Example: {"term_1": [4, 5, 6], "term_2": [10, 11, 12]} for half-yearly
+    term_months = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Configuration for when each term fee should be collected (month numbers 1-12)"
+    )
+    
+    # Annual fee amount - total fee for the year
+    annual_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total annual fee amount (sum of all installments)"
+    )
+    
+    # JSON field to store custom installment amounts
+    # Example: {"installment_1": "15000.00", "installment_2": "15000.00", ...}
+    installment_amounts = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Custom amounts for each installment (allows unequal distribution)"
+    )
+    
     is_mandatory = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     
@@ -429,6 +461,13 @@ class SiblingDiscount(BaseModel):
         related_name='sibling_discounts'
     )
     
+    name = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text="Name for this discount tier (e.g., '2 Siblings Discount')"
+    )
+    
     sibling_count = models.IntegerField(
         help_text="Number of siblings (2, 3, 4+)"
     )
@@ -448,4 +487,5 @@ class SiblingDiscount(BaseModel):
         unique_together = [['tenant', 'sibling_count']]
     
     def __str__(self):
-        return f"{self.sibling_count} siblings - {self.discount_percentage}%"
+        return self.name or f"{self.sibling_count} siblings - {self.discount_percentage}%"
+

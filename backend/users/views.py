@@ -26,17 +26,24 @@ from .serializers import (
     UserSerializer, UserCreateSerializer, UserProfileSerializer,
     UserPreferenceSerializer, RoleSerializer, PermissionSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer,
-    ResetPasswordConfirmSerializer, ImpersonationLogSerializer
+    ResetPasswordConfirmSerializer, ImpersonationLogSerializer,
+    PermissionMatrixSerializer, BulkRolePermissionUpdateSerializer
 )
 
 User = get_user_model()
+
+
+from .serializers import UserProfileSerializer
+
+
+from .serializers import UserProfileSerializer, CustomTokenObtainPairSerializer
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Custom JWT token obtain view with additional user data.
     """
-    
+    serializer_class = CustomTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
         """Override to include user profile in response."""
         response = super().post(request, *args, **kwargs)
@@ -52,6 +59,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             # Add user profile to response
             serializer = UserProfileSerializer(user)
             response.data['user'] = serializer.data
+            # Also include tenant id explicitly for frontend convenience
+            tenant_id = None
+            try:
+                tenant_id = serializer.data.get('tenant')
+            except Exception:
+                tenant_id = None
+            response.data['tenant'] = tenant_id
         
         return response
     
@@ -162,8 +176,11 @@ class UserViewSet(viewsets.ModelViewSet):
         })
     
     def perform_create(self, serializer):
-        """Set created_by when creating user."""
-        serializer.save(created_by=self.request.user)
+        """Set tenant and created_by when creating user."""
+        serializer.save(
+            tenant=self.request.user.tenant,
+            created_by=self.request.user
+        )
     
     def perform_update(self, serializer):
         """Set updated_by when updating user."""
@@ -353,8 +370,11 @@ class RoleViewSet(viewsets.ModelViewSet):
         return Role.objects.filter(tenant=user.tenant)
     
     def perform_create(self, serializer):
-        """Set created_by when creating role."""
-        serializer.save(created_by=self.request.user)
+        """Set tenant and created_by when creating role."""
+        serializer.save(
+            tenant=self.request.user.tenant,
+            created_by=self.request.user
+        )
     
     def perform_update(self, serializer):
         """Set updated_by when updating role."""
@@ -482,3 +502,182 @@ class ImpersonationViewSet(viewsets.ModelViewSet):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+
+class UserPermissionsView(generics.GenericAPIView):
+    """
+    View for getting current user's permissions.
+    
+    GET /auth/permissions/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get current user's permissions."""
+        from .utils import get_user_permissions, is_superadmin
+        
+        permissions = get_user_permissions(request.user)
+        
+        return Response({
+            'permissions': permissions,
+            'is_superadmin': is_superadmin(request.user),
+            'roles': [
+                {
+                    'id': str(role.id),
+                    'name': role.name,
+                    'code': role.code
+                }
+                for role in request.user.roles.filter(is_active=True)
+            ]
+        })
+
+
+class CheckPermissionView(generics.GenericAPIView):
+    """
+    View for checking if user has a specific permission.
+    
+    POST /auth/check-permission/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Check if user has permission."""
+        from .utils import has_permission
+        
+        module = request.data.get('module')
+        action = request.data.get('action')
+        
+        if not module or not action:
+            return Response({
+                'error': 'Both module and action are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        has_perm = has_permission(request.user, module, action)
+        
+        return Response({
+            'has_permission': has_perm,
+            'module': module,
+            'action': action
+        })
+
+
+class PermissionsMatrixViewSet(viewsets.ViewSet):
+    """
+    ViewSet for managing permissions matrix.
+    
+    Endpoints:
+    - GET /permissions-matrix/ - Get full permissions matrix
+    - PATCH /permissions-matrix/bulk-update/ - Bulk update role permissions
+    """
+    
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    
+    def list(self, request):
+        """
+        Get the complete permissions matrix.
+        
+        Returns:
+        {
+            "groups": [
+                {
+                    "name": "Dashboard",
+                    "permissions": [
+                        {
+                            "id": "uuid",
+                            "resource": "dashboard",
+                            "action": "read",
+                            "code": "dashboard.read",
+                            "display_name": "Dashboard - Read",
+                            "description": "..."
+                        }
+                    ]
+                }
+            ],
+            "roles": [
+                {
+                    "id": "uuid",
+                    "name": "Admin",
+                    "code": "admin",
+                    "description": "...",
+                    "permission_ids": ["uuid1", "uuid2"]
+                }
+            ]
+        }
+        """
+        serializer = PermissionMatrixSerializer({}, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['patch'])
+    def bulk_update(self, request):
+        """
+        Bulk update permissions for a role.
+        
+        Request body:
+        {
+            "role_id": "uuid",
+            "permission_ids": ["uuid1", "uuid2", ...]
+        }
+        """
+        serializer = BulkRolePermissionUpdateSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if not serializer.is_valid():
+            return Response(
+                {'status': 'error', 'errors': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        role_id = serializer.validated_data['role_id']
+        permission_ids = serializer.validated_data['permission_ids']
+        
+        try:
+            role = Role.objects.get(id=role_id)
+            
+            # Prevent self-downgrade: If updating own role, ensure they keep admin permissions
+            if request.user.roles.filter(id=role_id).exists():
+                # Check if user has other admin roles
+                other_admin_roles = request.user.roles.filter(
+                    is_active=True
+                ).exclude(id=role_id).exists()
+                
+                if not other_admin_roles and not request.user.is_platform_admin:
+                    # Ensure they're not removing their own admin permissions
+                    admin_perms = Permission.objects.filter(
+                        code__in=['role.update', 'role.read', 'permission.read']
+                    ).values_list('id', flat=True)
+                    
+                    if not all(perm_id in permission_ids for perm_id in admin_perms):
+                        return Response({
+                            'status': 'error',
+                            'message': 'Cannot remove your own admin permissions. Assign another admin role first.'
+                        }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Delete existing permissions for this role
+            RolePermission.objects.filter(role=role).delete()
+            
+            # Create new permissions
+            role_permissions = [
+                RolePermission(role=role, permission_id=perm_id)
+                for perm_id in permission_ids
+            ]
+            RolePermission.objects.bulk_create(role_permissions)
+            
+            return Response({
+                'status': 'success',
+                'message': f'Updated permissions for role {role.name}',
+                'role_id': str(role.id),
+                'permission_count': len(permission_ids)
+            })
+            
+        except Role.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Role not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

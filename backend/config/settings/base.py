@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
+    'simple_history',  # Audit trail
     
     # Local apps
     'core',
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'search',
     'students',
     'analytics',
-    'idcards',
+    # 'idcards',  # ID Card functionality is in students app
     'staff',
     'attendance',
     'fees',
@@ -63,14 +64,15 @@ INSTALLED_APPS = [
     'hostel',
     'salah_tracker',
     'habit_tracker',
-    'alumni',
+    # 'alumni',  # Moved to students app
     'lms',
     'certificates',
     'security',
     'placement',
     'helpdesk',
     'reports',
-    'notifications',
+    'data_management',
+    # 'notifications',  # Using communication app instead
 ]
 
 MIDDLEWARE = [
@@ -82,9 +84,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',  # Audit trail - must be after auth
     
     # Custom middleware - MUST be after authentication
     'core.middleware.TenantMiddleware',
+    'users.middleware.PermissionMiddleware',
+    'users.middleware.RoleCheckMiddleware',
     'billing.middleware.SubscriptionEnforcementMiddleware',
 ]
 
@@ -101,6 +106,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'users.context_processors.permissions_processor',
             ],
         },
     },
@@ -162,6 +168,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'users.backends.RoleBasedAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -226,7 +238,6 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
         'OPTIONS': {
-            'CLIENT_CLASS': 'django.core.cache.backends.redis.RedisClient',
         },
         'KEY_PREFIX': 'nucleiq',
         'TIMEOUT': 300,

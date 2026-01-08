@@ -458,11 +458,30 @@ class Permission(BaseModel):
         help_text=_('Permission description')
     )
     
+    # Grouping for UI organization
+    group = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text=_('Permission group for UI organization (e.g., Dashboard, Website, Finance)')
+    )
+    
+    display_name = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text=_('Human-readable display name for the permission')
+    )
+    
+    sort_order = models.IntegerField(
+        default=0,
+        help_text=_('Sort order within group')
+    )
+    
     class Meta:
         db_table = 'permissions'
         verbose_name = _('Permission')
         verbose_name_plural = _('Permissions')
-        ordering = ['resource', 'action']
+        ordering = ['group', 'sort_order', 'resource', 'action']
         constraints = [
             models.UniqueConstraint(
                 fields=['resource', 'action'],
@@ -474,9 +493,14 @@ class Permission(BaseModel):
         return f"{self.resource}.{self.action}"
     
     def save(self, *args, **kwargs):
-        """Auto-generate code from resource and action."""
+        """Auto-generate code and display_name from resource and action."""
         if not self.code:
             self.code = f"{self.resource}.{self.action}"
+        if not self.display_name:
+            # Convert 'student_module' to 'Student Module'
+            resource_name = self.resource.replace('_', ' ').title()
+            action_name = self.action.title()
+            self.display_name = f"{resource_name} - {action_name}"
         super().save(*args, **kwargs)
 
 

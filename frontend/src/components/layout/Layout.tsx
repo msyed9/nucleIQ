@@ -14,6 +14,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
+    // Prevent parents from accessing admin layout
+    const userType = localStorage.getItem('user_type');
+    if (userType === 'parent') {
+        return <Navigate to="/parent/portal" replace />;
+    }
+
     return (
         <div className="layout">
             <Sidebar />

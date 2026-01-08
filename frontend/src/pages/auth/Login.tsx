@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Globe, LogIn } from 'lucide-react';
+import axios from 'axios';
 import { Button, Input, Card } from '@/design-system';
 import './Login.css';
 
@@ -44,15 +45,38 @@ const Login: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
 
+                // Prevent parent users from logging in via admin portal
+                if (data.user && data.user.is_parent) {
+                    setError(t('auth.parent_login_error', { defaultValue: 'Please use the Parent Portal to log in' }));
+                    setLoading(false);
+                    return;
+                }
+
                 // Store tokens and user info
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);
                 localStorage.setItem('auth_tokens', JSON.stringify({ access: data.access, refresh: data.refresh }));
+                // store user
                 localStorage.setItem('user', JSON.stringify(data.user));
 
-                // Persist current tenant id
-                if (data.user && data.user.tenant) {
-                    localStorage.setItem('current_tenant', String(data.user.tenant));
+                // Persist current tenant id (prefer top-level `tenant` from backend)
+                const tenantId = data.tenant ?? data.user?.tenant;
+                if (tenantId) {
+                    localStorage.setItem('current_tenant', String(tenantId));
+                }
+
+                // Persist platform-admin flag and set axios defaults accordingly
+                const isPlatformAdmin = data.is_platform_admin ?? data.user?.is_platform_admin ?? false;
+                localStorage.setItem('is_platform_admin', String(Boolean(isPlatformAdmin)));
+
+                // Set axios default Authorization header
+                axios.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
+
+                // Attach tenant header for non-platform-admins
+                if (!isPlatformAdmin && tenantId) {
+                    axios.defaults.headers.common['X-Tenant-Id'] = String(tenantId);
+                } else {
+                    delete axios.defaults.headers.common['X-Tenant-Id'];
                 }
 
                 // Legacy keys for compatibility

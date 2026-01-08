@@ -33,6 +33,7 @@
 /* Container */
 .ds-select__container {
     position: relative;
+    z-index: 100;
 }
 
 /* Trigger */

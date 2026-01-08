@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from './pages/auth/LoginPage';
+import Login from './pages/auth/Login';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 
 // Example Dashboard component
 const Dashboard: React.FC = () => {
@@ -80,8 +80,8 @@ const SettingsPage: React.FC = () => {
                         <button
                             onClick={() => handleThemeChange('light')}
                             className={`px-4 py-2 rounded ${user?.preference.theme_mode === 'light'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-secondary'
+                                ? 'bg-primary text-white'
+                                : 'bg-secondary'
                                 }`}
                         >
                             Light
@@ -89,8 +89,8 @@ const SettingsPage: React.FC = () => {
                         <button
                             onClick={() => handleThemeChange('dark')}
                             className={`px-4 py-2 rounded ${user?.preference.theme_mode === 'dark'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-secondary'
+                                ? 'bg-primary text-white'
+                                : 'bg-secondary'
                                 }`}
                         >
                             Dark
@@ -98,8 +98,8 @@ const SettingsPage: React.FC = () => {
                         <button
                             onClick={() => handleThemeChange('system')}
                             className={`px-4 py-2 rounded ${user?.preference.theme_mode === 'system'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-secondary'
+                                ? 'bg-primary text-white'
+                                : 'bg-secondary'
                                 }`}
                         >
                             System
@@ -115,7 +115,7 @@ function App() {
     return (
         <Routes>
             {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Protected routes */}

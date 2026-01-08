@@ -145,8 +145,32 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """Get pending invoices."""
+        """Get pending invoices with optional filters."""
+        from django.db.models import Q
+        
         queryset = self.get_queryset().filter(status__in=['PENDING', 'PARTIAL'])
+        
+        # Apply class filter
+        class_filter = request.query_params.get('class_name')
+        if class_filter:
+            queryset = queryset.filter(
+                Q(student__current_class__name__icontains=class_filter) |
+                Q(student__class_level__icontains=class_filter)
+            )
+        
+        # Apply section filter
+        section_filter = request.query_params.get('section')
+        if section_filter:
+            queryset = queryset.filter(
+                Q(student__current_section__name__icontains=section_filter) |
+                Q(student__section__icontains=section_filter)
+            )
+        
+        # Apply status filter (within pending/partial)
+        status_filter = request.query_params.get('status')
+        if status_filter and status_filter in ['PENDING', 'PARTIAL']:
+            queryset = queryset.filter(status=status_filter)
+        
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

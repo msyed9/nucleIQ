@@ -30,6 +30,8 @@ import {
     Security as SecurityIcon,
     Backup as BackupIcon,
     Build as MaintenanceIcon,
+    Business as BrandingIcon,
+    Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 
@@ -51,17 +53,19 @@ function TabPanel(props: TabPanelProps) {
 const SystemSettings: React.FC = () => {
     const [tabValue, setTabValue] = useState(0);
     const [settings, setSettings] = useState<any>({});
+    const [branding, setBranding] = useState<any>({});
     const [loading, setLoading] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
     useEffect(() => {
         fetchSettings();
+        fetchBranding();
     }, []);
 
     const fetchSettings = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/api/tenants/settings/');
+            const response = await api.get('/tenants/settings/');
             setSettings(response.data);
         } catch (error) {
             console.error('Error fetching settings:', error);
@@ -71,10 +75,35 @@ const SystemSettings: React.FC = () => {
         }
     };
 
+    const fetchBranding = async () => {
+        try {
+            const response = await api.get('/tenants/branding/');
+            setBranding(response.data);
+            // Apply branding colors on initial load
+            if (response.data) {
+                const root = document.documentElement;
+                if (response.data.primary_color) {
+                    root.style.setProperty('--primary-color', response.data.primary_color);
+                    root.style.setProperty('--primary-main', response.data.primary_color);
+                }
+                if (response.data.secondary_color) {
+                    root.style.setProperty('--secondary-color', response.data.secondary_color);
+                    root.style.setProperty('--secondary-main', response.data.secondary_color);
+                }
+                if (response.data.sidebar_color) {
+                    root.style.setProperty('--sidebar-color', response.data.sidebar_color);
+                    root.style.setProperty('--sidebar-bg', response.data.sidebar_color);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching branding:', error);
+        }
+    };
+
     const handleSaveSettings = async () => {
         try {
             setLoading(true);
-            await api.put('/api/tenants/settings/', settings);
+            await api.patch('/tenants/settings/update/', settings);
             showSnackbar('Settings saved successfully', 'success');
         } catch (error: any) {
             console.error('Error saving settings:', error);
@@ -84,8 +113,56 @@ const SystemSettings: React.FC = () => {
         }
     };
 
+    const handleSaveBranding = async () => {
+        try {
+            setLoading(true);
+            await api.patch('/tenants/branding/update/', branding);
+
+            // Apply branding colors immediately via CSS custom properties
+            applyBrandingColors(branding);
+
+            showSnackbar('Branding saved successfully! Page will refresh to apply changes.', 'success');
+
+            // Refresh page after a short delay to apply new theme colors
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } catch (error: any) {
+            console.error('Error saving branding:', error);
+            showSnackbar(error.response?.data?.detail || 'Failed to save branding', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Function to apply branding colors to CSS custom properties
+    const applyBrandingColors = (brandingData: any) => {
+        const root = document.documentElement;
+        if (brandingData.primary_color) {
+            root.style.setProperty('--primary-color', brandingData.primary_color);
+            root.style.setProperty('--primary-main', brandingData.primary_color);
+        }
+        if (brandingData.secondary_color) {
+            root.style.setProperty('--secondary-color', brandingData.secondary_color);
+            root.style.setProperty('--secondary-main', brandingData.secondary_color);
+        }
+        if (brandingData.sidebar_color) {
+            root.style.setProperty('--sidebar-color', brandingData.sidebar_color);
+            root.style.setProperty('--sidebar-bg', brandingData.sidebar_color);
+        }
+    };
+
+    const handleSaveAll = async () => {
+        await handleSaveSettings();
+        await handleSaveBranding();
+    };
+
     const handleChange = (field: string, value: any) => {
         setSettings((prev: any) => ({ ...prev, [field]: value }));
+    };
+
+    const handleBrandingChange = (field: string, value: any) => {
+        setBranding((prev: any) => ({ ...prev, [field]: value }));
     };
 
     const showSnackbar = (message: string, severity: 'success' | 'error') => {
@@ -96,13 +173,14 @@ const SystemSettings: React.FC = () => {
         <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4">System Settings</Typography>
-                <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSaveSettings} disabled={loading}>
+                <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSaveAll} disabled={loading}>
                     Save All Settings
                 </Button>
             </Box>
 
             <Paper sx={{ width: '100%' }}>
                 <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto">
+                    <Tab icon={<BrandingIcon />} label="Branding" />
                     <Tab icon={<SchoolIcon />} label="Academic" />
                     <Tab icon={<MoneyIcon />} label="Fees" />
                     <Tab icon={<AttendanceIcon />} label="Attendance" />
@@ -113,8 +191,147 @@ const SystemSettings: React.FC = () => {
                     <Tab icon={<MaintenanceIcon />} label="Maintenance" />
                 </Tabs>
 
-                {/* Academic Settings */}
+                {/* Branding Settings */}
                 <TabPanel value={tabValue} index={0}>
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                School Information
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Configure your school's branding details that appear on receipts and documents.
+                            </Typography>
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="School Name"
+                                        value={branding.school_name || ''}
+                                        onChange={(e) => handleBrandingChange('school_name', e.target.value)}
+                                        helperText="Name displayed on receipts and documents"
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Logo URL"
+                                        value={branding.logo_url || ''}
+                                        onChange={(e) => handleBrandingChange('logo_url', e.target.value)}
+                                        helperText="URL to your school logo image"
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        label="School Address"
+                                        value={branding.school_address || ''}
+                                        onChange={(e) => handleBrandingChange('school_address', e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="School Phone"
+                                        value={branding.school_phone || ''}
+                                        onChange={(e) => handleBrandingChange('school_phone', e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        type="email"
+                                        label="School Email"
+                                        value={branding.school_email || ''}
+                                        onChange={(e) => handleBrandingChange('school_email', e.target.value)}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
+
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <ReceiptIcon /> Fee Receipt Configuration
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Configure how fee receipts are printed for parents and office records.
+                            </Typography>
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Receipt Copies per Page</InputLabel>
+                                        <Select
+                                            value={branding.receipt_copies || 3}
+                                            label="Receipt Copies per Page"
+                                            onChange={(e) => handleBrandingChange('receipt_copies', e.target.value)}
+                                        >
+                                            <MenuItem value={1}>1 Copy (Full Page)</MenuItem>
+                                            <MenuItem value={2}>2 Copies (Student + Office)</MenuItem>
+                                            <MenuItem value={3}>3 Copies (Student + Office + Parent)</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        label="Receipt Footer Text"
+                                        value={branding.receipt_footer_text || 'This is a computer generated receipt.'}
+                                        onChange={(e) => handleBrandingChange('receipt_footer_text', e.target.value)}
+                                        helperText="Custom text appearing at the bottom of receipts"
+                                    />
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                Color Theme
+                            </Typography>
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        label="Primary Color"
+                                        value={branding.primary_color || '#1976D2'}
+                                        onChange={(e) => handleBrandingChange('primary_color', e.target.value)}
+                                        type="color"
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        label="Secondary Color"
+                                        value={branding.secondary_color || '#424242'}
+                                        onChange={(e) => handleBrandingChange('secondary_color', e.target.value)}
+                                        type="color"
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        label="Sidebar Color"
+                                        value={branding.sidebar_color || '#263238'}
+                                        onChange={(e) => handleBrandingChange('sidebar_color', e.target.value)}
+                                        type="color"
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
+                </TabPanel>
+
+                {/* Academic Settings */}
+                <TabPanel value={tabValue} index={1}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -166,7 +383,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Fee Settings */}
-                <TabPanel value={tabValue} index={1}>
+                <TabPanel value={tabValue} index={2}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -239,7 +456,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Attendance Settings */}
-                <TabPanel value={tabValue} index={2}>
+                <TabPanel value={tabValue} index={3}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -290,7 +507,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Exam Settings */}
-                <TabPanel value={tabValue} index={3}>
+                <TabPanel value={tabValue} index={4}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -334,7 +551,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Email/SMS Settings */}
-                <TabPanel value={tabValue} index={4}>
+                <TabPanel value={tabValue} index={5}>
                     <Card sx={{ mb: 2 }}>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -473,7 +690,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Security Settings */}
-                <TabPanel value={tabValue} index={5}>
+                <TabPanel value={tabValue} index={6}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -583,7 +800,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Backup Settings */}
-                <TabPanel value={tabValue} index={6}>
+                <TabPanel value={tabValue} index={7}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -629,7 +846,7 @@ const SystemSettings: React.FC = () => {
                 </TabPanel>
 
                 {/* Maintenance Settings */}
-                <TabPanel value={tabValue} index={7}>
+                <TabPanel value={tabValue} index={8}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>

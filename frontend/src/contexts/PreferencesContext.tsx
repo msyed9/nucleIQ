@@ -76,6 +76,41 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
         root.setAttribute('lang', language);
     };
 
+    // Apply font customization styles
+    const applyFontStyles = (prefs: Partial<UserPreferences>) => {
+        const root = document.documentElement;
+
+        // Font family
+        if (prefs.font_family) {
+            root.style.setProperty('--user-font-family', prefs.font_family);
+            document.body.style.fontFamily = prefs.font_family;
+        }
+
+        // Font size mapping
+        const fontSizeMap: Record<string, string> = {
+            'small': '14px',
+            'medium': '16px',
+            'large': '18px',
+            'extra-large': '20px'
+        };
+        if (prefs.font_size && fontSizeMap[prefs.font_size]) {
+            root.style.setProperty('--user-font-size', fontSizeMap[prefs.font_size]);
+            document.body.style.fontSize = fontSizeMap[prefs.font_size];
+        }
+
+        // Custom colors
+        if (prefs.font_color) {
+            root.style.setProperty('--user-text-color', prefs.font_color);
+            root.style.setProperty('--color-text-primary', prefs.font_color);
+        }
+        if (prefs.heading_color) {
+            root.style.setProperty('--user-heading-color', prefs.heading_color);
+        }
+        if (prefs.link_color) {
+            root.style.setProperty('--user-link-color', prefs.link_color);
+        }
+    };
+
     // Load preferences from backend
     useEffect(() => {
         const loadPreferences = async () => {
@@ -102,6 +137,9 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
                     if (userPrefs.theme_mode) {
                         applyTheme(userPrefs.theme_mode);
                     }
+
+                    // Apply font customization
+                    applyFontStyles(userPrefs);
                 }
             } catch (error) {
                 console.error('Failed to load preferences:', error);
@@ -141,6 +179,12 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
             // Apply theme if changed
             if (newPreferences.theme_mode && newPreferences.theme_mode !== preferences.theme_mode) {
                 applyTheme(newPreferences.theme_mode);
+            }
+
+            // Apply font styles if any font settings changed
+            if (newPreferences.font_family || newPreferences.font_size ||
+                newPreferences.font_color || newPreferences.heading_color || newPreferences.link_color) {
+                applyFontStyles(updatedPrefs);
             }
         } catch (error) {
             console.error('Failed to update preferences:', error);

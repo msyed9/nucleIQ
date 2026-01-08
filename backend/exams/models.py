@@ -873,3 +873,431 @@ class ExamResult(TenantAwareModel):
                 raise ValidationError({
                     'marks_obtained': _('Marks obtained cannot be negative')
                 })
+
+
+class OnlineExam(TenantAwareModel):
+    """
+    Online Examination Configuration
+    """
+    
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('PUBLISHED', 'Published'),
+        ('ACTIVE', 'Active'),
+        ('COMPLETED', 'Completed'),
+        ('ARCHIVED', 'Archived'),
+    ]
+    
+    PROCTORING_CHOICES = [
+        ('NONE', 'No Proctoring'),
+        ('BASIC', 'Basic (Tab Switch Detection)'),
+        ('ADVANCED', 'Advanced (Webcam + Screen Recording)'),
+    ]
+    
+    name = models.CharField(
+        max_length=200,
+        help_text=_('Online exam name')
+    )
+    
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name='online_exams',
+        null=True,
+        blank=True,
+        help_text=_('Related offline exam (optional)')
+    )
+    
+    subject = models.ForeignKey(
+        'tenants.Subject',
+        on_delete=models.CASCADE,
+        related_name='online_exams',
+        help_text=_('Subject for this online exam')
+    )
+    
+    grade_level = models.ForeignKey(
+        'tenants.GradeLevel',
+        on_delete=models.CASCADE,
+        related_name='online_exams',
+        help_text=_('Grade level for this online exam')
+    )
+    
+    sections = models.ManyToManyField(
+        'tenants.Section',
+        related_name='online_exams',
+        help_text=_('Sections eligible for this exam')
+    )
+    
+    questions = models.ManyToManyField(
+        QuestionBank,
+        related_name='online_exams',
+        help_text=_('Questions included in this exam')
+    )
+    
+    total_marks = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text=_('Total marks for this exam')
+    )
+    
+    passing_marks = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text=_('Minimum passing marks')
+    )
+    
+    duration_minutes = models.IntegerField(
+        help_text=_('Exam duration in minutes')
+    )
+    
+    start_datetime = models.DateTimeField(
+        help_text=_('Exam start date and time')
+    )
+    
+    end_datetime = models.DateTimeField(
+        help_text=_('Exam end date and time')
+    )
+    
+    instructions = models.TextField(
+        blank=True,
+        help_text=_('Exam instructions for students')
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='DRAFT',
+        help_text=_('Exam status')
+    )
+    
+    shuffle_questions = models.BooleanField(
+        default=True,
+        help_text=_('Shuffle question order for each student')
+    )
+    
+    shuffle_options = models.BooleanField(
+        default=True,
+        help_text=_('Shuffle MCQ options for each student')
+    )
+    
+    show_results_immediately = models.BooleanField(
+        default=False,
+        help_text=_('Show results to student immediately after submission')
+    )
+    
+    allow_review = models.BooleanField(
+        default=True,
+        help_text=_('Allow students to review answers before submission')
+    )
+    
+    proctoring_level = models.CharField(
+        max_length=20,
+        choices=PROCTORING_CHOICES,
+        default='BASIC',
+        help_text=_('Proctoring level')
+    )
+    
+    max_tab_switches = models.IntegerField(
+        default=3,
+        help_text=_('Maximum allowed tab switches before auto-submit')
+    )
+    
+    auto_submit_on_time_end = models.BooleanField(
+        default=True,
+        help_text=_('Auto-submit exam when time expires')
+    )
+    
+    class Meta:
+        db_table = 'online_exams'
+        verbose_name = _('Online Exam')
+        verbose_name_plural = _('Online Exams')
+        ordering = ['-start_datetime']
+        indexes = [
+            models.Index(fields=['tenant', 'status', 'start_datetime']),
+            models.Index(fields=['subject', 'grade_level']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.subject.name}"
+    
+    def clean(self):
+        """Validate online exam data."""
+        super().clean()
+        
+        if self.end_datetime and self.start_datetime:
+            if self.end_datetime <= self.start_datetime:
+                raise ValidationError({
+                    'end_datetime': _('End datetime must be after start datetime')
+                })
+        
+        if self.passing_marks and self.total_marks:
+            if self.passing_marks > self.total_marks:
+                raise ValidationError({
+                    'passing_marks': _('Passing marks cannot exceed total marks')
+                })
+    
+    def is_available_for_student(self, student):
+        """Check if exam is available for a student."""
+        now = timezone.now()
+        
+        # Check if exam is active
+        if self.status != 'ACTIVE':
+            return False
+        
+        # Check if within time window
+        if now < self.start_datetime or now > self.end_datetime:
+            return False
+        
+        # Check if student's section is eligible
+        if not self.sections.filter(pk=student.section_id).exists():
+            return False
+        
+        # Check if student has already completed
+        if OnlineExamSession.objects.filter(
+            online_exam=self,
+            student=student,
+            status='SUBMITTED'
+        ).exists():
+            return False
+        
+        return True
+
+
+class OnlineExamSession(TenantAwareModel):
+    """
+    Student's Online Exam Session
+    """
+    
+    STATUS_CHOICES = [
+        ('STARTED', 'Started'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('SUBMITTED', 'Submitted'),
+        ('AUTO_SUBMITTED', 'Auto Submitted'),
+        ('TERMINATED', 'Terminated'),
+    ]
+    
+    online_exam = models.ForeignKey(
+        OnlineExam,
+        on_delete=models.CASCADE,
+        related_name='sessions',
+        help_text=_('Online exam')
+    )
+    
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='online_exam_sessions',
+        help_text=_('Student taking the exam')
+    )
+    
+    started_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_('When student started the exam')
+    )
+    
+    submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When student submitted the exam')
+    )
+    
+    time_remaining_seconds = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Time remaining when submitted (in seconds)')
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='STARTED',
+        help_text=_('Session status')
+    )
+    
+    tab_switch_count = models.IntegerField(
+        default=0,
+        help_text=_('Number of times student switched tabs')
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text=_('IP address of student')
+    )
+    
+    user_agent = models.TextField(
+        blank=True,
+        help_text=_('Browser user agent')
+    )
+    
+    score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Total score obtained')
+    )
+    
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Percentage scored')
+    )
+    
+    is_pass = models.BooleanField(
+        default=False,
+        help_text=_('Whether student passed')
+    )
+    
+    proctoring_violations = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_('List of proctoring violations')
+    )
+    
+    class Meta:
+        db_table = 'online_exam_sessions'
+        verbose_name = _('Online Exam Session')
+        verbose_name_plural = _('Online Exam Sessions')
+        ordering = ['-started_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['online_exam', 'student'],
+                name='unique_online_exam_student_session'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'online_exam', 'status']),
+            models.Index(fields=['student', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.student} - {self.online_exam.name} ({self.status})"
+    
+    def calculate_score(self):
+        """Calculate total score from answers."""
+        answers = self.answers.all()
+        total_score = Decimal('0.00')
+        
+        for answer in answers:
+            if answer.is_correct:
+                total_score += answer.question.marks
+        
+        self.score = total_score
+        self.percentage = (total_score / self.online_exam.total_marks) * 100
+        self.is_pass = total_score >= self.online_exam.passing_marks
+        self.save(update_fields=['score', 'percentage', 'is_pass'])
+        
+        return total_score
+    
+    def submit(self):
+        """Submit the exam and calculate score."""
+        self.submitted_at = timezone.now()
+        self.status = 'SUBMITTED'
+        
+        # Calculate time remaining
+        duration_seconds = self.online_exam.duration_minutes * 60
+        elapsed_seconds = (self.submitted_at - self.started_at).total_seconds()
+        self.time_remaining_seconds = max(0, int(duration_seconds - elapsed_seconds))
+        
+        self.save(update_fields=['submitted_at', 'status', 'time_remaining_seconds'])
+        
+        # Calculate score
+        self.calculate_score()
+
+
+class OnlineExamAnswer(TenantAwareModel):
+    """
+    Student's Answer to an Online Exam Question
+    """
+    
+    session = models.ForeignKey(
+        OnlineExamSession,
+        on_delete=models.CASCADE,
+        related_name='answers',
+        help_text=_('Exam session')
+    )
+    
+    question = models.ForeignKey(
+        QuestionBank,
+        on_delete=models.CASCADE,
+        related_name='online_answers',
+        help_text=_('Question')
+    )
+    
+    answer_text = models.TextField(
+        blank=True,
+        help_text=_('Student answer (for text-based questions)')
+    )
+    
+    selected_option = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text=_('Selected option (A, B, C, D for MCQ)')
+    )
+    
+    is_correct = models.BooleanField(
+        default=False,
+        help_text=_('Whether answer is correct (auto-calculated for MCQ)')
+    )
+    
+    marks_awarded = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text=_('Marks awarded (for manual grading)')
+    )
+    
+    answered_at = models.DateTimeField(
+        auto_now=True,
+        help_text=_('When answer was last updated')
+    )
+    
+    time_spent_seconds = models.IntegerField(
+        default=0,
+        help_text=_('Time spent on this question (in seconds)')
+    )
+    
+    is_marked_for_review = models.BooleanField(
+        default=False,
+        help_text=_('Whether student marked this for review')
+    )
+    
+    class Meta:
+        db_table = 'online_exam_answers'
+        verbose_name = _('Online Exam Answer')
+        verbose_name_plural = _('Online Exam Answers')
+        ordering = ['session', 'question']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'question'],
+                name='unique_session_question_answer'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'session']),
+            models.Index(fields=['question', 'is_correct']),
+        ]
+    
+    def __str__(self):
+        return f"{self.session.student} - Q{self.question.id}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-check answer for MCQ and True/False questions."""
+        if self.question.question_type in ['MCQ', 'TRUE_FALSE']:
+            # Check if selected option matches correct answer
+            if self.selected_option and self.question.correct_answer:
+                self.is_correct = (
+                    self.selected_option.upper() == 
+                    self.question.correct_answer.upper()
+                )
+                
+                # Award full marks if correct
+                if self.is_correct:
+                    self.marks_awarded = self.question.marks
+                else:
+                    self.marks_awarded = Decimal('0.00')
+        
+        super().save(*args, **kwargs)

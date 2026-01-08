@@ -2,11 +2,27 @@ from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.contrib.auth.models import Group
 from django.db import models
+from django.urls import path
 
 class NucleIQAdminSite(AdminSite):
-    site_header = 'NucleIQ Administration'
+    site_header = 'NucleIQ Platform Administration'
     site_title = 'NucleIQ Admin'
-    index_title = 'School Management Dashboard'
+    index_title = 'Platform Management Dashboard'
+    
+    def get_urls(self):
+        """Add custom URL patterns to admin"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('analytics/platform-dashboard/', 
+                 self.admin_view(self.platform_analytics_view),
+                 name='platform_analytics_dashboard'),
+        ]
+        return custom_urls + urls
+    
+    def platform_analytics_view(self, request):
+        """View for platform analytics dashboard"""
+        from analytics.views import platform_analytics_dashboard
+        return platform_analytics_dashboard(request)
     
     def get_app_list(self, request):
         """
@@ -17,8 +33,10 @@ class NucleIQAdminSite(AdminSite):
         
         # Define custom ordering
         app_order = [
+            'analytics',  # Put analytics first for platform admins
             'tenants',
             'users',
+            'billing',
             'students',
             'staff',
             'attendance',
@@ -26,7 +44,6 @@ class NucleIQAdminSite(AdminSite):
             'finance',
             'dashboard',
             'idcards',
-            'billing',
             'auth',
         ]
         
@@ -48,6 +65,9 @@ class NucleIQAdminSite(AdminSite):
         from tenants.models import Tenant
         
         extra_context = extra_context or {}
+        
+        # Add link to platform analytics dashboard
+        extra_context['show_platform_analytics'] = request.user.is_superuser
         
         try:
             extra_context['total_students'] = Student.objects.filter(is_deleted=False).count()

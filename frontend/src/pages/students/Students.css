@@ -299,6 +299,21 @@
     transition: all 0.2s;
 }
 
+/* Ensure inputs and checkboxes are interactable even if other styles try to disable pointer events */
+.form-group input,
+.form-group select,
+.form-group textarea {
+    pointer-events: auto;
+    cursor: text;
+}
+
+/* Checkbox interaction rules within the table */
+.data-table input[type="checkbox"],
+.data-table .checkbox-wrapper {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {

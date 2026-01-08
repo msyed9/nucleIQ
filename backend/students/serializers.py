@@ -4,6 +4,9 @@ Serializers for Student 360° System
 
 from rest_framework import serializers
 from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment
+from .utils import generate_admission_number, validate_admission_number_unique
+from core.utils import mask_aadhar
+from core.permissions import check_permission
 
 
 class StudentBasicSerializer(serializers.ModelSerializer):
@@ -13,15 +16,62 @@ class StudentBasicSerializer(serializers.ModelSerializer):
     current_class = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
     section = serializers.CharField(source='get_current_enrollment.section.name', read_only=True)
     roll_number = serializers.CharField(source='get_current_enrollment.roll_number', read_only=True)
+    fee_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = Student
         fields = [
             'id', 'admission_number', 'full_name', 'first_name', 'last_name',
             'current_class', 'section', 'roll_number', 'photo', 'age',
-            'date_of_birth', 'blood_group', 'is_active', 'email', 'phone'
+            'date_of_birth', 'blood_group', 'is_active', 'email', 'phone',
+            'fee_summary'
         ]
-        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'section', 'roll_number']
+        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'section', 'roll_number', 'fee_summary']
+    
+    def get_fee_summary(self, obj):
+        """Get fee summary for the student including discount information."""
+        try:
+            from fees.models import FeeInvoice, FeeAllocation
+            from django.db.models import Sum
+            
+            enrollment = obj.get_current_enrollment()
+            if not enrollment:
+                return None
+            
+            academic_year = enrollment.academic_year
+            
+            # Get fee allocations for discount info
+            allocations = FeeAllocation.objects.filter(
+                tenant=obj.tenant,
+                student=obj,
+                academic_year=academic_year,
+                is_active=True
+            )
+            
+            discount_amount = sum(
+                allocation.amount - allocation.get_final_amount()
+                for allocation in allocations
+            ) if allocations.exists() else 0
+            
+            # Get invoices for payment info
+            invoices = FeeInvoice.objects.filter(
+                tenant=obj.tenant,
+                student=obj,
+                academic_year=academic_year
+            )
+            
+            total_amount = invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+            paid_amount = invoices.aggregate(paid=Sum('paid_amount'))['paid'] or 0
+            pending_amount = float(total_amount - paid_amount)
+            
+            return {
+                'total_fee': float(total_amount),
+                'paid_amount': float(paid_amount),
+                'pending_amount': pending_amount,
+                'discount_amount': float(discount_amount)
+            }
+        except Exception:
+            return None
 
 
 class StudentDetailSerializer(serializers.ModelSerializer):
@@ -29,6 +79,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     age = serializers.IntegerField(source='get_age', read_only=True)
     siblings_count = serializers.SerializerMethodField()
+    aadhar_number_masked = serializers.SerializerMethodField()
     
     class Meta:
         model = Student
@@ -36,9 +87,97 @@ class StudentDetailSerializer(serializers.ModelSerializer):
         # Tenant is set from the request in the view's `perform_create`.
         # Mark it read-only so serializer validation does not require it in input.
         read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'age', 'tenant']
+        extra_kwargs = {
+            'aadhar_number': {'write_only': True}  # Hide in GET responses by default
+        }
     
     def get_siblings_count(self, obj):
         return obj.get_siblings().count()
+    
+    def get_aadhar_number_masked(self, obj):
+        """Return masked Aadhar unless user has view_full_aadhar permission."""
+        request = self.context.get('request')
+        
+        # Check if user has permission to view full Aadhar
+        if request and request.user:
+            if (request.user.is_platform_admin or 
+                request.user.is_superuser or 
+                check_permission(request.user, 'student_module', 'view_full_aadhar')):
+                # Return full Aadhar (already decrypted by EncryptedCharField)
+                return obj.aadhar_number
+        
+        # Return masked Aadhar
+        return mask_aadhar(obj.aadhar_number)
+    
+    def validate_admission_number(self, value):
+        """Validate admission number for uniqueness and requirements."""
+        request = self.context.get('request')
+        if not request:
+            return value
+        
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return value
+        
+        try:
+            settings = tenant.settings
+        except:
+            # If settings don't exist, proceed with value as-is
+            return value
+        
+        # If auto-generation is enabled and no value provided, that's OK (will be generated in create)
+        if settings.auto_generate_admission_number and not value:
+            return value
+        
+        # If value is provided, check for duplicates
+        if value:
+            instance_id = self.instance.id if self.instance else None
+            is_valid, error_msg = validate_admission_number_unique(
+                value, tenant, instance_id
+            )
+            if not is_valid:
+                raise serializers.ValidationError(error_msg)
+        
+        # If auto-generation is disabled, admission number is required
+        if not settings.auto_generate_admission_number and not value:
+            raise serializers.ValidationError(
+                "Admission number is required. Auto-generation is disabled in settings."
+            )
+        
+        return value
+    
+    def create(self, validated_data):
+        """Auto-generate admission number if enabled and not provided."""
+        request = self.context.get('request')
+        tenant = getattr(request, 'tenant', None) if request else None
+        
+        if tenant:
+            try:
+                settings = tenant.settings
+                
+                # Auto-generate if enabled and not provided
+                if settings.auto_generate_admission_number and not validated_data.get('admission_number'):
+                    # Get academic year if it's in the data
+                    academic_year = validated_data.get('academic_year')
+                    generated_number = generate_admission_number(tenant, academic_year)
+                    
+                    if generated_number:
+                        validated_data['admission_number'] = generated_number
+            except Exception as e:
+                # Log error but don't fail the creation
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to auto-generate admission number: {str(e)}")
+        
+        return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        """Override to add masked aadhar to output."""
+        data = super().to_representation(instance)
+        # Remove the write_only aadhar_number and use only masked version
+        if 'aadhar_number' in data:
+            del data['aadhar_number']
+        return data
 
 
 class StudentRemarkSerializer(serializers.ModelSerializer):
@@ -133,6 +272,8 @@ class Student360Serializer(serializers.Serializer):
     academic_summary = serializers.DictField()
     financial_summary = serializers.DictField()
     health_summary = serializers.DictField()
+    attendance_details = serializers.DictField(required=False, allow_null=True)
+    fee_details = serializers.DictField(required=False, allow_null=True)
 
 
 class SiblingSerializer(serializers.ModelSerializer):
@@ -147,11 +288,47 @@ class SiblingSerializer(serializers.ModelSerializer):
 
 class StudentEnrollmentSerializer(serializers.ModelSerializer):
     """Student enrollment serializer."""
+    student_full_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_admission_number = serializers.CharField(source='student.admission_number', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
+    grade_level_name = serializers.CharField(source='section.grade_level.name', read_only=True)
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = StudentEnrollment
-        fields = '__all__'
+        fields = [
+            'id', 'tenant', 'student', 'student_full_name', 'student_admission_number',
+            'academic_year', 'academic_year_name', 'section', 'section_name', 
+            'grade_level_name', 'roll_number', 'status', 'enrollment_date', 
+            'exit_date', 'exit_reason', 'total_days', 'present_days', 'absent_days',
+            'final_percentage', 'final_grade', 'notes', 'created_at', 'updated_at'
+        ]
         # Tenant is set in the view's `perform_create`; make it read-only to avoid
         # validation errors when it's not provided by the client.
-        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant', 'student_full_name', 
+                          'student_admission_number', 'section_name', 'grade_level_name', 
+                          'academic_year_name']
 
+
+class StudentHistorySerializer(serializers.Serializer):
+    """Serializer for student change history."""
+    history_id = serializers.IntegerField(source='history_id')
+    history_date = serializers.DateTimeField()
+    history_change_reason = serializers.CharField(allow_null=True)
+    history_type = serializers.CharField()
+    history_user = serializers.CharField(source='history_user.username', allow_null=True)
+    
+    # Key student fields at the time of this history record
+    admission_number = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.EmailField(allow_null=True)
+    phone = serializers.CharField(allow_null=True)
+    is_active = serializers.BooleanField()
+    
+    class Meta:
+        fields = [
+            'history_id', 'history_date', 'history_change_reason', 
+            'history_type', 'history_user', 'admission_number',
+            'first_name', 'last_name', 'email', 'phone', 'is_active'
+        ]

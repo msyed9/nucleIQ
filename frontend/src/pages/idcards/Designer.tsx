@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 import './Designer.css';
+import { PREBUILT_TEMPLATES, CARD_SIZES, TEMPLATE_CATEGORIES, TEMPLATE_STYLES, TEMPLATE_ORIENTATIONS, PrebuiltTemplate } from './prebuiltTemplates';
 
 interface Element {
     id: string;
@@ -19,12 +20,19 @@ interface Element {
     text?: string;
     fontSize?: number;
     fontWeight?: string;
+    fontFamily?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    letterSpacing?: number;
+    lineHeight?: number;
     color?: string;
     src?: string;
     shape?: string;
     fill?: string;
     stroke?: string;
     strokeWidth?: number;
+    borderRadius?: number;
+    boxShadow?: string;
+    opacity?: number;
     data?: string;
     qrColor?: string;
     qrBackground?: string;
@@ -36,8 +44,13 @@ interface Design {
         type: 'color' | 'image' | 'gradient';
         value?: string;
         image_url?: string;
+        gradient?: string;
     };
     elements: Element[];
+    dimensions?: {
+        width: number;
+        height: number;
+    };
 }
 
 interface Template {
@@ -95,7 +108,8 @@ const IDCardDesigner: React.FC = () => {
     const [design, setDesign] = useState<Design>({
         version: '1.0',
         background: { type: 'color', value: '#FFFFFF' },
-        elements: []
+        elements: [],
+        dimensions: { width: 85.6, height: 53.98 }
     });
 
     const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -108,6 +122,42 @@ const IDCardDesigner: React.FC = () => {
     const { t } = useTranslation();
     const canvasRef = useRef<HTMLDivElement>(null);
 
+    // Template browser state
+    const [showPrebuiltTemplates, setShowPrebuiltTemplates] = useState(true);
+    const [templateCategory, setTemplateCategory] = useState('all');
+    const [templateStyle, setTemplateStyle] = useState('all');
+    const [templateOrientation, setTemplateOrientation] = useState('all');
+    const [cardSize, setCardSize] = useState('CR80');
+    const [backgroundType, setBackgroundType] = useState<'color' | 'gradient' | 'image'>('color');
+    const [backgroundColor, setBackgroundColor] = useState('#FFFFFF');
+    const [backgroundGradient, setBackgroundGradient] = useState('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+
+    // Custom dimensions
+    const [useCustomDimensions, setUseCustomDimensions] = useState(false);
+    const [customWidth, setCustomWidth] = useState(85.6);
+    const [customHeight, setCustomHeight] = useState(53.98);
+
+    // Font options
+    const FONT_FAMILIES = [
+        { value: 'Arial, sans-serif', label: 'Arial' },
+        { value: "'Helvetica Neue', Helvetica, sans-serif", label: 'Helvetica' },
+        { value: 'Georgia, serif', label: 'Georgia' },
+        { value: "'Times New Roman', serif", label: 'Times New Roman' },
+        { value: "'Courier New', monospace", label: 'Courier New' },
+        { value: "'Segoe UI', sans-serif", label: 'Segoe UI' },
+        { value: 'Verdana, sans-serif', label: 'Verdana' },
+        { value: "'Trebuchet MS', sans-serif", label: 'Trebuchet MS' },
+        { value: "'Roboto', sans-serif", label: 'Roboto' },
+        { value: "'Open Sans', sans-serif", label: 'Open Sans' },
+        { value: "'Poppins', sans-serif", label: 'Poppins' },
+        { value: "'Montserrat', sans-serif", label: 'Montserrat' },
+        { value: "'Playfair Display', serif", label: 'Playfair Display' },
+    ];
+
+    // Card border options
+    const [cardBorder, setCardBorder] = useState({ width: 0, color: '#000000', radius: 0 });
+    const [cardShadow, setCardShadow] = useState({ enabled: false, blur: 10, color: 'rgba(0,0,0,0.2)' });
+
     // Load templates
     useEffect(() => {
         fetchTemplates();
@@ -115,7 +165,7 @@ const IDCardDesigner: React.FC = () => {
 
     const fetchTemplates = async () => {
         try {
-            const response = await api.get('/idcards/templates/');
+            const response = await api.get('/students/idcards/templates/');
             // Ensure we always set an array
             const data = response.data;
             if (Array.isArray(data)) {
@@ -269,13 +319,13 @@ const IDCardDesigner: React.FC = () => {
 
     const saveDesign = async () => {
         try {
-            const response = await api.post('/idcards/designs/', {
+            const response = await api.post('/students/idcards/templates/', {
                 name: designName,
-                card_type: cardType,
-                orientation: 'VERTICAL',
-                width_mm: 85.6,
-                height_mm: 53.98,
-                design_json: design,
+                description: `${cardType} ID Card Design`,
+                template_design: design,
+                include_photo: design.elements.some((e: Element) => e.type === 'image'),
+                include_qr_code: design.elements.some((e: Element) => e.type === 'qrcode'),
+                include_barcode: design.elements.some((e: Element) => e.type === 'barcode'),
                 is_active: true
             });
 
@@ -284,9 +334,9 @@ const IDCardDesigner: React.FC = () => {
             } else {
                 alert('Error saving design');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving design:', error);
-            alert('Error saving design');
+            alert(error.response?.data?.detail || 'Error saving design');
         }
     };
 
@@ -322,12 +372,65 @@ const IDCardDesigner: React.FC = () => {
         }
     };
 
-    const updateBackground = (color: string) => {
-        setDesign(prev => ({
-            ...prev,
-            background: { type: 'color', value: color }
-        }));
+    const updateBackground = (type: 'color' | 'gradient' | 'image', value: string) => {
+        setBackgroundType(type);
+        if (type === 'color') {
+            setBackgroundColor(value);
+            setDesign(prev => ({
+                ...prev,
+                background: { type: 'color', value: value }
+            }));
+        } else if (type === 'gradient') {
+            setBackgroundGradient(value);
+            setDesign(prev => ({
+                ...prev,
+                background: { type: 'gradient', value: value, gradient: value }
+            }));
+        } else {
+            setDesign(prev => ({
+                ...prev,
+                background: { type: 'image', image_url: value }
+            }));
+        }
     };
+
+    const updateCardDimensions = (sizeKey: string) => {
+        setCardSize(sizeKey);
+        const size = (CARD_SIZES as any)[sizeKey];
+        if (size) {
+            setDesign(prev => ({
+                ...prev,
+                dimensions: { width: size.width, height: size.height }
+            }));
+        }
+    };
+
+    const loadPrebuiltTemplate = (template: PrebuiltTemplate) => {
+        setDesign({
+            version: '1.0',
+            background: template.design.background,
+            elements: template.design.elements,
+            dimensions: template.dimensions
+        });
+        setDesignName(`${template.name} (Custom)`);
+        setSelectedElement(null);
+
+        // Find and set the matching card size
+        const matchingSize = Object.entries(CARD_SIZES).find(
+            ([_, size]) => size.width === template.dimensions.width && size.height === template.dimensions.height
+        );
+        if (matchingSize) {
+            setCardSize(matchingSize[0]);
+        }
+    };
+
+    // Filter prebuilt templates
+    const filteredPrebuiltTemplates = PREBUILT_TEMPLATES.filter(t => {
+        const categoryMatch = templateCategory === 'all' || t.category === templateCategory;
+        const styleMatch = templateStyle === 'all' || t.style === templateStyle;
+        const orientationMatch = templateOrientation === 'all' || t.orientation === templateOrientation;
+        return categoryMatch && styleMatch && orientationMatch;
+    });
 
     const selectedEl = design.elements.find(el => el.id === selectedElement);
 
@@ -414,65 +517,367 @@ const IDCardDesigner: React.FC = () => {
             {/* Main Area */}
             <div className="designer-main">
                 {/* Template Library */}
-                <div className="template-library">
-                    <h3>📚 {t('designer.templates')}</h3>
-                    {loading ? (
-                        <div className="loading">{t('designer.loading_templates')}</div>
-                    ) : (
-                        <div className="template-categories">
-                            {Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
-                                <div key={category} className="category-section">
-                                    <h4>{category}</h4>
-                                    <div className="template-grid">
-                                        {categoryTemplates.map(template => (
-                                            <div
-                                                key={template.id}
-                                                className="template-card"
-                                                onClick={() => loadTemplate(template)}
-                                                title={template.description}
-                                            >
-                                                <div className="template-preview">
-                                                    {template.preview_image ? (
-                                                        <img src={template.preview_image} alt={template.name} />
-                                                    ) : (
-                                                        <div className="template-placeholder">
-                                                            <span>{template.name.substring(0, 2)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="template-name">{template.name}</p>
-                                                <span className="template-orientation">{template.orientation}</span>
-                                            </div>
+                <div className="template-library" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 150px)' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <button
+                            onClick={() => setShowPrebuiltTemplates(true)}
+                            style={{
+                                flex: 1,
+                                padding: '0.5rem',
+                                border: showPrebuiltTemplates ? '2px solid #6366f1' : '1px solid #ddd',
+                                background: showPrebuiltTemplates ? '#EEF2FF' : 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: showPrebuiltTemplates ? 600 : 400
+                            }}
+                        >
+                            📚 Pre-built ({PREBUILT_TEMPLATES.length})
+                        </button>
+                        <button
+                            onClick={() => setShowPrebuiltTemplates(false)}
+                            style={{
+                                flex: 1,
+                                padding: '0.5rem',
+                                border: !showPrebuiltTemplates ? '2px solid #6366f1' : '1px solid #ddd',
+                                background: !showPrebuiltTemplates ? '#EEF2FF' : 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: !showPrebuiltTemplates ? 600 : 400
+                            }}
+                        >
+                            💾 My Templates ({templates.length})
+                        </button>
+                    </div>
+
+                    {showPrebuiltTemplates ? (
+                        <>
+                            {/* Filters */}
+                            <div style={{ marginBottom: '1rem' }}>
+                                <select
+                                    value={templateCategory}
+                                    onChange={(e) => setTemplateCategory(e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                >
+                                    {TEMPLATE_CATEGORIES.map(cat => (
+                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                    ))}
+                                </select>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <select
+                                        value={templateStyle}
+                                        onChange={(e) => setTemplateStyle(e.target.value)}
+                                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                    >
+                                        {TEMPLATE_STYLES.map(style => (
+                                            <option key={style.value} value={style.value}>{style.label}</option>
                                         ))}
-                                    </div>
+                                    </select>
+                                    <select
+                                        value={templateOrientation}
+                                        onChange={(e) => setTemplateOrientation(e.target.value)}
+                                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                    >
+                                        {TEMPLATE_ORIENTATIONS.map(orient => (
+                                            <option key={orient.value} value={orient.value}>{orient.label}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+                                Showing {filteredPrebuiltTemplates.length} templates
+                            </div>
+                            <div className="template-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                                {filteredPrebuiltTemplates.map(template => (
+                                    <div
+                                        key={template.id}
+                                        className="template-card"
+                                        onClick={() => loadPrebuiltTemplate(template)}
+                                        title={template.description}
+                                        style={{
+                                            padding: '0.5rem',
+                                            border: '1px solid #e5e7eb',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            background: 'white'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = '#6366f1';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.15)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = '#e5e7eb';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }}
+                                    >
+                                        <div style={{
+                                            height: '60px',
+                                            borderRadius: '4px',
+                                            marginBottom: '0.5rem',
+                                            background: template.design.background.value || template.design.background.gradient || template.colors.primary,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'white',
+                                            fontSize: '0.7rem',
+                                            textAlign: 'center',
+                                            padding: '0.25rem'
+                                        }}>
+                                            {template.orientation === 'landscape' ? '📄' : '🪪'} {template.style}
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {template.name}
+                                        </p>
+                                        <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>
+                                            {template.category} • {template.orientation}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        loading ? (
+                            <div className="loading">{t('designer.loading_templates')}</div>
+                        ) : (
+                            <div className="template-categories">
+                                {Object.entries(templatesByCategory).length > 0 ? (
+                                    Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
+                                        <div key={category} className="category-section">
+                                            <h4>{category}</h4>
+                                            <div className="template-grid">
+                                                {categoryTemplates.map(template => (
+                                                    <div
+                                                        key={template.id}
+                                                        className="template-card"
+                                                        onClick={() => loadTemplate(template)}
+                                                        title={template.description}
+                                                    >
+                                                        <div className="template-preview">
+                                                            {template.preview_image ? (
+                                                                <img src={template.preview_image} alt={template.name} />
+                                                            ) : (
+                                                                <div className="template-placeholder">
+                                                                    <span>{template.name.substring(0, 2)}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <p className="template-name">{template.name}</p>
+                                                        <span className="template-orientation">{template.orientation}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                                        No saved templates yet. Create and save your first design!
+                                    </div>
+                                )}
+                            </div>
+                        )
                     )}
                 </div>
 
                 {/* Canvas */}
                 <div className="canvas-container">
-                    <div className="canvas-toolbar">
-                        <label>
-                            Background:
+                    <div className="canvas-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '8px', marginBottom: '1rem' }}>
+                        {/* Card Size Selector */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>📐 Size:</label>
+                            <select
+                                value={cardSize}
+                                onChange={(e) => updateCardDimensions(e.target.value)}
+                                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.875rem' }}
+                            >
+                                {Object.entries(CARD_SIZES).map(([key, size]) => (
+                                    <option key={key} value={key}>{size.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Background Type */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>🎨 Background:</label>
+                            <select
+                                value={backgroundType}
+                                onChange={(e) => setBackgroundType(e.target.value as any)}
+                                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.875rem' }}
+                            >
+                                <option value="color">Solid Color</option>
+                                <option value="gradient">Gradient</option>
+                                <option value="image">Image</option>
+                            </select>
+                        </div>
+
+                        {/* Color/Gradient Input */}
+                        {backgroundType === 'color' && (
                             <input
                                 type="color"
-                                value={design.background.value || '#FFFFFF'}
-                                onChange={(e) => updateBackground(e.target.value)}
+                                value={backgroundColor}
+                                onChange={(e) => updateBackground('color', e.target.value)}
+                                style={{ width: '40px', height: '32px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
                             />
-                        </label>
-                        <span className="canvas-info">
-                            85.6mm × 53.98mm (Credit Card Size)
+                        )}
+
+                        {backgroundType === 'gradient' && (
+                            <select
+                                value={backgroundGradient}
+                                onChange={(e) => updateBackground('gradient', e.target.value)}
+                                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.875rem', maxWidth: '200px' }}
+                            >
+                                <option value="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">Purple Wave</option>
+                                <option value="linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">Green Nature</option>
+                                <option value="linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)">Ocean Blue</option>
+                                <option value="linear-gradient(135deg, #FF6B6B 0%, #FFA07A 100%)">Sunset</option>
+                                <option value="linear-gradient(135deg, #1A237E 0%, #303F9F 100%)">Corporate Navy</option>
+                                <option value="linear-gradient(180deg, #1A1A2E 0%, #16213E 100%)">Dark Elegant</option>
+                                <option value="linear-gradient(135deg, #E91E63 0%, #F8BBD0 100%)">Cherry Blossom</option>
+                                <option value="linear-gradient(135deg, #DAA520 0%, #FFD700 100%)">Gold Premium</option>
+                                <option value="linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)">Eco Green</option>
+                                <option value="linear-gradient(135deg, #795548 0%, #A1887F 100%)">Earth Brown</option>
+                                <option value="linear-gradient(90deg, #00FF88 0%, #00E5FF 100%)">Neon Glow</option>
+                            </select>
+                        )}
+
+                        <span className="canvas-info" style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#666' }}>
+                            {design.dimensions?.width || 85.6}mm × {design.dimensions?.height || 53.98}mm
                         </span>
+                    </div>
+
+                    {/* Second Row: Custom Dimensions & Styling */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', padding: '0.5rem 1rem', background: '#f1f5f9', borderRadius: '8px', marginBottom: '1rem' }}>
+                        {/* Custom Dimensions Toggle */}
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={useCustomDimensions}
+                                onChange={(e) => {
+                                    setUseCustomDimensions(e.target.checked);
+                                    if (e.target.checked) {
+                                        setCardSize('CUSTOM');
+                                    }
+                                }}
+                            />
+                            Custom Size
+                        </label>
+
+                        {useCustomDimensions && (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <label style={{ fontSize: '0.75rem' }}>W:</label>
+                                    <input
+                                        type="number"
+                                        value={customWidth}
+                                        onChange={(e) => {
+                                            const w = parseFloat(e.target.value) || 54;
+                                            setCustomWidth(w);
+                                            setDesign(prev => ({ ...prev, dimensions: { width: w, height: prev.dimensions?.height || 86 } }));
+                                        }}
+                                        style={{ width: '60px', padding: '0.3rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                        min="30"
+                                        max="200"
+                                    />
+                                    <span style={{ fontSize: '0.75rem' }}>mm</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <label style={{ fontSize: '0.75rem' }}>H:</label>
+                                    <input
+                                        type="number"
+                                        value={customHeight}
+                                        onChange={(e) => {
+                                            const h = parseFloat(e.target.value) || 86;
+                                            setCustomHeight(h);
+                                            setDesign(prev => ({ ...prev, dimensions: { width: prev.dimensions?.width || 54, height: h } }));
+                                        }}
+                                        style={{ width: '60px', padding: '0.3rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                        min="30"
+                                        max="200"
+                                    />
+                                    <span style={{ fontSize: '0.75rem' }}>mm</span>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Swap Orientation Button */}
+                        <button
+                            onClick={() => {
+                                const currentW = design.dimensions?.width || 85.6;
+                                const currentH = design.dimensions?.height || 53.98;
+                                setDesign(prev => ({ ...prev, dimensions: { width: currentH, height: currentW } }));
+                                setCustomWidth(currentH);
+                                setCustomHeight(currentW);
+                            }}
+                            style={{
+                                padding: '0.4rem 0.8rem',
+                                background: '#e0e7ff',
+                                border: '1px solid #6366f1',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                color: '#4338ca'
+                            }}
+                            title="Switch between Portrait and Landscape"
+                        >
+                            🔄 Swap W↔H
+                        </button>
+
+                        {/* Border Options */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderLeft: '1px solid #ddd', paddingLeft: '1rem' }}>
+                            <label style={{ fontSize: '0.75rem' }}>Border:</label>
+                            <input
+                                type="number"
+                                value={cardBorder.width}
+                                onChange={(e) => setCardBorder(prev => ({ ...prev, width: parseInt(e.target.value) || 0 }))}
+                                style={{ width: '40px', padding: '0.3rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                min="0"
+                                max="10"
+                            />
+                            <input
+                                type="color"
+                                value={cardBorder.color}
+                                onChange={(e) => setCardBorder(prev => ({ ...prev, color: e.target.value }))}
+                                style={{ width: '28px', height: '24px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+                            />
+                            <label style={{ fontSize: '0.75rem' }}>Radius:</label>
+                            <input
+                                type="number"
+                                value={cardBorder.radius}
+                                onChange={(e) => setCardBorder(prev => ({ ...prev, radius: parseInt(e.target.value) || 0 }))}
+                                style={{ width: '40px', padding: '0.3rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                min="0"
+                                max="20"
+                            />
+                        </div>
+
+                        {/* Shadow Toggle */}
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer', borderLeft: '1px solid #ddd', paddingLeft: '1rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={cardShadow.enabled}
+                                onChange={(e) => setCardShadow(prev => ({ ...prev, enabled: e.target.checked }))}
+                            />
+                            Shadow
+                        </label>
                     </div>
                     <div
                         ref={canvasRef}
                         className="canvas"
                         style={{
-                            width: '856px', // 85.6mm * 10
-                            height: '540px', // 53.98mm * 10
-                            backgroundColor: design.background.value || '#FFFFFF'
+                            width: `${(design.dimensions?.width || 85.6) * 10}px`,
+                            height: `${(design.dimensions?.height || 53.98) * 10}px`,
+                            background: design.background.type === 'gradient'
+                                ? (design.background.gradient || design.background.value)
+                                : (design.background.type === 'image' && design.background.image_url)
+                                    ? `url(${design.background.image_url})`
+                                    : (design.background.value || '#FFFFFF'),
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            transition: 'width 0.3s, height 0.3s',
+                            border: cardBorder.width > 0 ? `${cardBorder.width}px solid ${cardBorder.color}` : 'none',
+                            borderRadius: `${cardBorder.radius}px`,
+                            boxShadow: cardShadow.enabled ? `0 4px ${cardShadow.blur}px ${cardShadow.color}` : 'none',
+                            overflow: 'hidden'
                         }}
                         onClick={(e) => {
                             if (e.target === e.currentTarget) {
@@ -492,18 +897,24 @@ const IDCardDesigner: React.FC = () => {
                                     width: `${element.width * 10}px`,
                                     height: `${element.height * 10}px`,
                                     zIndex: element.zIndex,
+                                    opacity: element.opacity ?? 1,
                                     ...(element.type === 'text' && {
                                         fontSize: `${element.fontSize}px`,
+                                        fontFamily: element.fontFamily || 'Arial, sans-serif',
                                         color: element.color,
                                         fontWeight: element.fontWeight,
+                                        textAlign: element.textAlign || 'left',
+                                        letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
                                         display: 'flex',
                                         alignItems: 'center',
+                                        justifyContent: element.textAlign === 'center' ? 'center' : element.textAlign === 'right' ? 'flex-end' : 'flex-start',
                                         padding: '2px'
                                     }),
                                     ...(element.type === 'shape' && {
                                         backgroundColor: element.fill,
                                         border: element.stroke ? `${element.strokeWidth}px solid ${element.stroke}` : 'none',
-                                        borderRadius: element.shape === 'circle' ? '50%' : '0'
+                                        borderRadius: element.borderRadius ? `${element.borderRadius}px` : (element.shape === 'circle' ? '50%' : '0'),
+                                        boxShadow: element.boxShadow || 'none'
                                     })
                                 }}
                                 data-x={element.x * 10}
@@ -608,9 +1019,21 @@ const IDCardDesigner: React.FC = () => {
                                         />
                                         <small>
                                             {cardType === 'STUDENT'
-                                                ? 'Use placeholders: {StudentName}, {Class}, {AdmissionNumber}, {BloodGroup}'
-                                                : 'Use placeholders: {StaffName}, {EmployeeID}, {Designation}, {Department}, {BloodGroup}'}
+                                                ? 'Use placeholders: {{student_name}}, {{class}}, {{section}}, {{admission_number}}, {{blood_group}}'
+                                                : 'Use placeholders: {{staff_name}}, {{employee_id}}, {{designation}}, {{department}}'}
                                         </small>
+                                    </div>
+
+                                    <div className="property-group">
+                                        <label>Font Family</label>
+                                        <select
+                                            value={selectedEl.fontFamily || 'Arial, sans-serif'}
+                                            onChange={e => updateElementProperty(selectedEl.id, 'fontFamily', e.target.value)}
+                                        >
+                                            {FONT_FAMILIES.map(f => (
+                                                <option key={f.value} value={f.value}>{f.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     <div className="property-group">
@@ -630,7 +1053,43 @@ const IDCardDesigner: React.FC = () => {
                                         >
                                             <option value="normal">Normal</option>
                                             <option value="bold">Bold</option>
+                                            <option value="lighter">Light</option>
+                                            <option value="600">Semi-Bold</option>
+                                            <option value="800">Extra Bold</option>
                                         </select>
+                                    </div>
+
+                                    <div className="property-group">
+                                        <label>Text Align</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {(['left', 'center', 'right'] as const).map(align => (
+                                                <button
+                                                    key={align}
+                                                    onClick={() => updateElementProperty(selectedEl.id, 'textAlign', align)}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.4rem',
+                                                        border: selectedEl.textAlign === align ? '2px solid #6366f1' : '1px solid #ddd',
+                                                        background: selectedEl.textAlign === align ? '#e0e7ff' : 'white',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    {align === 'left' ? '⬅️' : align === 'center' ? '↔️' : '➡️'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="property-group">
+                                        <label>Letter Spacing (px)</label>
+                                        <input
+                                            type="number"
+                                            step="0.5"
+                                            value={selectedEl.letterSpacing || 0}
+                                            onChange={e => updateElementProperty(selectedEl.id, 'letterSpacing', parseFloat(e.target.value))}
+                                        />
                                     </div>
 
                                     <div className="property-group">
@@ -639,6 +1098,17 @@ const IDCardDesigner: React.FC = () => {
                                             type="color"
                                             value={selectedEl.color}
                                             onChange={e => updateElementProperty(selectedEl.id, 'color', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="property-group">
+                                        <label>Opacity (%)</label>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={(selectedEl.opacity ?? 1) * 100}
+                                            onChange={e => updateElementProperty(selectedEl.id, 'opacity', parseInt(e.target.value) / 100)}
                                         />
                                     </div>
                                 </div>

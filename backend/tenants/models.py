@@ -147,11 +147,37 @@ class TenantBranding(BaseModel):
     Stores logos, colors, fonts, and gallery images for customization.
     """
     
+    RECEIPT_COPIES_CHOICES = [
+        (1, 'Single Copy'),
+        (2, 'Two Copies'),
+        (3, 'Three Copies'),
+    ]
+    
     tenant = models.OneToOneField(
         Tenant,
         on_delete=models.CASCADE,
         related_name='branding',
         help_text="Tenant this branding belongs to"
+    )
+    
+    # School Information (for receipts and documents)
+    school_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="School name for documents and receipts"
+    )
+    school_address = models.TextField(
+        blank=True,
+        help_text="School address for documents and receipts"
+    )
+    school_phone = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="School phone number for documents"
+    )
+    school_email = models.EmailField(
+        blank=True,
+        help_text="School email for documents"
     )
     
     # Logo and visual assets
@@ -223,6 +249,18 @@ class TenantBranding(BaseModel):
         default=list,
         blank=True,
         help_text="List of gallery image URLs (JSON array)"
+    )
+    
+    # Fee Receipt Configuration
+    receipt_copies = models.IntegerField(
+        choices=RECEIPT_COPIES_CHOICES,
+        default=3,
+        help_text="Number of receipt copies to print on a single A4 page"
+    )
+    receipt_footer_text = models.TextField(
+        blank=True,
+        default="This is a computer generated receipt.",
+        help_text="Custom footer text for fee receipts"
     )
     
     # Additional customization
@@ -1162,6 +1200,31 @@ class TenantSettings(BaseModel):
         default=15,
         help_text="Minutes after which arrival is considered late"
     )
+    
+    # Student Admission Settings
+    auto_generate_admission_number = models.BooleanField(
+        default=False,
+        help_text="Whether to auto-generate admission numbers"
+    )
+    
+    admission_number_format = models.CharField(
+        max_length=100,
+        default='ADM{YEAR}{SEQUENCE:04d}',
+        help_text="Format for admission number (e.g., 'ADM{YEAR}{SEQUENCE:04d}' -> ADM20240001)"
+    )
+    
+    admission_number_prefix = models.CharField(
+        max_length=20,
+        default='ADM',
+        blank=True,
+        help_text="Prefix for admission numbers"
+    )
+    
+    admission_number_sequence = models.IntegerField(
+        default=1,
+        help_text="Current sequence number for admission numbers"
+    )
+
     
     # Exam Settings
     result_publish_delay_days = models.IntegerField(

@@ -6,6 +6,9 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
+from django.http import JsonResponse
+from django.db import connection
 from config.admin import admin_site  # Import custom admin
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -13,7 +16,37 @@ from drf_spectacular.views import (
     SpectacularRedocView
 )
 
+
+def health_check(request):
+    """
+    Health check endpoint for container orchestration and load balancers.
+    Returns 200 OK if the service is healthy, 503 if database is unreachable.
+    """
+    try:
+        # Check database connectivity
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        
+        return JsonResponse({
+            "status": "healthy",
+            "database": "connected",
+            "service": "nucleiq-backend"
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }, status=503)
+
+
 urlpatterns = [
+    # Health check (no authentication required)
+    path('api/health/', health_check, name='health-check'),
+    
+    # Root URL - Redirect to Admin (Platform Owner access)
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    
     # Admin - Using custom admin site
     path('admin/', admin_site.urls),
     
@@ -29,8 +62,9 @@ urlpatterns = [
     path('api/dashboard/', include('dashboard.urls')),
     path('api/search/', include('search.urls')),
     path('api/students/', include('students.urls')),
+    path('api/parent/', include('students.parent_urls')),  # Parent Portal
     path('api/analytics/', include('analytics.urls')),
-    path('api/idcards/', include('idcards.urls')),
+    # path('api/idcards/', include('idcards.urls')),  # ID Card functionality is in students app
     path('api/staff/', include('staff.urls')),
     path('api/attendance/', include('attendance.urls')),
     path('api/fees/', include('fees.urls')),
@@ -50,7 +84,7 @@ urlpatterns = [
     path('api/hostel/', include('hostel.urls')),
     path('api/salah/', include('salah_tracker.urls')),
     path('api/habits/', include('habit_tracker.urls')),
-    path('api/alumni/', include('alumni.urls')),
+    # path('api/alumni/', include('alumni.urls')),  # Moved to students app
     path('api/lms/', include('lms.urls')),
     
     # Mobile API
@@ -65,8 +99,11 @@ urlpatterns = [
     # Phase 7
     path('api/reports/', include('reports.urls')),
     
-    # Phase 8
-    path('api/notifications/', include('notifications.urls')),
+    # Data Management - Bulk Import/Export/Backup
+    path('api/data-management/', include('data_management.urls')),
+    
+    # Phase 8 - Notifications moved to communication app
+    # path('api/notifications/', include('notifications.urls')),
 ]
 
 # Serve media files in development

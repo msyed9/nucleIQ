@@ -12,11 +12,15 @@ import {
     Search,
     Download,
     Calendar,
-    Users
+    Users,
+    Filter,
+    AlertCircle
 } from 'lucide-react';
-import { Button, Card, Input } from '@/design-system';
+import { Button, Card, Input, Select } from '@/design-system';
 import api from '../../services/api';
 import Loading from '../../components/common/Loading';
+import ExportButton from '../../components/common/ExportButton';
+import { ExportColumn } from '../../utils/exportUtils';
 import './Attendance.css';
 
 interface Student {
@@ -28,11 +32,26 @@ interface Student {
     photo_url?: string;
 }
 
+interface GradeLevel {
+    id: string;
+    name: string;
+}
+
+interface Section {
+    id: string;
+    name: string;
+    grade_level: string;
+    grade_level_name: string;
+}
+
 type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE';
+type FilterOption = '' | 'LATE' | 'ABSENT' | 'PRESENT';
 
 const MarkAttendance: React.FC = () => {
     const { t } = useTranslation();
     const [students, setStudents] = useState<Student[]>([]);
+    const [grades, setGrades] = useState<GradeLevel[]>([]);
+    const [sections, setSections] = useState<Section[]>([]);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -40,15 +59,56 @@ const MarkAttendance: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(
         new Date().toISOString().split('T')[0]
     );
+    const [classFilter, setClassFilter] = useState('');
+    const [sectionFilter, setSectionFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState<FilterOption>('');
+
+    useEffect(() => {
+        fetchGrades();
+        fetchSections();
+        fetchStudents();
+    }, []);
 
     useEffect(() => {
         fetchStudents();
-    }, []);
+    }, [classFilter, sectionFilter]);
+
+    const fetchGrades = async () => {
+        try {
+            const response = await api.get('/tenants/grades/');
+            setGrades(response.data.results || response.data);
+        } catch (error) {
+            console.error('Error fetching grades:', error);
+        }
+    };
+
+    const fetchSections = async () => {
+        try {
+            const response = await api.get('/tenants/sections/');
+            setSections(response.data.results || response.data);
+        } catch (error) {
+            console.error('Error fetching sections:', error);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/students/students/');
+            let url = '/students/students/';
+            const params: string[] = [];
+            
+            if (classFilter) {
+                params.push(`class_name=${classFilter}`);
+            }
+            if (sectionFilter) {
+                params.push(`section=${sectionFilter}`);
+            }
+            
+            if (params.length > 0) {
+                url += `?${params.join('&')}`;
+            }
+            
+            const response = await api.get(url);
             const studentList = response.data.results || response.data;
             setStudents(studentList);
 
@@ -102,10 +162,16 @@ const MarkAttendance: React.FC = () => {
         }
     };
 
-    const filteredStudents = students.filter((student) =>
-        student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.admission_number.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStudents = students.filter((student) => {
+        // Search filter
+        const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.admission_number.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Status filter
+        const matchesStatus = !statusFilter || attendance[student.id] === statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
 
     const stats = {
         total: filteredStudents.length,
@@ -113,6 +179,30 @@ const MarkAttendance: React.FC = () => {
         absent: Object.values(attendance).filter((s) => s === 'ABSENT').length,
         late: Object.values(attendance).filter((s) => s === 'LATE').length,
     };
+
+    // Prepare data for export
+    const attendanceExportData = filteredStudents.map(student => ({
+        admission_number: student.admission_number,
+        full_name: student.full_name,
+        class_name: student.class_name,
+        section: student.section,
+        status: attendance[student.id] || 'PRESENT',
+        date: selectedDate
+    }));
+
+    // Export column configuration
+    const exportColumns: ExportColumn[] = [
+        { key: 'admission_number', label: 'Admission Number' },
+        { key: 'full_name', label: 'Student Name' },
+        { key: 'class_name', label: 'Class' },
+        { key: 'section', label: 'Section' },
+        { key: 'status', label: 'Attendance Status' },
+        {
+            key: 'date',
+            label: 'Date',
+            format: (value) => new Date(value).toLocaleDateString('en-IN')
+        }
+    ];
 
     if (loading) {
         return <Loading fullScreen text={t('attendance.loading', { defaultValue: 'Loading students...' })} />;
@@ -218,6 +308,124 @@ const MarkAttendance: React.FC = () => {
 
             {/* Controls */}
             <Card padding="lg" style={{ marginBottom: '2rem' }}>
+                {/* Filters Section */}
+                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '2px solid var(--color-border-light)', paddingBottom: '0.75rem' }}>
+                    <Filter size={18} color="var(--color-primary)" />
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        Filters
+                    </h3>
+                </div>
+                
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.5rem'
+                }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                            Class
+                        </label>
+                        <Select
+                            options={[
+                                { value: '', label: 'All Classes' },
+                                ...grades.map(g => ({ value: g.name, label: g.name }))
+                            ]}
+                            value={classFilter}
+                            onChange={(val: any) => {
+                                setClassFilter(val);
+                                setSectionFilter(''); // Reset section when class changes
+                            }}
+                            fullWidth
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                            Section
+                        </label>
+                        <Select
+                            options={[
+                                { value: '', label: 'All Sections' },
+                                ...sections
+                                    .filter(s => !classFilter || s.grade_level_name === classFilter)
+                                    .map(s => ({ value: s.name, label: s.name }))
+                            ]}
+                            value={sectionFilter}
+                            onChange={(val: any) => setSectionFilter(val)}
+                            fullWidth
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                            Status Filter
+                        </label>
+                        <Select
+                            options={[
+                                { value: '', label: 'All Status' },
+                                { value: 'PRESENT', label: 'Present Only' },
+                                { value: 'ABSENT', label: 'Absent Only' },
+                                { value: 'LATE', label: 'Late Only' }
+                            ]}
+                            value={statusFilter}
+                            onChange={(val: any) => setStatusFilter(val as FilterOption)}
+                            fullWidth
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                            Date
+                        </label>
+                        <Input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            iconLeft={Calendar}
+                            fullWidth
+                        />
+                    </div>
+                </div>
+
+                {/* Active Filters Badge */}
+                {(classFilter || sectionFilter || statusFilter) && (
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', padding: '0.75rem', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-base)' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <AlertCircle size={16} />
+                            Active Filters:
+                        </span>
+                        {classFilter && (
+                            <span style={{ padding: '0.25rem 0.75rem', background: 'var(--color-primary)', color: 'white', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                                Class: {classFilter}
+                            </span>
+                        )}
+                        {sectionFilter && (
+                            <span style={{ padding: '0.25rem 0.75rem', background: 'var(--color-info)', color: 'white', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                                Section: {sectionFilter}
+                            </span>
+                        )}
+                        {statusFilter && (
+                            <span style={{ padding: '0.25rem 0.75rem', background: 'var(--color-warning)', color: 'white', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                                Status: {statusFilter}
+                            </span>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setClassFilter('');
+                                setSectionFilter('');
+                                setStatusFilter('');
+                            }}
+                            style={{ marginLeft: 'auto', fontSize: '0.75rem' }}
+                        >
+                            Clear All
+                        </Button>
+                    </div>
+                )}
+                
+                {/* Search and Quick Actions */}
                 <div style={{
                     display: 'flex',
                     gap: '1rem',
@@ -225,19 +433,13 @@ const MarkAttendance: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between'
                 }}>
-                    <div style={{ display: 'flex', gap: '1rem', flex: 1, minWidth: '300px' }}>
+                    <div style={{ flex: 1, minWidth: '300px' }}>
                         <Input
                             placeholder={t('attendance.search', { defaultValue: 'Search by name or admission number...' })}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             iconLeft={Search}
                             fullWidth
-                        />
-                        <Input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            iconLeft={Calendar}
                         />
                     </div>
 
@@ -250,13 +452,14 @@ const MarkAttendance: React.FC = () => {
                         >
                             Mark All Present
                         </Button>
-                        <Button
+                        <ExportButton
+                            data={attendanceExportData}
+                            filename={`attendance_${selectedDate}`}
+                            title={`Attendance Report - ${selectedDate}`}
+                            columns={exportColumns}
                             variant="outline"
-                            size="sm"
-                            iconLeft={Download}
-                        >
-                            Export
-                        </Button>
+                            size="small"
+                        />
                     </div>
                 </div>
             </Card>
