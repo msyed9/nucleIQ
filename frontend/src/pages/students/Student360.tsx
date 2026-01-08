@@ -18,7 +18,13 @@ import {
     Users,
     BookOpen,
     CreditCard,
-    Activity
+    Activity,
+    MessageSquare,
+    User,
+    Calendar,
+    Phone,
+    Mail,
+    MapPin
 } from 'lucide-react';
 import { Button, Card } from '@/design-system';
 import api from '../../services/api';
@@ -39,7 +45,7 @@ interface StudentProfileData {
     fee_details: any;
 }
 
-type TabType = 'academic' | 'financial' | 'health' | 'documents' | 'attendance';
+type TabType = 'academic' | 'financial' | 'health' | 'documents' | 'attendance' | 'remarks';
 
 const Student360: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -94,6 +100,7 @@ const Student360: React.FC = () => {
         { id: 'attendance' as TabType, label: t('student.attendance', { defaultValue: 'Attendance' }), icon: CheckCircle },
         { id: 'financial' as TabType, label: t('student.financial', { defaultValue: 'Financial' }), icon: CreditCard },
         { id: 'academic' as TabType, label: t('student.academic', { defaultValue: 'Academic' }), icon: BookOpen },
+        { id: 'remarks' as TabType, label: t('student.remarks', { defaultValue: 'Remarks' }), icon: MessageSquare },
         { id: 'health' as TabType, label: t('student.health', { defaultValue: 'Health' }), icon: Heart },
         { id: 'documents' as TabType, label: t('student.documents', { defaultValue: 'Documents' }), icon: FileText },
     ];
@@ -156,27 +163,135 @@ const Student360: React.FC = () => {
                             }}>
                                 {student.full_name}
                             </h1>
+
+                            {/* Primary Info Row */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '1rem',
+                                gap: '0.75rem',
                                 flexWrap: 'wrap',
-                                fontSize: '0.875rem',
-                                color: 'var(--color-text-secondary)',
-                                marginBottom: '0.5rem'
+                                marginBottom: '0.75rem'
                             }}>
-                                <span>Class {student.class} - {student.section}</span>
-                                <span>•</span>
-                                <span>Roll {student.roll_number}</span>
-                                <span>•</span>
-                                <span>{student.admission_number}</span>
-                            </div>
-                            {student.parent_name && (
-                                <div style={{
-                                    fontSize: '0.875rem',
-                                    color: 'var(--color-text-tertiary)'
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.25rem 0.75rem',
+                                    background: 'var(--color-primary-50)',
+                                    color: 'var(--color-primary-700)',
+                                    borderRadius: 'var(--radius-base)',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: 600
                                 }}>
-                                    Parent: {student.parent_name} • {student.parent_phone}
+                                    <BookOpen size={14} />
+                                    Class {student.class} - {student.section}
+                                </span>
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.25rem 0.75rem',
+                                    background: 'var(--color-bg-secondary)',
+                                    color: 'var(--color-text-secondary)',
+                                    borderRadius: 'var(--radius-base)',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: 500
+                                }}>
+                                    <User size={14} />
+                                    Roll: {student.roll_number || 'N/A'}
+                                </span>
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.25rem 0.75rem',
+                                    background: 'var(--color-bg-secondary)',
+                                    color: 'var(--color-text-secondary)',
+                                    borderRadius: 'var(--radius-base)',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: 500
+                                }}>
+                                    {student.admission_number}
+                                </span>
+                                {student.blood_group && (
+                                    <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.25rem 0.75rem',
+                                        background: 'rgba(244, 67, 54, 0.1)',
+                                        color: 'var(--color-danger)',
+                                        borderRadius: 'var(--radius-base)',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: 600
+                                    }}>
+                                        <Heart size={14} />
+                                        {student.blood_group}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Secondary Info Grid */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                gap: '0.5rem',
+                                fontSize: '0.8125rem',
+                                color: 'var(--color-text-secondary)'
+                            }}>
+                                {student.age && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Calendar size={14} color="var(--color-text-tertiary)" />
+                                        <span>Age: <strong>{student.age} years</strong></span>
+                                    </div>
+                                )}
+                                {student.email && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Mail size={14} color="var(--color-text-tertiary)" />
+                                        <span>{student.email}</span>
+                                    </div>
+                                )}
+                                {student.phone && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Phone size={14} color="var(--color-text-tertiary)" />
+                                        <span>{student.phone}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Parent Info */}
+                            {(student.father_name || student.mother_name) && (
+                                <div style={{
+                                    marginTop: '0.75rem',
+                                    padding: '0.75rem',
+                                    background: 'var(--color-bg-secondary)',
+                                    borderRadius: 'var(--radius-base)',
+                                    fontSize: '0.8125rem'
+                                }}>
+                                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                        {student.father_name && (
+                                            <div>
+                                                <span style={{ color: 'var(--color-text-tertiary)' }}>Father: </span>
+                                                <strong style={{ color: 'var(--color-text-primary)' }}>{student.father_name}</strong>
+                                                {student.father_phone && (
+                                                    <span style={{ color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+                                                        ({student.father_phone})
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {student.mother_name && (
+                                            <div>
+                                                <span style={{ color: 'var(--color-text-tertiary)' }}>Mother: </span>
+                                                <strong style={{ color: 'var(--color-text-primary)' }}>{student.mother_name}</strong>
+                                                {student.mother_phone && (
+                                                    <span style={{ color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+                                                        ({student.mother_phone})
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -730,6 +845,143 @@ const Student360: React.FC = () => {
                             <p style={{ color: 'var(--color-text-secondary)' }}>
                                 Student documents will be displayed here.
                             </p>
+                        </Card>
+                    )}
+
+                    {activeTab === 'remarks' && (
+                        <Card
+                            header={<h3 style={{ margin: 0 }}>Student Remarks</h3>}
+                            padding="lg"
+                        >
+                            {recent_activity && recent_activity.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {recent_activity.map((remark: any) => (
+                                        <div
+                                            key={remark.id}
+                                            style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-bg-secondary)',
+                                                borderRadius: 'var(--radius-md)',
+                                                borderLeft: `4px solid ${remark.type === 'POSITIVE' ? 'var(--color-success)' :
+                                                    remark.type === 'NEGATIVE' ? 'var(--color-danger)' :
+                                                        remark.type === 'ACHIEVEMENT' ? 'var(--color-primary-500)' :
+                                                            remark.type === 'DISCIPLINE' ? 'var(--color-danger)' :
+                                                                remark.type === 'COMPLAINT' ? 'var(--color-warning)' :
+                                                                    'var(--color-text-tertiary)'
+                                                    }`
+                                            }}
+                                        >
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'flex-start',
+                                                marginBottom: '0.5rem'
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    flexWrap: 'wrap'
+                                                }}>
+                                                    <span style={{
+                                                        fontWeight: 600,
+                                                        fontSize: '0.9375rem',
+                                                        color: 'var(--color-text-primary)'
+                                                    }}>
+                                                        {remark.title}
+                                                    </span>
+                                                    {remark.is_important && (
+                                                        <span style={{
+                                                            padding: '0.125rem 0.5rem',
+                                                            fontSize: '0.625rem',
+                                                            fontWeight: 600,
+                                                            borderRadius: '4px',
+                                                            background: 'var(--color-danger)',
+                                                            color: 'white',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            Important
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--color-text-tertiary)'
+                                                }}>
+                                                    {formatDate(remark.created_at)}
+                                                </span>
+                                            </div>
+
+                                            <p style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                margin: '0 0 0.75rem 0'
+                                            }}>
+                                                {remark.description}
+                                            </p>
+
+                                            <div style={{
+                                                display: 'flex',
+                                                gap: '0.5rem',
+                                                flexWrap: 'wrap',
+                                                alignItems: 'center'
+                                            }}>
+                                                <span style={{
+                                                    padding: '0.25rem 0.5rem',
+                                                    fontSize: '0.6875rem',
+                                                    fontWeight: 500,
+                                                    borderRadius: '4px',
+                                                    background: remark.type === 'POSITIVE' ? 'rgba(76, 175, 80, 0.15)' :
+                                                        remark.type === 'NEGATIVE' ? 'rgba(244, 67, 54, 0.15)' :
+                                                            remark.type === 'ACHIEVEMENT' ? 'rgba(33, 150, 243, 0.15)' :
+                                                                'rgba(158, 158, 158, 0.15)',
+                                                    color: remark.type === 'POSITIVE' ? 'var(--color-success)' :
+                                                        remark.type === 'NEGATIVE' ? 'var(--color-danger)' :
+                                                            remark.type === 'ACHIEVEMENT' ? 'var(--color-primary-700)' :
+                                                                'var(--color-text-secondary)',
+                                                    textTransform: 'capitalize'
+                                                }}>
+                                                    {remark.type?.toLowerCase()}
+                                                </span>
+                                                <span style={{
+                                                    padding: '0.25rem 0.5rem',
+                                                    fontSize: '0.6875rem',
+                                                    fontWeight: 500,
+                                                    borderRadius: '4px',
+                                                    background: 'rgba(158, 158, 158, 0.15)',
+                                                    color: 'var(--color-text-secondary)',
+                                                    textTransform: 'capitalize'
+                                                }}>
+                                                    {remark.category?.toLowerCase()}
+                                                </span>
+                                                {remark.requires_action && !remark.action_taken && (
+                                                    <span style={{
+                                                        padding: '0.25rem 0.5rem',
+                                                        fontSize: '0.6875rem',
+                                                        fontWeight: 500,
+                                                        borderRadius: '4px',
+                                                        background: 'rgba(255, 152, 0, 0.15)',
+                                                        color: 'var(--color-warning)'
+                                                    }}>
+                                                        Action Required
+                                                    </span>
+                                                )}
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--color-text-tertiary)',
+                                                    marginLeft: 'auto'
+                                                }}>
+                                                    By: {remark.created_by}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    No remarks found for this student.
+                                </p>
+                            )}
                         </Card>
                     )}
                 </div>

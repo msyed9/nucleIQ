@@ -41,6 +41,7 @@ const resources = {
             // Navigation
             'nav.dashboard': 'Dashboard',
             'nav.students': 'Students',
+            'nav.enrollments': 'Enrollments',
             'nav.staff': 'Staff',
             'nav.finance': 'Finance',
             'nav.users': 'Users',

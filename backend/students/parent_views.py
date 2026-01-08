@@ -14,6 +14,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from rest_framework import serializers
 
 from .models import ParentUser
 from .parent_portal import ParentPortalService
@@ -30,11 +32,53 @@ User = get_user_model()
 class ParentTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Custom JWT serializer for parent login.
-    Adds parent profile and accessible students info to token response.
+    Supports login via email OR mobile number.
+    Adds parent profile, email, and accessible students info to token response.
     """
+    username_field = 'username'  # Accept either email or phone number
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Replace the email field with a more flexible username field
+        del self.fields[self.username_field]
+        self.fields['username'] = serializers.CharField(
+            help_text="Email or mobile number"
+        )
     
     def validate(self, attrs):
-        data = super().validate(attrs)
+        username = attrs.get('username', '')
+        password = attrs.get('password', '')
+        
+        # Try to find user by email or phone number
+        user = User.objects.filter(
+            Q(email__iexact=username) | Q(phone_number=username)
+        ).first()
+        
+        if not user:
+            raise serializers.ValidationError(
+                "No account found with this email or mobile number."
+            )
+        
+        # Check password
+        if not user.check_password(password):
+            raise serializers.ValidationError(
+                "Incorrect password."
+            )
+        
+        if not user.is_active:
+            raise serializers.ValidationError(
+                "This account is inactive."
+            )
+        
+        # Set the user for token generation
+        self.user = user
+        
+        # Generate tokens
+        refresh = self.get_token(user)
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
         
         # Check if user is a parent
         try:
@@ -47,13 +91,27 @@ class ParentTokenObtainPairSerializer(TokenObtainPairSerializer):
             data['user_type'] = 'parent'
             data['parent_id'] = parent_profile.id
             data['relation_type'] = parent_profile.relation_type
+            data['email'] = self.user.email  # Include email in response
+            data['phone_number'] = self.user.phone_number  # Include phone in response
+            data['name'] = self.user.get_full_name()
             
-            # Get accessible students
-            students = parent_profile.students.filter(is_active=True).values(
-                'id', 'admission_number', 'first_name', 'last_name'
-            )
-            data['students'] = list(students)
-            data['students_count'] = len(students)
+            # Get accessible students with more details
+            students = parent_profile.students.filter(is_active=True)
+            students_data = []
+            for student in students:
+                enrollment = student.get_current_enrollment()
+                students_data.append({
+                    'id': str(student.id),
+                    'admission_number': student.admission_number,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name,
+                    'full_name': student.get_full_name(),
+                    'class': enrollment.section.grade_level.name if enrollment else 'N/A',
+                    'section': enrollment.section.name if enrollment else 'N/A',
+                    'photo_url': student.photo.url if student.photo else None,
+                })
+            data['students'] = students_data
+            data['students_count'] = len(students_data)
             
             # Update last login
             parent_profile.last_login_at = timezone.now()

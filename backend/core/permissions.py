@@ -16,7 +16,11 @@ class IsTenantUser(permissions.BasePermission):
     
     def has_permission(self, request, view):
         """Check if user belongs to current tenant."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not request.user or not request.user.is_authenticated:
+            logger.debug("IsTenantUser: User not authenticated")
             return False
         
         # Platform admins can access any tenant
@@ -28,9 +32,21 @@ class IsTenantUser(permissions.BasePermission):
         current_tenant = get_current_tenant()
         
         if not current_tenant:
+            logger.warning(
+                f"IsTenantUser: No tenant context detected for user '{request.user.email}'. "
+                f"Check X-Tenant-ID header or subdomain configuration."
+            )
+            self.message = "No tenant context detected. Please ensure X-Tenant-ID header is sent."
             return False
         
-        return request.user.tenant_id == current_tenant.id
+        if request.user.tenant_id != current_tenant.id:
+            logger.warning(
+                f"IsTenantUser: User '{request.user.email}' (tenant: {request.user.tenant_id}) "
+                f"attempted to access tenant {current_tenant.id}"
+            )
+            return False
+        
+        return True
 
 
 class IsPlatformAdmin(permissions.BasePermission):
@@ -49,6 +65,55 @@ class IsPlatformAdmin(permissions.BasePermission):
         )
 
 
+class IsTenantAdmin(permissions.BasePermission):
+    """
+    Permission class for tenant administrators only.
+    Checks if the user is a tenant super admin or has admin role for their tenant.
+    """
+    
+    message = "Only tenant administrators can perform this action."
+    
+    def has_permission(self, request, view):
+        """Check if user is tenant admin."""
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Platform admins and superusers have full access
+        if request.user.is_platform_admin or request.user.is_superuser:
+            return True
+        
+        # Django staff users have admin access
+        if request.user.is_staff:
+            return True
+        
+        # Check if user is a tenant super admin (if field exists)
+        if hasattr(request.user, 'is_tenant_admin') and request.user.is_tenant_admin:
+            return True
+        
+        # Check if user is the primary contact of their tenant
+        if hasattr(request.user, 'tenant') and request.user.tenant:
+            tenant = request.user.tenant
+            if hasattr(tenant, 'primary_contact_id') and tenant.primary_contact_id == request.user.id:
+                return True
+        
+        # Check if user has any admin-like role by code
+        admin_role_codes = ['admin', 'super_admin', 'tenant_admin', 'school_admin', 'principal', 'administrator']
+        if hasattr(request.user, 'roles') and request.user.roles.filter(
+            code__in=admin_role_codes, 
+            is_active=True
+        ).exists():
+            return True
+        
+        # Check if user has any role with 'admin' in the name (case-insensitive)
+        if hasattr(request.user, 'roles') and request.user.roles.filter(
+            name__icontains='admin',
+            is_active=True
+        ).exists():
+            return True
+        
+        return False
+
+
 class HasModulePermission(permissions.BasePermission):
     """
     Permission class to check if user has permission for a specific module and action.
@@ -58,9 +123,15 @@ class HasModulePermission(permissions.BasePermission):
         required_permission = ('student_module', 'create')
     """
     
+    message = "You do not have permission to access this resource."
+    
     def has_permission(self, request, view):
         """Check if user has required permission."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not request.user or not request.user.is_authenticated:
+            logger.debug("HasModulePermission: User not authenticated")
             return False
         
         # Platform admins and superusers have all permissions
@@ -73,7 +144,16 @@ class HasModulePermission(permissions.BasePermission):
             return True
         
         resource, action = view.required_permission
-        return check_permission(request.user, resource, action)
+        has_perm = check_permission(request.user, resource, action)
+        
+        if not has_perm:
+            logger.warning(
+                f"HasModulePermission: User '{request.user.email}' denied access to "
+                f"{resource}.{action}. User roles: {list(request.user.roles.values_list('name', flat=True))}"
+            )
+            self.message = f"You do not have permission to {action} {resource}."
+        
+        return has_perm
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):

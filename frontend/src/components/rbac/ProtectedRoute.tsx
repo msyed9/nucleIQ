@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { usePermission } from '../../hooks/usePermission';
 
 interface ProtectedRouteProps {
@@ -26,7 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, isLoading, isRole } = useAuth();
   const location = useLocation();
-  
+
   const hasPermission = usePermission(
     permission?.module || '',
     permission?.action || ''

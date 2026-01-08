@@ -22,6 +22,13 @@ import { formatDate } from '../../utils/helpers';
 import api from '../../services/api';
 import './Students.css';
 
+interface FeeSummary {
+    total_fee: number;
+    paid_amount: number;
+    pending_amount: number;
+    discount_amount: number;
+}
+
 interface Student {
     id: string;
     admission_number: string;
@@ -32,6 +39,7 @@ interface Student {
     age?: number;
     is_active: boolean;
     photo?: string;
+    fee_summary?: FeeSummary;
 }
 
 const StudentList: React.FC = () => {
@@ -136,7 +144,7 @@ const StudentList: React.FC = () => {
     const handleBulkDelete = async () => {
         if (selectedStudents.size === 0) return;
         if (!confirm(`Delete ${selectedStudents.size} student(s)?`)) return;
-        
+
         try {
             await Promise.all(
                 Array.from(selectedStudents).map(id => api.delete(`/students/students/${id}/`))
@@ -199,6 +207,16 @@ const StudentList: React.FC = () => {
             key: 'is_active',
             label: 'Status',
             format: (value) => value ? 'Active' : 'Inactive'
+        },
+        {
+            key: 'fee_summary',
+            label: 'Pending Fee',
+            format: (value) => value ? `₹${value.pending_amount?.toLocaleString() || 0}` : '—'
+        },
+        {
+            key: 'fee_summary',
+            label: 'Discount',
+            format: (value) => value && value.discount_amount > 0 ? `₹${value.discount_amount?.toLocaleString()}` : '—'
         }
     ];
 
@@ -268,12 +286,14 @@ const StudentList: React.FC = () => {
             </div>
 
             {/* Filters */}
-            <Card padding="lg" style={{ marginBottom: '1.5rem' }}>
+            <Card padding="lg" style={{ marginBottom: '1.5rem', overflow: 'visible' }}>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                     gap: '1rem',
-                    alignItems: 'end'
+                    alignItems: 'end',
+                    position: 'relative',
+                    zIndex: 1
                 }}>
                     <Input
                         placeholder={t('students.search_placeholder', { defaultValue: 'Search by name or admission number...' })}
@@ -318,8 +338,8 @@ const StudentList: React.FC = () => {
                         fullWidth
                     />
 
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         onClick={() => {
                             setSearchTerm('');
                             setSectionFilter('');
@@ -408,6 +428,12 @@ const StudentList: React.FC = () => {
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                                     Status
                                 </th>
+                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                                    Pending Fee
+                                </th>
+                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                                    Discount
+                                </th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                                     Actions
                                 </th>
@@ -488,6 +514,27 @@ const StudentList: React.FC = () => {
                                                 {student.is_active ? t('common.active', { defaultValue: 'Active' }) : t('common.inactive', { defaultValue: 'Inactive' })}
                                             </Badge>
                                         </td>
+                                        <td style={{ padding: '1rem', fontSize: '0.875rem', textAlign: 'right' }}>
+                                            {student.fee_summary ? (
+                                                <span style={{
+                                                    color: student.fee_summary.pending_amount > 0 ? 'var(--color-danger)' : 'var(--color-success)',
+                                                    fontWeight: 600
+                                                }}>
+                                                    ₹{student.fee_summary.pending_amount.toLocaleString()}
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '1rem', fontSize: '0.875rem', textAlign: 'right' }}>
+                                            {student.fee_summary && student.fee_summary.discount_amount > 0 ? (
+                                                <Badge variant="info" size="sm">
+                                                    ₹{student.fee_summary.discount_amount.toLocaleString()}
+                                                </Badge>
+                                            ) : (
+                                                <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <Button
@@ -517,7 +564,7 @@ const StudentList: React.FC = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={10} style={{
+                                    <td colSpan={12} style={{
                                         padding: '3rem',
                                         textAlign: 'center',
                                         color: 'var(--color-text-tertiary)'

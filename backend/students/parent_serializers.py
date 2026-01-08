@@ -23,17 +23,17 @@ class ParentStudentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = [
-            'id', 'admission_number', 'first_name', 'middle_name', 
-            'last_name', 'photo_url', 'current_class', 'date_of_birth',
+            'id', 'admission_number', 'first_name', 'last_name', 
+            'photo_url', 'current_class', 'date_of_birth',
             'blood_group', 'gender'
         ]
         read_only_fields = fields
     
     def get_current_class(self, obj):
         """Get current class and section."""
-        if hasattr(obj, 'current_enrollment') and obj.current_enrollment:
-            enrollment = obj.current_enrollment
-            return f"{enrollment.grade.name} - {enrollment.section.name}"
+        enrollment = obj.get_current_enrollment()
+        if enrollment and enrollment.section and enrollment.section.grade:
+            return f"{enrollment.section.grade.name} - {enrollment.section.name}"
         return "Not Enrolled"
     
     def get_photo_url(self, obj):
@@ -62,7 +62,7 @@ class ParentStudentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = [
-            'id', 'admission_number', 'first_name', 'middle_name', 'last_name',
+            'id', 'admission_number', 'first_name', 'last_name',
             'photo_url', 'date_of_birth', 'gender', 'blood_group', 'religion',
             'category', 'nationality', 'mother_tongue',
             'current_class', 'current_enrollment_details', 'parent_contact',
@@ -73,9 +73,9 @@ class ParentStudentDetailSerializer(serializers.ModelSerializer):
     
     def get_current_class(self, obj):
         """Get current class and section."""
-        if hasattr(obj, 'current_enrollment') and obj.current_enrollment:
-            enrollment = obj.current_enrollment
-            return f"{enrollment.grade.name} - {enrollment.section.name}"
+        enrollment = obj.get_current_enrollment()
+        if enrollment and enrollment.section and enrollment.section.grade:
+            return f"{enrollment.section.grade.name} - {enrollment.section.name}"
         return "Not Enrolled"
     
     def get_photo_url(self, obj):
@@ -89,11 +89,11 @@ class ParentStudentDetailSerializer(serializers.ModelSerializer):
     
     def get_current_enrollment_details(self, obj):
         """Get current enrollment details."""
-        if hasattr(obj, 'current_enrollment') and obj.current_enrollment:
-            enrollment = obj.current_enrollment
+        enrollment = obj.get_current_enrollment()
+        if enrollment:
             return {
                 'academic_year': enrollment.academic_year.name,
-                'grade': enrollment.grade.name,
+                'grade': enrollment.section.grade.name,
                 'section': enrollment.section.name,
                 'roll_number': enrollment.roll_number,
                 'enrollment_date': enrollment.enrollment_date,

@@ -116,10 +116,22 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
         model = TenantBranding
         fields = [
             'id', 'tenant', 'tenant_name',
+            # School Information
+            'school_name', 'school_address', 'school_phone', 'school_email',
+            # Visual Assets
             'logo_url', 'favicon_url', 'login_background_url', 'email_header_image',
+            # Colors
             'primary_color', 'secondary_color', 'sidebar_color',
-            'font_family', 'gallery_images', 'custom_css',
+            # Typography
+            'font_family',
+            # Gallery
+            'gallery_images',
+            # Receipt Configuration
+            'receipt_copies', 'receipt_footer_text',
+            # Custom CSS
+            'custom_css',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']
+
 

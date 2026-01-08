@@ -45,6 +45,13 @@ const Login: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
 
+                // Prevent parent users from logging in via admin portal
+                if (data.user && data.user.is_parent) {
+                    setError(t('auth.parent_login_error', { defaultValue: 'Please use the Parent Portal to log in' }));
+                    setLoading(false);
+                    return;
+                }
+
                 // Store tokens and user info
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);

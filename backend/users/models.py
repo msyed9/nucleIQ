@@ -301,6 +301,43 @@ class UserPreference(models.Model):
         help_text=_('Preferred time format')
     )
     
+    # Font Customization
+    font_family = models.CharField(
+        max_length=100,
+        default='Inter, sans-serif',
+        help_text=_('Preferred font family (e.g., Inter, Roboto, Poppins)')
+    )
+    
+    font_size = models.CharField(
+        max_length=20,
+        default='medium',
+        choices=[
+            ('small', 'Small (14px)'),
+            ('medium', 'Medium (16px)'),
+            ('large', 'Large (18px)'),
+            ('extra-large', 'Extra Large (20px)'),
+        ],
+        help_text=_('Preferred font size')
+    )
+    
+    font_color = models.CharField(
+        max_length=7,
+        default='#1a1a1a',
+        help_text=_('Custom text color in hex format (e.g., #1a1a1a)')
+    )
+    
+    heading_color = models.CharField(
+        max_length=7,
+        default='#1a1a1a',
+        help_text=_('Custom heading color in hex format (e.g., #1a1a1a)')
+    )
+    
+    link_color = models.CharField(
+        max_length=7,
+        default='#0066cc',
+        help_text=_('Custom link color in hex format (e.g., #0066cc)')
+    )
+    
     class Meta:
         db_table = 'user_preferences'
         verbose_name = _('User Preference')

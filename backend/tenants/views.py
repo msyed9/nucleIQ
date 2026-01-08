@@ -163,6 +163,66 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='current')
+    def current(self, request):
+        """
+        Get current tenant settings combined with branding data.
+        This endpoint provides all tenant configuration including receipt settings.
+        """
+        settings = self.get_object()
+        settings_data = self.get_serializer(settings).data
+        
+        # Get branding data
+        try:
+            branding, _ = TenantBranding.objects.get_or_create(
+                tenant=request.user.tenant
+            )
+            branding_serializer = TenantBrandingSerializer(branding)
+            branding_data = branding_serializer.data
+            
+            # Merge branding data into settings
+            settings_data.update({
+                'school_name': branding_data.get('school_name') or settings_data.get('school_name', ''),
+                'school_address': branding_data.get('school_address', ''),
+                'school_phone': branding_data.get('school_phone', ''),
+                'school_email': branding_data.get('school_email', ''),
+                'logo_url': branding_data.get('logo_url', ''),
+                'receipt_copies': branding_data.get('receipt_copies', 3),
+                'receipt_footer_text': branding_data.get('receipt_footer_text', 'This is a computer generated receipt.'),
+            })
+        except Exception as e:
+            # If branding fetch fails, continue with settings only
+            pass
+        
+        return Response(settings_data)
+    
+    @action(detail=False, methods=['get'], url_path='next_admission_number')
+    def next_admission_number(self, request):
+        """
+        Get the next admission number preview.
+        This reads directly from settings to give accurate preview.
+        """
+        from students.utils import get_next_admission_number_preview
+        
+        settings = self.get_object()
+        
+        if not settings.auto_generate_admission_number:
+            return Response({
+                'auto_generate': False,
+                'admission_number': None,
+                'message': 'Auto-generation is disabled. Please enter admission number manually.'
+            })
+        
+        preview = get_next_admission_number_preview(request.user.tenant)
+        
+        return Response({
+            'auto_generate': True,
+            'admission_number': preview,
+            'format': settings.admission_number_format,
+            'prefix': settings.admission_number_prefix,
+            'current_sequence': settings.admission_number_sequence
+        })
 
 
 class TenantBrandingViewSet(viewsets.ModelViewSet):
@@ -212,5 +272,17 @@ class TenantBrandingViewSet(viewsets.ModelViewSet):
         """
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['patch'], url_path='update')
+    def update_branding(self, request):
+        """
+        Custom action to update branding via /api/tenants/branding/update/
+        This allows updating without needing to know the branding ID.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 

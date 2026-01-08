@@ -51,10 +51,7 @@ class ParentPortalService:
             is_active=True,
             tenant=self.user.tenant
         ).select_related(
-            'tenant',
-            'current_enrollment__academic_year',
-            'current_enrollment__grade',
-            'current_enrollment__section'
+            'tenant'
         )
     
     def get_student(self, student_id):

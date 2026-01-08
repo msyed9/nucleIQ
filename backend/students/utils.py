@@ -112,7 +112,7 @@ def validate_admission_number_unique(admission_number, tenant, exclude_id=None):
     
     if query.exists():
         existing_student = query.first()
-        return False, f"Admission number '{admission_number}' already exists for {existing_student.full_name}"
+        return False, f"Admission number '{admission_number}' already exists for {existing_student.get_full_name()}"
     
     return True, None
 
@@ -120,6 +120,7 @@ def validate_admission_number_unique(admission_number, tenant, exclude_id=None):
 def get_next_admission_number_preview(tenant, academic_year=None):
     """
     Preview what the next admission number would be without incrementing the sequence.
+    Automatically detects and skips existing admission numbers.
     
     Args:
         tenant: Tenant instance
@@ -128,6 +129,8 @@ def get_next_admission_number_preview(tenant, academic_year=None):
     Returns:
         str: Preview of next admission number or None if auto-generation is disabled
     """
+    import re
+    
     settings = tenant.settings
     
     if not settings.auto_generate_admission_number:
@@ -150,24 +153,43 @@ def get_next_admission_number_preview(tenant, academic_year=None):
         end_year = str(academic_year.end_date.year)[2:]
         replacements['{ACADYEAR}'] = f'{start_year}-{end_year}'
     
-    # Build preview
-    preview = format_template
-    
-    for placeholder, value in replacements.items():
-        preview = preview.replace(placeholder, value)
-    
-    # Handle formatted sequence
-    import re
     sequence_pattern = r'\{SEQUENCE(?::(\d+)d)?\}'
-    match = re.search(sequence_pattern, preview)
     
-    if match:
-        format_spec = match.group(1)
-        if format_spec:
-            sequence_str = f'{current_sequence:0{int(format_spec)}d}'
-        else:
-            sequence_str = str(current_sequence)
+    # Build admission number with given sequence
+    def build_admission_number(seq):
+        result = format_template
+        for placeholder, value in replacements.items():
+            result = result.replace(placeholder, value)
         
-        preview = re.sub(sequence_pattern, sequence_str, preview)
+        match = re.search(sequence_pattern, result)
+        if match:
+            format_spec = match.group(1)
+            if format_spec:
+                sequence_str = f'{seq:0{int(format_spec)}d}'
+            else:
+                sequence_str = str(seq)
+            result = re.sub(sequence_pattern, sequence_str, result)
+        
+        return result
     
-    return preview
+    # Find the next available admission number (skip existing ones)
+    test_sequence = current_sequence
+    max_attempts = 100  # Prevent infinite loop
+    
+    for _ in range(max_attempts):
+        candidate = build_admission_number(test_sequence)
+        
+        # Check if this admission number already exists
+        if not Student.objects.filter(tenant=tenant, admission_number=candidate).exists():
+            # Found an available admission number
+            # Update the sequence if we had to skip some
+            if test_sequence != current_sequence:
+                settings.admission_number_sequence = test_sequence
+                settings.save(update_fields=['admission_number_sequence'])
+            return candidate
+        
+        test_sequence += 1
+    
+    # Fallback: return the last candidate even if it exists (will fail on save)
+    return build_admission_number(test_sequence)
+

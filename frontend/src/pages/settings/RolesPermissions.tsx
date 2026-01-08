@@ -77,9 +77,9 @@ const RolesPermissions: React.FC = () => {
     try {
       setLoading(true);
       const [rolesRes, permsRes, matrixRes] = await Promise.all([
-        api.get('/users/roles/'),
-        api.get('/users/permissions/'),
-        api.get('/users/permissions-matrix/')
+        api.get('/roles/'),
+        api.get('/permissions/'),
+        api.get('/permissions-matrix/')
       ]);
 
       setRoles(rolesRes.data.results || rolesRes.data);
@@ -130,7 +130,7 @@ const RolesPermissions: React.FC = () => {
 
     try {
       setSaving(true);
-      await api.patch('/users/permissions-matrix/bulk-update/', {
+      await api.patch('/permissions-matrix/bulk-update/', {
         role_id: selectedRole.id,
         permission_ids: Array.from(selectedPermissions),
       });
@@ -151,9 +151,9 @@ const RolesPermissions: React.FC = () => {
     try {
       setSaving(true);
       if (editingRole) {
-        await api.put(`/users/roles/${editingRole.id}/`, formData);
+        await api.put(`/roles/${editingRole.id}/`, formData);
       } else {
-        await api.post('/users/roles/', formData);
+        await api.post('/roles/', formData);
       }
 
       setShowRoleForm(false);
@@ -172,7 +172,7 @@ const RolesPermissions: React.FC = () => {
     if (!confirm('Are you sure you want to delete this role?')) return;
 
     try {
-      await api.delete(`/users/roles/${roleId}/`);
+      await api.delete(`/roles/${roleId}/`);
       await fetchData();
       if (selectedRole?.id === roleId) {
         setSelectedRole(null);

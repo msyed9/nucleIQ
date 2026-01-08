@@ -61,7 +61,6 @@ interface Student {
     id: number;
     admission_number: string;
     first_name: string;
-    middle_name?: string;
     last_name: string;
     photo_url?: string;
     current_class: string;
@@ -188,12 +187,18 @@ const ParentPortal: React.FC = () => {
             setLoading(true);
             setError(null);
             const response = await api.get('/parent/students/');
-            setStudents(response.data);
-            if (response.data.length > 0) {
-                setSelectedStudent(response.data[0].id);
+            // Ensure response.data is an array
+            const studentsData = Array.isArray(response.data) ? response.data : [];
+            console.log('📚 Fetched students:', studentsData);
+            setStudents(studentsData);
+            if (studentsData.length > 0) {
+                setSelectedStudent(studentsData[0].id);
+                console.log('✅ Selected first student:', studentsData[0]);
+            } else {
+                console.warn('⚠️ No students found for this parent');
             }
         } catch (error: any) {
-            console.error('Error fetching students:', error);
+            console.error('❌ Error fetching students:', error);
             setError(error.response?.data?.detail || 'Failed to load students');
         } finally {
             setLoading(false);
@@ -255,12 +260,12 @@ const ParentPortal: React.FC = () => {
         link.remove();
     };
 
-    const currentStudent = students.find((s) => s.id === selectedStudent);
+    const currentStudent = Array.isArray(students) ? students.find((s) => s.id === selectedStudent) : undefined;
     const fullName = currentStudent 
-        ? `${currentStudent.first_name} ${currentStudent.middle_name || ''} ${currentStudent.last_name}`.trim()
+        ? `${currentStudent.first_name} ${currentStudent.last_name}`.trim()
         : '';
 
-    if (loading && students.length === 0) {
+    if (loading && (!students || students.length === 0)) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
                 <CircularProgress />
@@ -268,10 +273,20 @@ const ParentPortal: React.FC = () => {
         );
     }
 
-    if (error && students.length === 0) {
+    if (error && (!students || students.length === 0)) {
         return (
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Alert severity="error">{error}</Alert>
+            </Container>
+        );
+    }
+
+    if (!loading && (!students || students.length === 0)) {
+        return (
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Alert severity="info">
+                    No students linked to your account. Please contact school administration.
+                </Alert>
             </Container>
         );
     }

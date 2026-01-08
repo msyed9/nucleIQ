@@ -3,9 +3,10 @@
  * Modern settings interface with tabs and form controls
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import {
     Settings as SettingsIcon,
     School,
@@ -17,7 +18,8 @@ import {
     Database,
     Save,
     Shield,
-    UserCog
+    UserCog,
+    Type
 } from 'lucide-react';
 import { Button, Card, Input, Select, Checkbox } from '@/design-system';
 
@@ -33,9 +35,29 @@ const Settings: React.FC = () => {
     const [timezone, setTimezone] = useState('Asia/Kolkata');
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [smsNotifications, setSmsNotifications] = useState(false);
+    const [savingFontSettings, setSavingFontSettings] = useState(false);
 
     // Theme Context
     const { themeMode, setThemeMode, themeColor, setThemeColor } = useTheme();
+
+    // Preferences Context for font customization
+    const { preferences, updatePreferences } = usePreferences();
+
+    // Font customization state
+    const [fontFamily, setFontFamily] = useState(preferences.font_family || 'Inter, sans-serif');
+    const [fontSize, setFontSize] = useState(preferences.font_size || 'medium');
+    const [fontColor, setFontColor] = useState(preferences.font_color || '#1a1a1a');
+    const [headingColor, setHeadingColor] = useState(preferences.heading_color || '#1a1a1a');
+    const [linkColor, setLinkColor] = useState(preferences.link_color || '#0066cc');
+
+    // Sync font settings with preferences when loaded
+    useEffect(() => {
+        if (preferences.font_family) setFontFamily(preferences.font_family);
+        if (preferences.font_size) setFontSize(preferences.font_size);
+        if (preferences.font_color) setFontColor(preferences.font_color);
+        if (preferences.heading_color) setHeadingColor(preferences.heading_color);
+        if (preferences.link_color) setLinkColor(preferences.link_color);
+    }, [preferences]);
 
     const tabs = [
         { id: 'general' as SettingsTab, label: 'General', icon: SettingsIcon },
@@ -59,9 +81,50 @@ const Settings: React.FC = () => {
         { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
     ];
 
+    // Font customization options
+    const fontFamilyOptions = [
+        { value: 'Inter, sans-serif', label: 'Inter (Default)' },
+        { value: 'Roboto, sans-serif', label: 'Roboto' },
+        { value: 'Poppins, sans-serif', label: 'Poppins' },
+        { value: 'Outfit, sans-serif', label: 'Outfit' },
+        { value: 'Open Sans, sans-serif', label: 'Open Sans' },
+        { value: 'Lato, sans-serif', label: 'Lato' },
+        { value: 'Source Sans Pro, sans-serif', label: 'Source Sans Pro' },
+        { value: 'Nunito, sans-serif', label: 'Nunito' },
+        { value: 'Montserrat, sans-serif', label: 'Montserrat' },
+        { value: 'Georgia, serif', label: 'Georgia (Serif)' },
+        { value: 'Times New Roman, serif', label: 'Times New Roman (Serif)' },
+    ];
+
+    const fontSizeOptions = [
+        { value: 'small', label: 'Small (14px)' },
+        { value: 'medium', label: 'Medium (16px - Default)' },
+        { value: 'large', label: 'Large (18px)' },
+        { value: 'extra-large', label: 'Extra Large (20px)' },
+    ];
+
     const handleSave = () => {
         console.log('Saving settings...');
         // TODO: Implement save functionality
+    };
+
+    const handleSaveFontSettings = async () => {
+        try {
+            setSavingFontSettings(true);
+            await updatePreferences({
+                font_family: fontFamily,
+                font_size: fontSize,
+                font_color: fontColor,
+                heading_color: headingColor,
+                link_color: linkColor
+            });
+            alert('Font settings saved successfully!');
+        } catch (error) {
+            console.error('Failed to save font settings:', error);
+            alert('Failed to save font settings. Please try again.');
+        } finally {
+            setSavingFontSettings(false);
+        }
     };
 
     return (
@@ -316,34 +379,229 @@ const Settings: React.FC = () => {
                                 Appearance Settings
                             </h2>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <Checkbox
-                                    label="Dark Mode"
-                                    checked={themeMode === 'dark'}
-                                    onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
-                                    helperText="Enable dark mode theme"
-                                />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                {/* Theme Section */}
+                                <div>
+                                    <h3 style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        margin: '0 0 1rem 0',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 600,
+                                        color: 'var(--color-text-primary)'
+                                    }}>
+                                        <Palette size={20} /> Theme
+                                    </h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <Checkbox
+                                            label="Dark Mode"
+                                            checked={themeMode === 'dark'}
+                                            onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
+                                            helperText="Enable dark mode theme"
+                                        />
 
-                                <Select
-                                    label="Theme Color"
-                                    options={[
-                                        { value: '#0b3b66', label: 'Blue (Default)' },
-                                        { value: '#15803d', label: 'Green' },
-                                        { value: '#7e22ce', label: 'Purple' },
-                                        { value: '#c2410c', label: 'Orange' },
-                                        { value: '#be123c', label: 'Red' },
-                                    ]}
-                                    value={themeColor} // Hex code
-                                    onChange={(val) => setThemeColor(val)}
-                                    fullWidth
-                                />
+                                        <Select
+                                            label="Theme Color"
+                                            options={[
+                                                { value: '#0b3b66', label: 'Blue (Default)' },
+                                                { value: '#15803d', label: 'Green' },
+                                                { value: '#7e22ce', label: 'Purple' },
+                                                { value: '#c2410c', label: 'Orange' },
+                                                { value: '#be123c', label: 'Red' },
+                                            ]}
+                                            value={themeColor}
+                                            onChange={(val) => setThemeColor(val)}
+                                            fullWidth
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div style={{ borderTop: '1px solid var(--color-border)', margin: '0.5rem 0' }} />
+
+                                {/* Typography Section */}
+                                <div>
+                                    <h3 style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        margin: '0 0 1rem 0',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 600,
+                                        color: 'var(--color-text-primary)'
+                                    }}>
+                                        <Type size={20} /> Typography & Font Settings
+                                    </h3>
+                                    <p style={{
+                                        color: 'var(--color-text-secondary)',
+                                        marginBottom: '1rem',
+                                        fontSize: '0.9rem'
+                                    }}>
+                                        Customize fonts and colors for your personal view. These settings only affect your account.
+                                    </p>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <Select
+                                            label="Font Family"
+                                            options={fontFamilyOptions}
+                                            value={fontFamily}
+                                            onChange={(val) => setFontFamily(val)}
+                                            fullWidth
+                                        />
+
+                                        <Select
+                                            label="Font Size"
+                                            options={fontSizeOptions}
+                                            value={fontSize}
+                                            onChange={(val) => setFontSize(val)}
+                                            fullWidth
+                                        />
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{
+                                                    display: 'block',
+                                                    marginBottom: '0.5rem',
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: 500,
+                                                    color: 'var(--color-text-primary)'
+                                                }}>
+                                                    Text Color
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <input
+                                                        type="color"
+                                                        value={fontColor}
+                                                        onChange={(e) => setFontColor(e.target.value)}
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            border: '2px solid var(--color-border)',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            padding: 0
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        value={fontColor}
+                                                        onChange={(e) => setFontColor(e.target.value)}
+                                                        style={{ width: '120px' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label style={{
+                                                    display: 'block',
+                                                    marginBottom: '0.5rem',
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: 500,
+                                                    color: 'var(--color-text-primary)'
+                                                }}>
+                                                    Heading Color
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <input
+                                                        type="color"
+                                                        value={headingColor}
+                                                        onChange={(e) => setHeadingColor(e.target.value)}
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            border: '2px solid var(--color-border)',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            padding: 0
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        value={headingColor}
+                                                        onChange={(e) => setHeadingColor(e.target.value)}
+                                                        style={{ width: '120px' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label style={{
+                                                    display: 'block',
+                                                    marginBottom: '0.5rem',
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: 500,
+                                                    color: 'var(--color-text-primary)'
+                                                }}>
+                                                    Link Color
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <input
+                                                        type="color"
+                                                        value={linkColor}
+                                                        onChange={(e) => setLinkColor(e.target.value)}
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            border: '2px solid var(--color-border)',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            padding: 0
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        value={linkColor}
+                                                        onChange={(e) => setLinkColor(e.target.value)}
+                                                        style={{ width: '120px' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Preview */}
+                                        <div style={{
+                                            marginTop: '1rem',
+                                            padding: '1.5rem',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--color-border)'
+                                        }}>
+                                            <h4 style={{
+                                                margin: '0 0 0.5rem 0',
+                                                fontFamily: fontFamily,
+                                                color: headingColor,
+                                                fontSize: fontSize === 'small' ? '1rem' : fontSize === 'large' ? '1.4rem' : fontSize === 'extra-large' ? '1.6rem' : '1.2rem'
+                                            }}>
+                                                Preview: Sample Heading
+                                            </h4>
+                                            <p style={{
+                                                margin: '0 0 0.5rem 0',
+                                                fontFamily: fontFamily,
+                                                color: fontColor,
+                                                fontSize: fontSize === 'small' ? '14px' : fontSize === 'large' ? '18px' : fontSize === 'extra-large' ? '20px' : '16px'
+                                            }}>
+                                                This is sample text showing how your font settings will appear throughout the application.
+                                            </p>
+                                            <a href="#" style={{
+                                                fontFamily: fontFamily,
+                                                color: linkColor,
+                                                fontSize: fontSize === 'small' ? '14px' : fontSize === 'large' ? '18px' : fontSize === 'extra-large' ? '20px' : '16px'
+                                            }} onClick={(e) => e.preventDefault()}>
+                                                Sample Link Text
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                                     <Button variant="outline">
-                                        Cancel
+                                        Reset to Defaults
                                     </Button>
-                                    <Button variant="primary" iconLeft={Save} onClick={handleSave}>
-                                        Save Changes
+                                    <Button
+                                        variant="primary"
+                                        iconLeft={Save}
+                                        onClick={handleSaveFontSettings}
+                                        disabled={savingFontSettings}
+                                    >
+                                        {savingFontSettings ? 'Saving...' : 'Save Font Settings'}
                                     </Button>
                                 </div>
                             </div>
@@ -363,9 +621,9 @@ const Settings: React.FC = () => {
                             <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
                                 Manage user permissions and roles
                             </p>
-                            
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px' }}>
-                                <div 
+                                <div
                                     onClick={() => navigate('/users/manage')}
                                     style={{
                                         display: 'flex',
@@ -408,7 +666,7 @@ const Settings: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div 
+                                <div
                                     onClick={() => navigate('/settings/roles')}
                                     style={{
                                         display: 'flex',
@@ -451,7 +709,7 @@ const Settings: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div 
+                                <div
                                     onClick={() => navigate('/settings/permissions')}
                                     style={{
                                         display: 'flex',

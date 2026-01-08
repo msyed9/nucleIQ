@@ -31,6 +31,7 @@ import {
     FileText,
     BarChart3,
     Video,
+    Camera,
     Library,
     ClipboardCheck,
     PieChart,
@@ -60,7 +61,10 @@ import {
     Heart,
     Sunrise,
     Activity,
-    Palette
+    Palette,
+    History,
+    QrCode,
+    Database
 } from 'lucide-react';
 import './Layout.css';
 
@@ -87,10 +91,12 @@ const menuItems: MenuItem[] = [
         label: 'Students',
         children: [
             { path: '/students', icon: List, labelKey: 'nav.student_list', label: 'Student List' },
+            { path: '/students/enrollments', icon: ClipboardCheck, labelKey: 'nav.enrollments', label: 'Enrollments' },
             { path: '/students/add', icon: UserPlus, labelKey: 'nav.add_student', label: 'Add Student' },
             { path: '/students/remarks', icon: MessageCircle, labelKey: 'nav.remarks', label: 'Remarks' },
             { path: '/students/documents', icon: FolderOpen, labelKey: 'nav.documents', label: 'Documents' },
-            { path: '/idcards/designer', icon: LayoutTemplate, labelKey: 'nav.id_cards', label: 'ID Cards' },
+            { path: '/idcards/designer', icon: LayoutTemplate, labelKey: 'nav.id_cards', label: 'ID Designer' },
+            { path: '/idcards/bulk', icon: CreditCard, labelKey: 'nav.bulk_id_cards', label: 'Bulk ID Generation' },
         ]
     },
     {
@@ -132,6 +138,9 @@ const menuItems: MenuItem[] = [
         label: 'Attendance',
         children: [
             { path: '/attendance', icon: ClipboardCheck, labelKey: 'nav.mark_attendance', label: 'Mark Attendance' },
+            { path: '/attendance/mobile-capture', icon: QrCode, labelKey: 'nav.qr_face_scanner', label: 'QR & Face Scanner' },
+            { path: '/attendance/face-enrollment', icon: Camera, labelKey: 'nav.face_enrollment', label: 'Face Enrollment' },
+            { path: '/attendance/reports', icon: BarChart3, labelKey: 'nav.attendance_reports', label: 'Reports' },
             { path: '/attendance/aggregates', icon: PieChart, labelKey: 'nav.attendance_aggregates', label: 'Aggregates' },
         ]
     },
@@ -150,6 +159,7 @@ const menuItems: MenuItem[] = [
         label: 'Fees',
         children: [
             { path: '/fees/collect', icon: CreditCard, labelKey: 'nav.collect_fees', label: 'Collect Fees' },
+            { path: '/fees/history', icon: History, labelKey: 'nav.fee_history', label: 'Fee Paid History' },
             { path: '/fees/configure', icon: SettingsIcon, labelKey: 'nav.fee_config', label: 'Configure' },
             { path: '/fees/defaulters', icon: AlertTriangle, labelKey: 'nav.fee_defaulters', label: 'Defaulters' },
             { path: '/finance', icon: PieChart, labelKey: 'nav.finance', label: 'Finance' },
@@ -243,7 +253,9 @@ const menuItems: MenuItem[] = [
             { path: '/settings/system', icon: SettingsIcon, labelKey: 'nav.system_settings', label: 'System Settings' },
             { path: '/settings/academic', icon: GraduationCap, labelKey: 'nav.academic_setup', label: 'Academic Setup' },
             { path: '/settings/branding', icon: Palette, labelKey: 'nav.branding', label: 'Branding' },
-            { path: '/settings/permissions', icon: Shield, labelKey: 'nav.permissions', label: 'Permissions' },
+            { path: '/settings/roles', icon: ShieldCheck, labelKey: 'nav.roles_permissions', label: 'Roles & Permissions' },
+            { path: '/settings/permissions', icon: Shield, labelKey: 'nav.permissions', label: 'Permissions Matrix' },
+            { path: '/settings/data-management', icon: Database, labelKey: 'nav.data_management', label: 'Data Management' },
         ]
     },
     { path: '/parent-portal', icon: Users, labelKey: 'nav.parent_portal', label: 'Parent Portal' },

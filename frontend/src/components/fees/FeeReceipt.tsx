@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
+import { formatCurrency, formatDate } from '../../utils/helpers';
 import './FeeReceipt.css';
 
 interface ReceiptData {
@@ -27,6 +28,8 @@ interface ReceiptData {
     schoolPhone?: string;
     schoolEmail?: string;
     schoolLogo?: string;
+    receiptCopies?: number; // 1, 2, or 3
+    receiptFooterText?: string;
 }
 
 interface FeeReceiptProps {
@@ -36,6 +39,7 @@ interface FeeReceiptProps {
 
 const FeeReceipt: React.FC<FeeReceiptProps> = ({ receiptData, onClose }) => {
     const printRef = useRef<HTMLDivElement>(null);
+    const copies = receiptData.receiptCopies || 3;
 
     const handlePrint = useReactToPrint({
         contentRef: printRef,
@@ -44,22 +48,6 @@ const FeeReceipt: React.FC<FeeReceiptProps> = ({ receiptData, onClose }) => {
             console.log('Print completed');
         },
     });
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 2
-        }).format(amount);
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-    };
 
     const getPaymentModeLabel = (mode: string) => {
         const modes: Record<string, string> = {
@@ -80,161 +68,165 @@ const FeeReceipt: React.FC<FeeReceiptProps> = ({ receiptData, onClose }) => {
             'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
         const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-        if (num === 0) return 'Zero';
+        // Handle edge cases: NaN, undefined, null, negative numbers
+        if (num === null || num === undefined || isNaN(num)) return 'Zero Rupees Only';
+
+        // Convert to positive integer (remove decimals)
+        const intNum = Math.abs(Math.floor(num));
+
+        if (intNum === 0) return 'Zero Rupees Only';
 
         const convertLessThanThousand = (n: number): string => {
-            if (n === 0) return '';
-            if (n < 20) return ones[n] + ' ';
-            if (n < 100) return tens[Math.floor(n / 10)] + ' ' + ones[n % 10] + ' ';
-            return ones[Math.floor(n / 100)] + ' Hundred ' + convertLessThanThousand(n % 100);
+            // Ensure n is a valid non-negative integer
+            const safeN = Math.floor(Math.abs(n));
+            if (safeN === 0) return '';
+            if (safeN < 20) return ones[safeN] + ' ';
+            if (safeN < 100) return tens[Math.floor(safeN / 10)] + ' ' + ones[safeN % 10] + ' ';
+            return ones[Math.floor(safeN / 100)] + ' Hundred ' + convertLessThanThousand(safeN % 100);
         };
 
         let result = '';
-        const crore = Math.floor(num / 10000000);
-        const lakh = Math.floor((num % 10000000) / 100000);
-        const thousand = Math.floor((num % 100000) / 1000);
-        const remainder = Math.floor(num % 1000);
+        const crore = Math.floor(intNum / 10000000);
+        const lakh = Math.floor((intNum % 10000000) / 100000);
+        const thousand = Math.floor((intNum % 100000) / 1000);
+        const remainder = Math.floor(intNum % 1000);
 
         if (crore > 0) result += convertLessThanThousand(crore) + 'Crore ';
         if (lakh > 0) result += convertLessThanThousand(lakh) + 'Lakh ';
         if (thousand > 0) result += convertLessThanThousand(thousand) + 'Thousand ';
         result += convertLessThanThousand(remainder);
 
-        return result.trim() + ' Rupees Only';
+        return (num < 0 ? 'Minus ' : '') + result.trim() + ' Rupees Only';
     };
 
-    // Render a single copy of the receipt
-    const renderReceiptCopy = (copyType: string, copyNumber: number) => (
-        <div className={`receipt-copy ${copyNumber > 1 ? 'page-break-before' : ''}`} key={copyType}>
-            <div className="receipt-header">
-                <div className="school-info">
+    // Get copy labels based on number of copies
+    const getCopyLabels = (numCopies: number): string[] => {
+        if (numCopies === 1) return ['RECEIPT'];
+        if (numCopies === 2) return ['OFFICE COPY', 'STUDENT COPY'];
+        return ['OFFICE COPY', 'STUDENT COPY', 'PARENT COPY'];
+    };
+
+    // Get CSS class for height based on copies
+    const getHeightClass = (): string => {
+        if (copies === 1) return 'single-copy';
+        if (copies === 2) return 'two-copies';
+        return 'three-copies';
+    };
+
+    // Render a single compact copy of the receipt
+    const renderReceiptCopy = (copyType: string, index: number) => (
+        <div className={`receipt-copy-compact ${getHeightClass()}`} key={copyType}>
+            {/* Header */}
+            <div className="receipt-header-compact">
+                <div className="school-info-compact">
                     {receiptData.schoolLogo && (
-                        <img src={receiptData.schoolLogo} alt="School Logo" className="school-logo" />
+                        <img src={receiptData.schoolLogo} alt="" className="school-logo-compact" />
                     )}
-                    <div className="school-details">
-                        <h1 className="school-name">{receiptData.schoolName}</h1>
-                        <p className="school-address">{receiptData.schoolAddress}</p>
-                        {receiptData.schoolPhone && (
-                            <p className="school-contact">📞 {receiptData.schoolPhone}</p>
+                    <div className="school-details-compact">
+                        <h1 className="school-name-compact">{receiptData.schoolName}</h1>
+                        <p className="school-address-compact">{receiptData.schoolAddress}</p>
+                        {(receiptData.schoolPhone || receiptData.schoolEmail) && (
+                            <p className="school-contact-compact">
+                                {receiptData.schoolPhone && `📞 ${receiptData.schoolPhone}`}
+                                {receiptData.schoolPhone && receiptData.schoolEmail && ' | '}
+                                {receiptData.schoolEmail && `✉️ ${receiptData.schoolEmail}`}
+                            </p>
                         )}
-                        {receiptData.schoolEmail && (
-                            <p className="school-contact">✉️ {receiptData.schoolEmail}</p>
-                        )}
                     </div>
                 </div>
-                <div className="receipt-title-section">
-                    <h2 className="receipt-title">FEE RECEIPT</h2>
-                    <span className="copy-type">{copyType}</span>
+                <div className="receipt-meta-compact">
+                    <div className="copy-badge">{copyType}</div>
+                    <div className="receipt-no">#{receiptData.receiptNumber}</div>
+                    <div className="receipt-date">{formatDate(receiptData.paymentDate)}</div>
                 </div>
             </div>
 
-            <div className="receipt-info-bar">
-                <div className="info-item">
-                    <span className="info-label">Receipt No:</span>
-                    <span className="info-value">{receiptData.receiptNumber}</span>
+            {/* Student Info Row */}
+            <div className="student-info-compact">
+                <div className="info-item-compact">
+                    <span className="label">Student:</span>
+                    <span className="value">{receiptData.studentName}</span>
                 </div>
-                <div className="info-item">
-                    <span className="info-label">Date:</span>
-                    <span className="info-value">{formatDate(receiptData.paymentDate)}</span>
+                <div className="info-item-compact">
+                    <span className="label">Adm. No:</span>
+                    <span className="value">{receiptData.admissionNumber}</span>
                 </div>
-            </div>
-
-            <div className="student-info-section">
-                <div className="student-info-grid">
-                    <div className="info-row">
-                        <span className="label">Student Name:</span>
-                        <span className="value">{receiptData.studentName}</span>
-                    </div>
-                    <div className="info-row">
-                        <span className="label">Admission No:</span>
-                        <span className="value">{receiptData.admissionNumber}</span>
-                    </div>
-                    <div className="info-row">
-                        <span className="label">Class:</span>
-                        <span className="value">
-                            {receiptData.className}
-                            {receiptData.section && ` - ${receiptData.section}`}
-                        </span>
-                    </div>
-                    <div className="info-row">
-                        <span className="label">Invoice No:</span>
-                        <span className="value">{receiptData.invoiceNumber}</span>
-                    </div>
+                <div className="info-item-compact">
+                    <span className="label">Class:</span>
+                    <span className="value">{receiptData.className}{receiptData.section ? ` - ${receiptData.section}` : ''}</span>
+                </div>
+                <div className="info-item-compact">
+                    <span className="label">Invoice:</span>
+                    <span className="value">{receiptData.invoiceNumber}</span>
                 </div>
             </div>
 
-            <table className="fee-items-table">
+            {/* Fee Items Table - Compact */}
+            <table className="fee-table-compact">
                 <thead>
                     <tr>
-                        <th>S.No</th>
                         <th>Description</th>
-                        <th>Amount (₹)</th>
+                        <th className="amount-col">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {receiptData.items.map((item, index) => (
-                        <tr key={index}>
-                            <td>{index + 1}</td>
+                    {receiptData.items.slice(0, copies === 1 ? 10 : copies === 2 ? 5 : 3).map((item, idx) => (
+                        <tr key={idx}>
                             <td>{item.description}</td>
-                            <td className="amount-cell">{formatCurrency(item.amount)}</td>
+                            <td className="amount-col">{formatCurrency(item.amount)}</td>
                         </tr>
                     ))}
-                </tbody>
-                <tfoot>
-                    <tr className="total-row">
-                        <td colSpan={2}>Total Amount</td>
-                        <td className="amount-cell">{formatCurrency(receiptData.totalAmount)}</td>
-                    </tr>
-                    <tr className="paid-row">
-                        <td colSpan={2}>Amount Paid</td>
-                        <td className="amount-cell">{formatCurrency(receiptData.paidAmount)}</td>
-                    </tr>
-                    {receiptData.balanceAmount > 0 && (
-                        <tr className="balance-row">
-                            <td colSpan={2}>Balance Due</td>
-                            <td className="amount-cell">{formatCurrency(receiptData.balanceAmount)}</td>
+                    {receiptData.items.length > (copies === 1 ? 10 : copies === 2 ? 5 : 3) && (
+                        <tr>
+                            <td colSpan={2} style={{ textAlign: 'center', fontStyle: 'italic', color: '#666' }}>
+                                ...and {receiptData.items.length - (copies === 1 ? 10 : copies === 2 ? 5 : 3)} more items
+                            </td>
                         </tr>
                     )}
-                </tfoot>
+                </tbody>
             </table>
 
-            <div className="amount-in-words">
-                <span className="label">Amount in words:</span>
-                <span className="words">{numberToWords(receiptData.paidAmount)}</span>
-            </div>
-
-            <div className="payment-details">
-                <div className="payment-info">
-                    <span className="label">Payment Mode:</span>
-                    <span className="value">{getPaymentModeLabel(receiptData.paymentMode)}</span>
+            {/* Payment Summary */}
+            <div className="payment-summary-compact">
+                <div className="summary-row">
+                    <span>Total:</span>
+                    <span>{formatCurrency(receiptData.totalAmount)}</span>
                 </div>
-                {receiptData.paymentReference && (
-                    <div className="payment-info">
-                        <span className="label">Reference:</span>
-                        <span className="value">{receiptData.paymentReference}</span>
+                <div className="summary-row paid">
+                    <span>Paid ({getPaymentModeLabel(receiptData.paymentMode)}):</span>
+                    <span className="paid-amount">{formatCurrency(receiptData.paidAmount)}</span>
+                </div>
+                {receiptData.balanceAmount > 0 && (
+                    <div className="summary-row balance">
+                        <span>Balance Due:</span>
+                        <span className="balance-amount">{formatCurrency(receiptData.balanceAmount)}</span>
                     </div>
                 )}
             </div>
 
-            <div className="receipt-footer">
-                <div className="footer-left">
-                    <p className="received-text">Received with thanks</p>
-                    {receiptData.collectedBy && (
-                        <p className="collected-by">Collected by: {receiptData.collectedBy}</p>
-                    )}
-                </div>
-                <div className="footer-right">
-                    <div className="signature-line"></div>
-                    <p className="signature-label">Authorized Signature</p>
-                </div>
+            {/* Amount in Words */}
+            <div className="amount-words-compact">
+                <strong>Amount in words:</strong> {numberToWords(receiptData.paidAmount)}
             </div>
 
-            <div className="receipt-note">
-                <p>* This is a computer generated receipt and does not require a signature.</p>
-                <p>* Please retain this receipt for future reference.</p>
+            {/* Footer */}
+            <div className="receipt-footer-compact">
+                <div className="footer-left-compact">
+                    <p>Received with thanks</p>
+                    {receiptData.collectedBy && <small>By: {receiptData.collectedBy}</small>}
+                    {receiptData.receiptFooterText && (
+                        <small className="footer-note">{receiptData.receiptFooterText}</small>
+                    )}
+                </div>
+                <div className="footer-right-compact">
+                    <div className="signature-line-compact"></div>
+                    <small>Authorized Signature</small>
+                </div>
             </div>
         </div>
     );
+
+    const copyLabels = getCopyLabels(copies);
 
     return (
         <div className="fee-receipt-modal">
@@ -244,7 +236,7 @@ const FeeReceipt: React.FC<FeeReceiptProps> = ({ receiptData, onClose }) => {
                     <h2>📄 Fee Receipt Preview</h2>
                     <div className="receipt-modal-actions">
                         <button className="btn-print" onClick={() => handlePrint()}>
-                            🖨️ Print 3 Copies (A4)
+                            🖨️ Print Receipt ({copies} {copies === 1 ? 'copy' : 'copies'} on A4)
                         </button>
                         <button className="btn-close" onClick={onClose}>
                             ✕
@@ -253,11 +245,20 @@ const FeeReceipt: React.FC<FeeReceiptProps> = ({ receiptData, onClose }) => {
                 </div>
 
                 <div className="receipt-preview-container">
-                    <div ref={printRef} className="receipt-print-area">
-                        {/* Three copies: Office, Student, Parent */}
-                        {renderReceiptCopy('OFFICE COPY', 1)}
-                        {renderReceiptCopy('STUDENT COPY', 2)}
-                        {renderReceiptCopy('PARENT COPY', 3)}
+                    <div ref={printRef} className="receipt-print-area-single-page">
+                        {/* Copies on single A4 page */}
+                        <div className={`receipt-page-a4 copies-${copies}`}>
+                            {copyLabels.map((label, index) => (
+                                <React.Fragment key={label}>
+                                    {renderReceiptCopy(label, index)}
+                                    {index < copyLabels.length - 1 && (
+                                        <div className="cut-line">
+                                            <span>✂️ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂️</span>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

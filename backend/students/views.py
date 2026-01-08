@@ -1,18 +1,18 @@
-"""
-Student 360° API Views
+﻿"""
+Student 360Â° API Views
 """
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from core.permissions import IsTenantUser, HasModulePermission
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
-from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment
+from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment, ParentUser
 from .serializers import (
     StudentBasicSerializer,
     StudentDetailSerializer,
@@ -33,14 +33,29 @@ import io
 import pandas as pd
 
 
+class IsNotParent(BasePermission):
+    """
+    Permission to ensure parent users cannot access admin APIs.
+    Parents should use the dedicated /api/parent/* endpoints.
+    """
+    def has_permission(self, request, view):
+        # Check if user has an active parent profile
+        try:
+            ParentUser.objects.get(user=request.user, portal_access_enabled=True)
+            return False  # Is a parent, deny access
+        except ParentUser.DoesNotExist:
+            return True  # Not a parent, allow access
+
+
 class StudentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for student management with 360° profile support.
+    ViewSet for student management with 360Â° profile support.
     """
     # Require authentication and tenant membership. Module-level RBAC is
     # intentionally omitted here so tenant administrators (staff users)
     # can access student listings in development/seeding scenarios.
-    permission_classes = [IsAuthenticated, IsTenantUser]
+    # IsNotParent ensures parents can't access this admin API.
+    permission_classes = [IsAuthenticated, IsTenantUser, IsNotParent]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['gender', 'is_active']
     search_fields = ['first_name', 'last_name', 'admission_number', 'email', 'phone']
@@ -138,7 +153,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         if student.father_phone:
             father_user = User.objects.filter(
                 tenant=student.tenant,
-                phone=student.father_phone
+                phone_number=student.father_phone
             ).first()
             
             if not father_user:
@@ -147,22 +162,24 @@ class StudentViewSet(viewsets.ModelViewSet):
                 import string
                 temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
                 
+                # Determine email
+                father_email = student.father_email if student.father_email else f"{student.father_phone}@parent.local"
+                
                 father_user = User.objects.create_user(
                     tenant=student.tenant,
-                    username=student.father_phone,
-                    phone=student.father_phone,
-                    email=student.father_email if hasattr(student, 'father_email') and student.father_email else f"{student.father_phone}@parent.local",
+                    email=father_email,
+                    phone_number=student.father_phone,
                     first_name=student.father_name.split()[0] if student.father_name else 'Parent',
                     last_name=' '.join(student.father_name.split()[1:]) if student.father_name and len(student.father_name.split()) > 1 else '',
-                    password=temp_password,
-                    user_type='PARENT'
+                    password=temp_password
                 )
                 
-                # Create parent profile
+                # Create parent profile with portal access enabled
                 parent_profile = ParentUser.objects.create(
                     user=father_user,
                     tenant=student.tenant,
-                    relation_type='FATHER'
+                    relation_type='FATHER',
+                    portal_access_enabled=True
                 )
                 parent_profile.students.add(student)
                 
@@ -190,7 +207,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         if student.mother_phone and student.mother_phone != student.father_phone:
             mother_user = User.objects.filter(
                 tenant=student.tenant,
-                phone=student.mother_phone
+                phone_number=student.mother_phone
             ).first()
             
             if not mother_user:
@@ -198,22 +215,24 @@ class StudentViewSet(viewsets.ModelViewSet):
                 import string
                 temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
                 
+                # Determine email
+                mother_email = student.mother_email if student.mother_email else f"{student.mother_phone}@parent.local"
+                
                 mother_user = User.objects.create_user(
                     tenant=student.tenant,
-                    username=student.mother_phone,
-                    phone=student.mother_phone,
-                    email=student.mother_email if hasattr(student, 'mother_email') and student.mother_email else f"{student.mother_phone}@parent.local",
+                    email=mother_email,
+                    phone_number=student.mother_phone,
                     first_name=student.mother_name.split()[0] if student.mother_name else 'Parent',
                     last_name=' '.join(student.mother_name.split()[1:]) if student.mother_name and len(student.mother_name.split()) > 1 else '',
-                    password=temp_password,
-                    user_type='PARENT'
+                    password=temp_password
                 )
                 
-                # Create parent profile
+                # Create parent profile with portal access enabled
                 parent_profile = ParentUser.objects.create(
                     user=mother_user,
                     tenant=student.tenant,
-                    relation_type='MOTHER'
+                    relation_type='MOTHER',
+                    portal_access_enabled=True
                 )
                 parent_profile.students.add(student)
                 
@@ -243,7 +262,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def profile_360(self, request, pk=None):
         """
-        Get complete 360° profile for a student.
+        Get complete 360Â° profile for a student.
         
         Returns comprehensive data from all modules.
         """
@@ -1159,16 +1178,197 @@ class StudentHealthRecordViewSet(viewsets.ModelViewSet):
 class StudentEnrollmentViewSet(viewsets.ModelViewSet):
     """
     ViewSet for student enrollments.
+    
+    Endpoints:
+    - GET /enrollments/ - List enrollments
+    - POST /enrollments/ - Create enrollment
+    - GET /enrollments/pending/ - Get students without enrollments for current year
+    - POST /enrollments/bulk_create/ - Bulk create enrollments
     """
     permission_classes = [IsAuthenticated, IsTenantUser, HasModulePermission]
     required_permission = ('student_module', 'read')
     serializer_class = StudentEnrollmentSerializer
     
     def get_queryset(self):
-        return StudentEnrollment.objects.filter(
+        queryset = StudentEnrollment.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related('student', 'academic_year', 'section')
+        ).select_related('student', 'academic_year', 'section', 'section__grade_level')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        if academic_year:
+            queryset = queryset.filter(academic_year_id=academic_year)
+        
+        # Filter by section
+        section = self.request.query_params.get('section')
+        if section:
+            queryset = queryset.filter(section_id=section)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Search by student name or admission number
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(student__first_name__icontains=search) |
+                models.Q(student__last_name__icontains=search) |
+                models.Q(student__admission_number__icontains=search)
+            )
+        
+        return queryset.order_by('-enrollment_date')
     
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
-
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """
+        Get students without enrollments for the current/specified academic year.
+        
+        Query params:
+            - academic_year: UUID (optional, defaults to active year)
+        
+        Returns list of students who don't have an enrollment for the academic year.
+        """
+        from tenants.models import AcademicYear
+        
+        # Get academic year
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            academic_year = AcademicYear.objects.get(
+                id=academic_year_id, 
+                tenant=request.user.tenant
+            )
+        else:
+            academic_year = AcademicYear.objects.filter(
+                tenant=request.user.tenant,
+                is_active=True
+            ).first()
+        
+        if not academic_year:
+            return Response({
+                'students': [],
+                'message': 'No active academic year found'
+            })
+        
+        # Get all active students
+        all_students = Student.objects.filter(
+            tenant=request.user.tenant,
+            is_active=True
+        )
+        
+        # Get students who already have enrollments for this year
+        enrolled_student_ids = StudentEnrollment.objects.filter(
+            tenant=request.user.tenant,
+            academic_year=academic_year
+        ).values_list('student_id', flat=True)
+        
+        # Filter to get students without enrollments
+        pending_students = all_students.exclude(id__in=enrolled_student_ids)
+        
+        # Serialize basic student info
+        students_data = []
+        for student in pending_students:
+            students_data.append({
+                'id': str(student.id),
+                'admission_number': student.admission_number,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'full_name': student.get_full_name(),
+                'date_of_birth': student.date_of_birth.isoformat() if student.date_of_birth else None,
+                'photo': student.photo.url if student.photo else None,
+            })
+        
+        return Response({
+            'academic_year': {
+                'id': str(academic_year.id),
+                'name': academic_year.name
+            },
+            'pending_count': len(students_data),
+            'students': students_data
+        })
+    
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """
+        Bulk create enrollments for multiple students.
+        
+        Request body:
+            - student_ids: list of student UUIDs
+            - section: UUID
+            - academic_year: UUID
+            - enrollment_date: date (optional, defaults to today)
+        
+        Returns:
+            - created: count of successfully created enrollments
+            - skipped: count of skipped (already enrolled)
+            - errors: list of errors
+        """
+        student_ids = request.data.get('student_ids', [])
+        section_id = request.data.get('section')
+        academic_year_id = request.data.get('academic_year')
+        enrollment_date = request.data.get('enrollment_date', timezone.now().date())
+        
+        if not student_ids:
+            return Response({
+                'error': 'student_ids is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not section_id:
+            return Response({
+                'error': 'section is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not academic_year_id:
+            return Response({
+                'error': 'academic_year is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Parse date if string
+        if isinstance(enrollment_date, str):
+            from datetime import datetime
+            enrollment_date = datetime.strptime(enrollment_date, '%Y-%m-%d').date()
+        
+        created_count = 0
+        skipped_count = 0
+        errors = []
+        
+        for student_id in student_ids:
+            try:
+                # Check if already enrolled
+                existing = StudentEnrollment.objects.filter(
+                    tenant=request.user.tenant,
+                    student_id=student_id,
+                    academic_year_id=academic_year_id
+                ).first()
+                
+                if existing:
+                    skipped_count += 1
+                    continue
+                
+                # Create enrollment
+                StudentEnrollment.objects.create(
+                    tenant=request.user.tenant,
+                    student_id=student_id,
+                    section_id=section_id,
+                    academic_year_id=academic_year_id,
+                    enrollment_date=enrollment_date,
+                    status='ACTIVE'
+                )
+                created_count += 1
+            
+            except Exception as e:
+                errors.append({
+                    'student_id': str(student_id),
+                    'error': str(e)
+                })
+        
+        return Response({
+            'created': created_count,
+            'skipped': skipped_count,
+            'errors': errors,
+            'message': f'Successfully enrolled {created_count} students'
+        }, status=status.HTTP_201_CREATED if created_count > 0 else status.HTTP_200_OK)

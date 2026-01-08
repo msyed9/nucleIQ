@@ -50,6 +50,8 @@ const AddStudent: React.FC = () => {
     const [selectedParent, setSelectedParent] = useState<any>(null);
     const [showParentSuggestions, setShowParentSuggestions] = useState(false);
     const [searchingParents, setSearchingParents] = useState(false);
+    const [parentCredentials, setParentCredentials] = useState<any>(null);
+    const [showCredentialsModal, setShowCredentialsModal] = useState(false);
 
     useEffect(() => {
         fetchSections();
@@ -58,30 +60,41 @@ const AddStudent: React.FC = () => {
 
     const fetchTenantSettings = async () => {
         try {
+            // First get general settings
             const response = await api.get('/tenants/settings/');
             const settings = response.data;
 
             if (settings.auto_generate_admission_number) {
                 setAutoGenerateAdmission(true);
-                // Generate preview
-                const year = new Date().getFullYear();
-                const format = settings.admission_number_format || 'ADM{YEAR}{SEQUENCE:04d}';
-                const sequence = settings.admission_number_sequence || 1;
 
-                let preview = format.replace('{YEAR}', year.toString());
-                preview = preview.replace('{PREFIX}', settings.admission_number_prefix || 'ADM');
+                // Fetch the actual next admission number from backend
+                try {
+                    const admissionRes = await api.get('/tenants/settings/next_admission_number/');
+                    if (admissionRes.data.auto_generate && admissionRes.data.admission_number) {
+                        setAdmissionNumberPreview(admissionRes.data.admission_number);
+                        setFormData(prev => ({ ...prev, admission_number: admissionRes.data.admission_number }));
+                    }
+                } catch (admErr) {
+                    console.error('Error fetching admission number preview:', admErr);
+                    // Fallback: Generate preview locally
+                    const year = new Date().getFullYear();
+                    const format = settings.admission_number_format || 'ADM{YEAR}{SEQUENCE:04d}';
+                    const sequence = settings.admission_number_sequence || 1;
 
-                // Handle sequence formatting
-                const sequenceMatch = format.match(/\{SEQUENCE:(\d+)d\}/);
-                if (sequenceMatch) {
-                    const width = parseInt(sequenceMatch[1]);
-                    preview = preview.replace(/\{SEQUENCE:\d+d\}/, sequence.toString().padStart(width, '0'));
-                } else {
-                    preview = preview.replace('{SEQUENCE}', sequence.toString());
+                    let preview = format.replace('{YEAR}', year.toString());
+                    preview = preview.replace('{PREFIX}', settings.admission_number_prefix || 'ADM');
+
+                    const sequenceMatch = format.match(/\{SEQUENCE:(\d+)d\}/);
+                    if (sequenceMatch) {
+                        const width = parseInt(sequenceMatch[1]);
+                        preview = preview.replace(/\{SEQUENCE:\d+d\}/, sequence.toString().padStart(width, '0'));
+                    } else {
+                        preview = preview.replace('{SEQUENCE}', sequence.toString());
+                    }
+
+                    setAdmissionNumberPreview(preview);
+                    setFormData(prev => ({ ...prev, admission_number: preview }));
                 }
-
-                setAdmissionNumberPreview(preview);
-                setFormData(prev => ({ ...prev, admission_number: preview }));
             }
         } catch (error) {
             console.error('Error fetching tenant settings:', error);
@@ -118,6 +131,11 @@ const AddStudent: React.FC = () => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Reset selected parent when phone number changes to allow re-checking
+        if (name === 'father_phone' || name === 'mother_phone') {
+            setSelectedParent(null);
+        }
     };
 
     // Automatic sibling detection when parent phone is entered
@@ -277,34 +295,17 @@ const AddStudent: React.FC = () => {
             // Display parent login information if created
             if (studentRes.data.parent_logins) {
                 const logins = studentRes.data.parent_logins;
-                let loginMessage = '✅ Student added successfully!\n\n';
-
-                if (logins.existing_accounts_linked) {
-                    loginMessage += '🔗 ' + logins.message + '\n';
-                } else {
-                    if (logins.father?.created) {
-                        loginMessage += `👨 Father's Login:\n`;
-                        loginMessage += `   Username: ${logins.father.username}\n`;
-                        loginMessage += `   Password: ${logins.father.password}\n\n`;
-                    } else if (logins.father?.message) {
-                        loginMessage += `👨 Father: ${logins.father.message}\n\n`;
-                    }
-
-                    if (logins.mother?.created) {
-                        loginMessage += `👩 Mother's Login:\n`;
-                        loginMessage += `   Username: ${logins.mother.username}\n`;
-                        loginMessage += `   Password: ${logins.mother.password}\n\n`;
-                    } else if (logins.mother?.message) {
-                        loginMessage += `👩 Mother: ${logins.mother.message}\n\n`;
-                    }
-                }
-
-                loginMessage += '\n📱 Please save these credentials and share with parents.';
-                alert(loginMessage);
+                setParentCredentials({
+                    studentName: `${formData.first_name} ${formData.last_name}`,
+                    admissionNumber: studentRes.data.admission_number,
+                    ...logins
+                });
+                setShowCredentialsModal(true);
+                success(t('students.add_success', { defaultValue: 'Student admitted successfully! 🎉' }));
+            } else {
+                success(t('students.add_success', { defaultValue: 'Student admitted and enrolled successfully! 🎉' }));
+                navigate('/students');
             }
-
-            success(t('students.add_success', { defaultValue: 'Student admitted and enrolled successfully! 🎉' }));
-            navigate('/students');
         } catch (err: any) {
             console.error('Error admitting student:', err);
             // Log server validation errors when present to aid debugging
@@ -734,6 +735,119 @@ const AddStudent: React.FC = () => {
                                 </div>
                             </div>
                         </Card>
+
+                        {/* Parent Portal Access Preview */}
+                        {(formData.father_phone || formData.mother_phone) && (
+                            <Card title={t('students.parent_portal_access', { defaultValue: '🔐 Parent Portal Access' })}>
+                                <div style={{
+                                    backgroundColor: '#e8f5e9',
+                                    borderRadius: '8px',
+                                    padding: '1rem',
+                                    marginBottom: '1rem',
+                                    border: '1px solid #4caf50'
+                                }}>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#2e7d32' }}>
+                                        {t('students.parent_portal_info', {
+                                            defaultValue: 'Parent login accounts will be automatically created after admission. The phone number becomes the username, and a temporary password will be generated.'
+                                        })}
+                                    </p>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {formData.father_phone && (
+                                        <div style={{
+                                            padding: '1rem',
+                                            backgroundColor: '#f5f5f5',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e0e0e0'
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                marginBottom: '0.5rem',
+                                                fontWeight: 600,
+                                                color: '#333'
+                                            }}>
+                                                <span>👨</span>
+                                                <span>{t('students.father_account', { defaultValue: "Father's Account" })}</span>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '0.25rem', fontSize: '0.9rem' }}>
+                                                <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
+                                                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1976d2' }}>
+                                                    {formData.father_phone}
+                                                </span>
+                                                <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
+                                                <span style={{ fontFamily: 'monospace', color: '#ff9800' }}>
+                                                    {t('students.auto_generated', { defaultValue: '(Auto-generated on submit)' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {formData.mother_phone && formData.mother_phone !== formData.father_phone && (
+                                        <div style={{
+                                            padding: '1rem',
+                                            backgroundColor: '#f5f5f5',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e0e0e0'
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                marginBottom: '0.5rem',
+                                                fontWeight: 600,
+                                                color: '#333'
+                                            }}>
+                                                <span>👩</span>
+                                                <span>{t('students.mother_account', { defaultValue: "Mother's Account" })}</span>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '0.25rem', fontSize: '0.9rem' }}>
+                                                <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
+                                                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1976d2' }}>
+                                                    {formData.mother_phone}
+                                                </span>
+                                                <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
+                                                <span style={{ fontFamily: 'monospace', color: '#ff9800' }}>
+                                                    {t('students.auto_generated', { defaultValue: '(Auto-generated on submit)' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {formData.mother_phone === formData.father_phone && formData.father_phone && (
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            backgroundColor: '#fff3cd',
+                                            borderRadius: '6px',
+                                            border: '1px solid #ffc107',
+                                            fontSize: '0.85rem',
+                                            color: '#856404'
+                                        }}>
+                                            ℹ️ {t('students.same_phone_notice', {
+                                                defaultValue: 'Father and Mother have the same phone number. Only one account will be created.'
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {selectedParent && (
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            backgroundColor: '#e3f2fd',
+                                            borderRadius: '6px',
+                                            border: '1px solid #2196f3',
+                                            fontSize: '0.85rem',
+                                            color: '#1565c0'
+                                        }}>
+                                            🔗 {t('students.existing_account_linked', {
+                                                defaultValue: 'Existing parent account will be linked from sibling records. No new password will be generated.'
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+                        )}
                     </div>
 
                     <div className="form-actions">
@@ -743,6 +857,259 @@ const AddStudent: React.FC = () => {
                     </div>
                 </form>
             </div>
+
+            {/* Parent Credentials Modal */}
+            {showCredentialsModal && parentCredentials && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 9999,
+                    padding: '1rem'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '16px',
+                        padding: '2rem',
+                        maxWidth: '500px',
+                        width: '100%',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+                        animation: 'fadeIn 0.3s ease-out'
+                    }}>
+                        <div style={{
+                            textAlign: 'center',
+                            marginBottom: '1.5rem'
+                        }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✅</div>
+                            <h2 style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                                color: '#28a745',
+                                marginBottom: '0.5rem'
+                            }}>
+                                {t('students.admission_success', { defaultValue: 'Admission Successful!' })}
+                            </h2>
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                                {parentCredentials.studentName} ({parentCredentials.admissionNumber})
+                            </p>
+                        </div>
+
+                        {parentCredentials.existing_accounts_linked ? (
+                            <div style={{
+                                padding: '1rem',
+                                backgroundColor: '#e3f2fd',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                border: '1px solid #2196f3'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1565c0', fontWeight: 600 }}>
+                                    <span>🔗</span>
+                                    <span>{parentCredentials.message}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <h3 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    marginBottom: '1rem',
+                                    color: '#333',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <span>🔐</span>
+                                    {t('students.parent_login_credentials', { defaultValue: 'Parent Login Credentials' })}
+                                </h3>
+
+                                {parentCredentials.father?.created && (
+                                    <div style={{
+                                        padding: '1rem',
+                                        backgroundColor: '#f8f9fa',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.75rem',
+                                        border: '1px solid #dee2e6'
+                                    }}>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#333' }}>
+                                            👨 {t('students.father_login', { defaultValue: "Father's Login" })}
+                                        </div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '100px 1fr',
+                                            gap: '0.5rem',
+                                            fontSize: '0.9rem'
+                                        }}>
+                                            <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
+                                            <span style={{
+                                                fontFamily: 'monospace',
+                                                fontWeight: 600,
+                                                color: '#1976d2',
+                                                cursor: 'pointer'
+                                            }}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(parentCredentials.father.username);
+                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
+                                                }}
+                                                title="Click to copy"
+                                            >
+                                                {parentCredentials.father.username} 📋
+                                            </span>
+                                            <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
+                                            <span style={{
+                                                fontFamily: 'monospace',
+                                                fontWeight: 600,
+                                                color: '#d32f2f',
+                                                cursor: 'pointer'
+                                            }}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(parentCredentials.father.password);
+                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
+                                                }}
+                                                title="Click to copy"
+                                            >
+                                                {parentCredentials.father.password} 📋
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                                {parentCredentials.father && !parentCredentials.father.created && parentCredentials.father.message && (
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        backgroundColor: '#e8f5e9',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.75rem',
+                                        border: '1px solid #4caf50',
+                                        fontSize: '0.9rem',
+                                        color: '#2e7d32'
+                                    }}>
+                                        👨 {parentCredentials.father.message}
+                                    </div>
+                                )}
+
+                                {parentCredentials.mother?.created && (
+                                    <div style={{
+                                        padding: '1rem',
+                                        backgroundColor: '#f8f9fa',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.75rem',
+                                        border: '1px solid #dee2e6'
+                                    }}>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#333' }}>
+                                            👩 {t('students.mother_login', { defaultValue: "Mother's Login" })}
+                                        </div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '100px 1fr',
+                                            gap: '0.5rem',
+                                            fontSize: '0.9rem'
+                                        }}>
+                                            <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
+                                            <span style={{
+                                                fontFamily: 'monospace',
+                                                fontWeight: 600,
+                                                color: '#1976d2',
+                                                cursor: 'pointer'
+                                            }}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(parentCredentials.mother.username);
+                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
+                                                }}
+                                                title="Click to copy"
+                                            >
+                                                {parentCredentials.mother.username} 📋
+                                            </span>
+                                            <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
+                                            <span style={{
+                                                fontFamily: 'monospace',
+                                                fontWeight: 600,
+                                                color: '#d32f2f',
+                                                cursor: 'pointer'
+                                            }}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(parentCredentials.mother.password);
+                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
+                                                }}
+                                                title="Click to copy"
+                                            >
+                                                {parentCredentials.mother.password} 📋
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                                {parentCredentials.mother && !parentCredentials.mother.created && parentCredentials.mother.message && (
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        backgroundColor: '#e8f5e9',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.75rem',
+                                        border: '1px solid #4caf50',
+                                        fontSize: '0.9rem',
+                                        color: '#2e7d32'
+                                    }}>
+                                        👩 {parentCredentials.mother.message}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#fff3cd',
+                            borderRadius: '8px',
+                            marginBottom: '1.5rem',
+                            border: '1px solid #ffc107',
+                            fontSize: '0.85rem',
+                            color: '#856404',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.5rem'
+                        }}>
+                            <span>⚠️</span>
+                            <span>{t('students.save_credentials_warning', { defaultValue: 'Please save these credentials and share with parents. Passwords cannot be recovered once this dialog is closed.' })}</span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    // Copy all credentials to clipboard
+                                    let text = `Parent Login Credentials for ${parentCredentials.studentName}\n`;
+                                    text += `Admission Number: ${parentCredentials.admissionNumber}\n\n`;
+                                    if (parentCredentials.father?.created) {
+                                        text += `Father's Login:\n`;
+                                        text += `  Username: ${parentCredentials.father.username}\n`;
+                                        text += `  Password: ${parentCredentials.father.password}\n\n`;
+                                    }
+                                    if (parentCredentials.mother?.created) {
+                                        text += `Mother's Login:\n`;
+                                        text += `  Username: ${parentCredentials.mother.username}\n`;
+                                        text += `  Password: ${parentCredentials.mother.password}\n`;
+                                    }
+                                    navigator.clipboard.writeText(text);
+                                    success(t('students.credentials_copied', { defaultValue: 'All credentials copied to clipboard!' }));
+                                }}
+                            >
+                                📋 {t('common.copy_all', { defaultValue: 'Copy All' })}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => {
+                                    setShowCredentialsModal(false);
+                                    navigate('/students');
+                                }}
+                            >
+                                ✓ {t('common.done', { defaultValue: 'Done' })}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

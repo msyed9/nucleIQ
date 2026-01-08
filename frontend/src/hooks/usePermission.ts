@@ -4,14 +4,14 @@
  */
 
 import { useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Hook to check if user has a specific permission
  */
 export const usePermission = (module: string, action: string): boolean => {
   const { hasPermission } = useAuth();
-  
+
   return useMemo(() => {
     return hasPermission(module, action);
   }, [hasPermission, module, action]);
@@ -22,7 +22,7 @@ export const usePermission = (module: string, action: string): boolean => {
  */
 export const useRole = () => {
   const { user, isRole, isSuperadmin, getUserRoles } = useAuth();
-  
+
   return useMemo(() => ({
     role: user?.roles?.[0] || null,
     roles: getUserRoles(),
@@ -43,7 +43,7 @@ export const useRole = () => {
  */
 export const usePermissionCheck = () => {
   const { hasPermission } = useAuth();
-  
+
   return {
     checkPermission: (module: string, action: string) => hasPermission(module, action),
   };
@@ -54,7 +54,7 @@ export const usePermissionCheck = () => {
  */
 export const useAnyPermission = (...permissions: Array<[string, string]>): boolean => {
   const { hasPermission } = useAuth();
-  
+
   return useMemo(() => {
     return permissions.some(([module, action]) => hasPermission(module, action));
   }, [hasPermission, permissions]);
@@ -65,7 +65,7 @@ export const useAnyPermission = (...permissions: Array<[string, string]>): boole
  */
 export const useAllPermissions = (...permissions: Array<[string, string]>): boolean => {
   const { hasPermission } = useAuth();
-  
+
   return useMemo(() => {
     return permissions.every(([module, action]) => hasPermission(module, action));
   }, [hasPermission, permissions]);

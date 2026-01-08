@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import StudentList from './pages/students/StudentList';
 import AddStudent from './pages/students/AddStudent';
 import EditStudent from './pages/students/EditStudent';
+import Enrollments from './pages/students/Enrollments';
 import Student360 from './pages/students/Student360';
 import RemarksManager from './pages/students/RemarksManager';
 import DocumentManager from './pages/students/DocumentManager';
@@ -16,6 +17,10 @@ import AddStaff from './pages/staff/AddStaff';
 import CollectFees from './pages/fees/CollectFees';
 import FeeConfiguration from './pages/fees/FeeConfiguration';
 import MarkAttendance from './pages/attendance/MarkAttendance';
+import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
+import MobileCapture from './pages/attendance/MobileCapture';
+import AttendanceReports from './pages/attendance/AttendanceReports';
+import FaceEnrollment from './pages/attendance/FaceEnrollment';
 import UserList from './pages/users/UserList';
 import UserManagement from './pages/users/UserManagement';
 import ExpenseManager from './pages/finance/ExpenseManager';
@@ -36,6 +41,7 @@ import SalahTracker from './pages/trackers/SalahTracker';
 import HabitBoard from './pages/trackers/HabitBoard';
 import TransportFleet from './pages/transport/TransportFleet';
 import FeeDefaulters from './pages/fees/FeeDefaulters';
+import FeePaymentHistory from './pages/fees/FeePaymentHistory';
 import FinancialReports from './pages/finance/FinancialReports';
 import LibraryManagement from './pages/library/LibraryManagement';
 
@@ -92,6 +98,8 @@ import SalaryStructure from './pages/payroll/SalaryStructure';
 import LibraryMembers from './pages/library/LibraryMembers';
 import VehicleMaintenance from './pages/transport/VehicleMaintenance';
 import DigitalResourcesLibrary from './pages/library/DigitalResources';
+import BulkIDCards from './pages/idcards/BulkIDCards';
+import DataManagement from './pages/admin/DataManagement';
 import LibraryReports from './pages/library/LibraryReports';
 import LibrarySettings from './pages/library/LibrarySettings';
 import HostelFees from './pages/hostel/HostelFees';
@@ -141,10 +149,11 @@ import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
 
 // Phase 12 - Additional Features
 import ParentPortal from './pages/parent/ParentPortal';
+import ParentLogin from './pages/parent/ParentLogin';
+import ParentLayout from './components/layout/ParentLayout';
 import AuditLogs from './pages/admin/AuditLogs';
 
 // New pages added
-import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
 import TransportAllocations from './pages/transport/TransportAllocations';
 import LibraryBooks from './pages/library/LibraryBooks';
 import BookCopies from './pages/library/BookCopies';
@@ -168,8 +177,8 @@ import './i18n';
 // Import Preferences Context
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { TenantBrandingProvider } from './contexts/TenantBrandingContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Import theme CSS
 import './styles/theme.css';
@@ -195,6 +204,7 @@ function App() {
                     <Routes>
                         {/* Public Routes - No authentication required */}
                         <Route path="/login" element={<Login />} />
+                        <Route path="/parent/login" element={<ParentLogin />} />
                         <Route path="/" element={<Login />} />
 
                         {/* Protected Routes - Single PreferencesProvider wrapper */}
@@ -206,6 +216,7 @@ function App() {
                                             <Routes>
                                                 <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
                                                 {/* Student routes - specific routes MUST come before dynamic :id route */}
+                                                <Route path="/students/enrollments" element={<Layout><Enrollments /></Layout>} />
                                                 <Route path="/students/add" element={<Layout><AddStudent /></Layout>} />
                                                 <Route path="/students/:id/edit" element={<Layout><EditStudent /></Layout>} />
                                                 <Route path="/students/remarks" element={<Layout><RemarksManager /></Layout>} />
@@ -215,6 +226,7 @@ function App() {
                                                 <Route path="/students/analytics" element={<Layout><StudentAnalytics /></Layout>} />
                                                 {/* ID Cards routes */}
                                                 <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
+                                                <Route path="/idcards/bulk" element={<Layout><BulkIDCards /></Layout>} />
                                                 {/* Staff routes */}
                                                 <Route path="/staff/add" element={<Layout><AddStaff /></Layout>} />
                                                 <Route path="/staff/documents" element={<Layout><StaffDocuments /></Layout>} />
@@ -232,9 +244,13 @@ function App() {
                                                 <Route path="/fees/configure" element={<Layout><FeeConfiguration /></Layout>} />
                                                 <Route path="/fees/collect" element={<Layout><CollectFees /></Layout>} />
                                                 <Route path="/fees/defaulters" element={<Layout><FeeDefaulters /></Layout>} />
+                                                <Route path="/fees/history" element={<Layout><FeePaymentHistory /></Layout>} />
                                                 {/* Other routes */}
                                                 <Route path="/attendance" element={<Layout><MarkAttendance /></Layout>} />
                                                 <Route path="/attendance/aggregates" element={<Layout><AttendanceAggregates /></Layout>} />
+                                                <Route path="/attendance/mobile-capture" element={<Layout><MobileCapture /></Layout>} />
+                                                <Route path="/attendance/reports" element={<Layout><AttendanceReports /></Layout>} />
+                                                <Route path="/attendance/face-enrollment" element={<Layout><FaceEnrollment /></Layout>} />
                                                 {/* Finance Routes - Phase 3 */}
                                                 <Route path="/finance/dashboard" element={<Layout><FinanceDashboard /></Layout>} />
                                                 <Route path="/finance/chart-of-accounts" element={<Layout><ChartOfAccounts /></Layout>} />
@@ -260,13 +276,19 @@ function App() {
                                                 <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
                                                 <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
                                                 <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
+                                                <Route path="/settings/data-management" element={<Layout><DataManagement /></Layout>} />
                                                 <Route path="/settings" element={<Layout><Settings /></Layout>} />
                                                 {/* User routes - specific routes before general */}
                                                 <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
                                                 <Route path="/users" element={<Layout><UserList /></Layout>} />
                                                 {/* Phase 11 & 12 routes */}
-                                                <Route path="/dashboard/enhanced" element={<Layout><EnhancedDashboard /></Layout>} />
-                                                <Route path="/parent-portal" element={<Layout><ParentPortal /></Layout>} />
+                                                <Route path="/parent/portal" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                {/* Parent routes - ensure sidebar links have matching routes */}
+                                                <Route path="/parent/students" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/attendance" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/fees" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/academics" element={<ParentLayout><ParentPortal /></ParentLayout>} />
+                                                <Route path="/parent/messages" element={<ParentLayout><ParentPortal /></ParentLayout>} />
                                                 <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
                                                 {/* Timetable routes */}
                                                 <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />

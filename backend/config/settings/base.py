@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'search',
     'students',
     'analytics',
-    # 'idcards',  # Moved to students app
+    # 'idcards',  # ID Card functionality is in students app
     'staff',
     'attendance',
     'fees',
@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'placement',
     'helpdesk',
     'reports',
+    'data_management',
     # 'notifications',  # Using communication app instead
 ]
 

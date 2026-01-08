@@ -16,15 +16,62 @@ class StudentBasicSerializer(serializers.ModelSerializer):
     current_class = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
     section = serializers.CharField(source='get_current_enrollment.section.name', read_only=True)
     roll_number = serializers.CharField(source='get_current_enrollment.roll_number', read_only=True)
+    fee_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = Student
         fields = [
             'id', 'admission_number', 'full_name', 'first_name', 'last_name',
             'current_class', 'section', 'roll_number', 'photo', 'age',
-            'date_of_birth', 'blood_group', 'is_active', 'email', 'phone'
+            'date_of_birth', 'blood_group', 'is_active', 'email', 'phone',
+            'fee_summary'
         ]
-        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'section', 'roll_number']
+        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'section', 'roll_number', 'fee_summary']
+    
+    def get_fee_summary(self, obj):
+        """Get fee summary for the student including discount information."""
+        try:
+            from fees.models import FeeInvoice, FeeAllocation
+            from django.db.models import Sum
+            
+            enrollment = obj.get_current_enrollment()
+            if not enrollment:
+                return None
+            
+            academic_year = enrollment.academic_year
+            
+            # Get fee allocations for discount info
+            allocations = FeeAllocation.objects.filter(
+                tenant=obj.tenant,
+                student=obj,
+                academic_year=academic_year,
+                is_active=True
+            )
+            
+            discount_amount = sum(
+                allocation.amount - allocation.get_final_amount()
+                for allocation in allocations
+            ) if allocations.exists() else 0
+            
+            # Get invoices for payment info
+            invoices = FeeInvoice.objects.filter(
+                tenant=obj.tenant,
+                student=obj,
+                academic_year=academic_year
+            )
+            
+            total_amount = invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+            paid_amount = invoices.aggregate(paid=Sum('paid_amount'))['paid'] or 0
+            pending_amount = float(total_amount - paid_amount)
+            
+            return {
+                'total_fee': float(total_amount),
+                'paid_amount': float(paid_amount),
+                'pending_amount': pending_amount,
+                'discount_amount': float(discount_amount)
+            }
+        except Exception:
+            return None
 
 
 class StudentDetailSerializer(serializers.ModelSerializer):
@@ -225,6 +272,8 @@ class Student360Serializer(serializers.Serializer):
     academic_summary = serializers.DictField()
     financial_summary = serializers.DictField()
     health_summary = serializers.DictField()
+    attendance_details = serializers.DictField(required=False, allow_null=True)
+    fee_details = serializers.DictField(required=False, allow_null=True)
 
 
 class SiblingSerializer(serializers.ModelSerializer):
@@ -239,13 +288,26 @@ class SiblingSerializer(serializers.ModelSerializer):
 
 class StudentEnrollmentSerializer(serializers.ModelSerializer):
     """Student enrollment serializer."""
+    student_full_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_admission_number = serializers.CharField(source='student.admission_number', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
+    grade_level_name = serializers.CharField(source='section.grade_level.name', read_only=True)
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = StudentEnrollment
-        fields = '__all__'
+        fields = [
+            'id', 'tenant', 'student', 'student_full_name', 'student_admission_number',
+            'academic_year', 'academic_year_name', 'section', 'section_name', 
+            'grade_level_name', 'roll_number', 'status', 'enrollment_date', 
+            'exit_date', 'exit_reason', 'total_days', 'present_days', 'absent_days',
+            'final_percentage', 'final_grade', 'notes', 'created_at', 'updated_at'
+        ]
         # Tenant is set in the view's `perform_create`; make it read-only to avoid
         # validation errors when it's not provided by the client.
-        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant', 'student_full_name', 
+                          'student_admission_number', 'section_name', 'grade_level_name', 
+                          'academic_year_name']
 
 
 class StudentHistorySerializer(serializers.Serializer):

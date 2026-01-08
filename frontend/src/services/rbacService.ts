@@ -3,7 +3,7 @@
  * Handles API calls for roles, permissions, and permission matrix
  */
 
-import api from '../lib/api/client';
+import api from './api';
 import type { Role, Permission } from '../types/auth';
 
 export const rbacAPI = {
@@ -14,7 +14,7 @@ export const rbacAPI = {
   },
 
   getRole: async (id: string): Promise<Role> => {
-    const response = await api.get(/users/roles//);
+    const response = await api.get(`/users/roles/${id}/`);
     return response.data;
   },
 
@@ -24,12 +24,12 @@ export const rbacAPI = {
   },
 
   updateRole: async (id: string, data: Partial<Role>): Promise<Role> => {
-    const response = await api.put(/users/roles//, data);
+    const response = await api.put(`/users/roles/${id}/`, data);
     return response.data;
   },
 
   deleteRole: async (id: string): Promise<void> => {
-    await api.delete(/users/roles//);
+    await api.delete(`/users/roles/${id}/`);
   },
 
   // Permission Modules
@@ -39,7 +39,7 @@ export const rbacAPI = {
   },
 
   getModule: async (id: string): Promise<any> => {
-    const response = await api.get(/users/permission-modules//);
+    const response = await api.get(`/users/permission-modules/${id}/`);
     return response.data;
   },
 

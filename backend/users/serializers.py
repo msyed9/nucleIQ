@@ -38,7 +38,8 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
         fields = [
             'theme_mode', 'density', 'language', 'notification_channels',
             'sidebar_collapsed', 'dashboard_widgets', 'timezone',
-            'date_format', 'time_format', 'is_rtl'
+            'date_format', 'time_format', 'is_rtl',
+            'font_family', 'font_size', 'font_color', 'heading_color', 'link_color'
         ]
     
     def validate_notification_channels(self, value):
@@ -207,8 +208,42 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True},
         }
     
+    def validate_is_platform_admin(self, value):
+        """
+        SECURITY HARDSTOP: Prevent tenant users from granting platform admin access.
+        Only platform admins can modify this field.
+        """
+        request = self.context.get('request')
+        if request and request.user:
+            # Only platform admins or superusers can set is_platform_admin
+            if value and not (request.user.is_platform_admin or request.user.is_superuser):
+                raise serializers.ValidationError(
+                    "Only platform administrators can grant platform admin access."
+                )
+        return value
+    
+    def to_representation(self, instance):
+        """
+        Hide is_platform_admin from non-platform-admin users for security.
+        """
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        # Remove is_platform_admin field for non-platform-admin users
+        if request and request.user:
+            if not (request.user.is_platform_admin or request.user.is_superuser):
+                data.pop('is_platform_admin', None)
+        
+        return data
+    
     def create(self, validated_data):
         """Create user with roles."""
+        # SECURITY: Remove is_platform_admin if not set by platform admin
+        request = self.context.get('request')
+        if request and request.user:
+            if not (request.user.is_platform_admin or request.user.is_superuser):
+                validated_data.pop('is_platform_admin', None)
+        
         role_ids = validated_data.pop('role_ids', [])
         user = User.objects.create_user(**validated_data)
         
@@ -227,6 +262,12 @@ class UserSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         """Update user and roles."""
+        # SECURITY: Prevent non-platform-admins from modifying platform admin status
+        request = self.context.get('request')
+        if request and request.user:
+            if not (request.user.is_platform_admin or request.user.is_superuser):
+                validated_data.pop('is_platform_admin', None)
+        
         role_ids = validated_data.pop('role_ids', None)
         
         # Update basic fields
@@ -412,16 +453,22 @@ class UserProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField(source='get_full_name')
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
     tenant_branding = serializers.SerializerMethodField()
+    is_parent = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'full_name',
             'phone_number', 'avatar_url', 'is_active', 'is_2fa_enabled',
-            'is_platform_admin', 'tenant', 'tenant_name', 'tenant_branding',
+            'is_platform_admin', 'is_parent', 'tenant', 'tenant_name', 'tenant_branding',
             'roles', 'permissions', 'preference', 'last_login', 'date_joined'
         ]
         read_only_fields = fields
+    
+    def get_is_parent(self, obj):
+        """Check if user has a parent profile."""
+        from students.models import ParentUser
+        return ParentUser.objects.filter(user=obj, portal_access_enabled=True).exists()
     
     def get_permissions(self, obj):
         """Get all permissions for the user."""

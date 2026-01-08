@@ -176,8 +176,11 @@ class UserViewSet(viewsets.ModelViewSet):
         })
     
     def perform_create(self, serializer):
-        """Set created_by when creating user."""
-        serializer.save(created_by=self.request.user)
+        """Set tenant and created_by when creating user."""
+        serializer.save(
+            tenant=self.request.user.tenant,
+            created_by=self.request.user
+        )
     
     def perform_update(self, serializer):
         """Set updated_by when updating user."""
@@ -367,8 +370,11 @@ class RoleViewSet(viewsets.ModelViewSet):
         return Role.objects.filter(tenant=user.tenant)
     
     def perform_create(self, serializer):
-        """Set created_by when creating role."""
-        serializer.save(created_by=self.request.user)
+        """Set tenant and created_by when creating role."""
+        serializer.save(
+            tenant=self.request.user.tenant,
+            created_by=self.request.user
+        )
     
     def perform_update(self, serializer):
         """Set updated_by when updating role."""

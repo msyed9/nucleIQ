@@ -149,6 +149,14 @@ class AttendanceConfiguration(BaseModel):
     )
     
     # Student settings
+    school_start_time = models.TimeField(
+        default='08:30:00',
+        help_text="School start time for students"
+    )
+    late_threshold_time = models.TimeField(
+        default='09:30:00',
+        help_text="Time after which students are marked as late"
+    )
     student_cutoff_time = models.TimeField(
         default='10:00:00',
         help_text="Auto-absent cutoff time for students"
@@ -303,3 +311,62 @@ class QRCodeToken(BaseModel):
         if self.teacher:
             return f"Teacher QR - {self.teacher.get_full_name()} - {self.valid_date}"
         return f"Student QR - {self.student.get_full_name()}"
+
+
+class StudentFaceEncoding(BaseModel):
+    """
+    Stores face encodings for students to enable face recognition attendance.
+    Each student can have one active face encoding.
+    """
+    
+    student = models.OneToOneField(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='face_encoding'
+    )
+    
+    # Store the face encoding as JSON (128-dimensional vector from face_recognition library)
+    encoding_data = models.JSONField(
+        help_text=_('Face encoding vector as JSON array')
+    )
+    
+    # Store a reference image for verification/debugging
+    reference_image = models.ImageField(
+        upload_to='students/face_encodings/',
+        blank=True,
+        null=True,
+        help_text=_('Reference image used for face encoding')
+    )
+    
+    # Metadata
+    encoded_at = models.DateTimeField(auto_now_add=True)
+    encoded_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='face_enrollments'
+    )
+    
+    # Quality metrics
+    confidence_score = models.FloatField(
+        default=1.0,
+        help_text=_('Confidence score of the face encoding (0-1)')
+    )
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'student_face_encodings'
+        verbose_name = _('Student Face Encoding')
+        verbose_name_plural = _('Student Face Encodings')
+    
+    def __str__(self):
+        return f"Face Encoding - {self.student.get_full_name()}"
+    
+    def get_encoding_array(self):
+        """Return the encoding as a numpy-compatible list."""
+        if isinstance(self.encoding_data, list):
+            return self.encoding_data
+        return None
+

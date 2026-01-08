@@ -3,7 +3,7 @@
  * 
  * Dedicated login page for parents with:
  * - Custom branding for parent portal
- * - Email/password authentication
+ * - Email or Mobile number authentication
  * - JWT token storage
  * - Redirect to parent portal on success
  */
@@ -33,7 +33,7 @@ import api from '../../services/api';
 const ParentLogin: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        email: '',
+        username: '',
         password: '',
     });
     const [showPassword, setShowPassword] = useState(false);
@@ -50,9 +50,9 @@ const ParentLogin: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!formData.email || !formData.password) {
-            setError('Please enter both email and password');
+
+        if (!formData.username || !formData.password) {
+            setError('Please enter your email/mobile number and password');
             return;
         }
 
@@ -61,28 +61,44 @@ const ParentLogin: React.FC = () => {
 
         try {
             const response = await api.post('/parent/auth/login/', formData);
-            
+
             // Store tokens
             localStorage.setItem('access_token', response.data.access);
             localStorage.setItem('refresh_token', response.data.refresh);
             localStorage.setItem('user_type', response.data.user_type);
             localStorage.setItem('parent_id', response.data.parent_id);
-            
+
+            // Store parent info for quick access
+            if (response.data.email) {
+                localStorage.setItem('parent_email', response.data.email);
+            }
+            if (response.data.phone_number) {
+                localStorage.setItem('parent_phone', response.data.phone_number);
+            }
+            if (response.data.name) {
+                localStorage.setItem('parent_name', response.data.name);
+            }
+
             // Store student info for quick access
             localStorage.setItem('students', JSON.stringify(response.data.students));
-            
+
             // Show success message
             console.log('Login successful:', response.data);
-            
+
             // Redirect to parent portal
             navigate('/parent/portal');
         } catch (error: any) {
             console.error('Login error:', error);
-            
+
             if (error.response?.status === 403) {
                 setError(error.response.data.detail || 'Portal access is disabled. Please contact school administration.');
             } else if (error.response?.status === 401) {
-                setError('Invalid email or password');
+                setError('Invalid email/mobile number or password');
+            } else if (error.response?.data?.non_field_errors) {
+                setError(error.response.data.non_field_errors[0]);
+            } else if (typeof error.response?.data === 'object') {
+                const firstError = Object.values(error.response.data)[0];
+                setError(Array.isArray(firstError) ? firstError[0] : String(firstError));
             } else {
                 setError(error.response?.data?.detail || 'Login failed. Please try again.');
             }
@@ -144,16 +160,17 @@ const ParentLogin: React.FC = () => {
                     <form onSubmit={handleSubmit}>
                         <TextField
                             fullWidth
-                            label="Email Address"
-                            name="email"
-                            type="email"
-                            value={formData.email}
+                            label="Email or Mobile Number"
+                            name="username"
+                            value={formData.username}
                             onChange={handleChange}
                             margin="normal"
                             required
-                            autoComplete="email"
+                            autoComplete="email tel"
                             autoFocus
                             disabled={loading}
+                            placeholder="Enter email or mobile number"
+                            helperText="Use the email or phone number registered with the school"
                         />
 
                         <TextField
@@ -231,7 +248,7 @@ const ParentLogin: React.FC = () => {
                         }}
                     >
                         <Typography variant="caption" color="info.dark">
-                            <strong>Note:</strong> Use the email address registered with the school.
+                            <strong>Note:</strong> You can login using either your email address or mobile number registered with the school.
                             If you're having trouble logging in, please contact school administration.
                         </Typography>
                     </Box>
@@ -242,3 +259,4 @@ const ParentLogin: React.FC = () => {
 };
 
 export default ParentLogin;
+

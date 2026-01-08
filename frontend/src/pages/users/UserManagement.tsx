@@ -39,7 +39,7 @@ interface User {
     is_active: boolean;
     is_staff: boolean;
     roles: Role[];
-    phone?: string;
+    phone_number?: string;
     date_joined: string;
 }
 
@@ -47,7 +47,7 @@ interface UserFormData {
     email: string;
     first_name: string;
     last_name: string;
-    phone: string;
+    phone_number: string;
     password?: string;
     password_confirm?: string;
     is_active: boolean;
@@ -73,7 +73,7 @@ const UserManagement: React.FC = () => {
         email: '',
         first_name: '',
         last_name: '',
-        phone: '',
+        phone_number: '',
         password: '',
         password_confirm: '',
         is_active: true,
@@ -97,7 +97,7 @@ const UserManagement: React.FC = () => {
             setLoading(true);
             const [usersRes, rolesRes] = await Promise.all([
                 api.get('/users/'),
-                api.get('/users/roles/')
+                api.get('/roles/')
             ]);
 
             setUsers(usersRes.data.results || usersRes.data);
@@ -157,7 +157,7 @@ const UserManagement: React.FC = () => {
                 email: '',
                 first_name: '',
                 last_name: '',
-                phone: '',
+                phone_number: '',
                 password: '',
                 password_confirm: '',
                 is_active: true,
@@ -203,7 +203,7 @@ const UserManagement: React.FC = () => {
             email: user.email,
             first_name: user.first_name,
             last_name: user.last_name,
-            phone: user.phone || '',
+            phone_number: user.phone_number || '',
             is_active: user.is_active,
             is_staff: user.is_staff,
             role_ids: user.roles.map(r => r.id)
@@ -313,7 +313,7 @@ const UserManagement: React.FC = () => {
                                         email: '',
                                         first_name: '',
                                         last_name: '',
-                                        phone: '',
+                                        phone_number: '',
                                         password: '',
                                         password_confirm: '',
                                         is_active: true,
@@ -373,10 +373,10 @@ const UserManagement: React.FC = () => {
                                                         <Mail size={12} />
                                                         {user.email}
                                                     </div>
-                                                    {user.phone && (
+                                                    {user.phone_number && (
                                                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
                                                             <Phone size={12} />
-                                                            {user.phone}
+                                                            {user.phone_number}
                                                         </div>
                                                     )}
                                                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -646,8 +646,8 @@ const UserManagement: React.FC = () => {
                                             </label>
                                             <input
                                                 type="tel"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                value={formData.phone_number}
+                                                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                                                 style={{
                                                     width: '100%',
                                                     padding: '0.75rem',
@@ -757,8 +757,9 @@ const UserManagement: React.FC = () => {
                                                     email: '',
                                                     first_name: '',
                                                     last_name: '',
-                                                    phone: '',
+                                                    phone_number: '',
                                                     password: '',
+                                                    password_confirm: '',
                                                     is_active: true,
                                                     is_staff: false,
                                                     role_ids: []
