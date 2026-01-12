@@ -258,6 +258,59 @@ class StudentViewSet(viewsets.ModelViewSet):
         
         return parent_logins
 
+    def perform_update(self, serializer):
+        """
+        Override update to handle parent linking when phone numbers change.
+        If father_phone or mother_phone changes, trigger parent account linking/creation.
+        """
+        instance = self.get_object()
+        old_father_phone = instance.father_phone
+        old_mother_phone = instance.mother_phone
+        
+        # Save the updated student
+        student = serializer.save()
+        
+        # Check if phone numbers changed
+        phone_changed = (
+            (student.father_phone != old_father_phone) or 
+            (student.mother_phone != old_mother_phone)
+        )
+        
+        # If parent login creation is requested or phone changed, handle parent accounts
+        create_parent_login = self.request.data.get('create_parent_login', False) or phone_changed
+        
+        if create_parent_login and phone_changed:
+            parent_info = self._create_parent_login(student)
+            # Store parent login info to include in response
+            if hasattr(self, '_parent_login_info'):
+                self._parent_login_info.update(parent_info)
+            else:
+                self._parent_login_info = parent_info
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to include parent login info in response"""
+        self._parent_login_info = {}
+        response = super().update(request, *args, **kwargs)
+        
+        # Add parent login info to response if available
+        if self._parent_login_info:
+            response.data['parent_logins'] = self._parent_login_info
+            response.data['message'] = 'Student updated successfully. Parent accounts updated/linked.'
+        
+        return response
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial update to include parent login info in response"""
+        self._parent_login_info = {}
+        response = super().partial_update(request, *args, **kwargs)
+        
+        # Add parent login info to response if available
+        if self._parent_login_info:
+            response.data['parent_logins'] = self._parent_login_info
+            response.data['message'] = 'Student updated successfully. Parent accounts updated/linked.'
+        
+        return response
+
     
     @action(detail=True, methods=['get'])
     def profile_360(self, request, pk=None):

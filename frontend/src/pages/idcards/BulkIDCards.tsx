@@ -25,11 +25,12 @@ interface Student {
     first_name: string;
     last_name: string;
     admission_number: string;
-    class_name: string;
-    section_name: string;
+    current_class?: string;
+    section?: string;
     photo?: string;
     date_of_birth?: string;
     blood_group?: string;
+    roll_number?: string;
 }
 
 interface Template {
@@ -82,8 +83,8 @@ const BulkIDCards: React.FC = () => {
             setStudents(studentList);
 
             // Extract unique classes and sections
-            const uniqueClasses = [...new Set(studentList.map((s: Student) => s.class_name))].filter(Boolean);
-            const uniqueSections = [...new Set(studentList.map((s: Student) => s.section_name))].filter(Boolean);
+            const uniqueClasses = [...new Set(studentList.map((s: Student) => s.current_class))].filter(Boolean);
+            const uniqueSections = [...new Set(studentList.map((s: Student) => s.section))].filter(Boolean);
             setClasses(uniqueClasses as string[]);
             setSections(uniqueSections as string[]);
 
@@ -101,8 +102,8 @@ const BulkIDCards: React.FC = () => {
             student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesClass = classFilter === 'all' || student.class_name === classFilter;
-        const matchesSection = sectionFilter === 'all' || student.section_name === sectionFilter;
+        const matchesClass = classFilter === 'all' || student.current_class === classFilter;
+        const matchesSection = sectionFilter === 'all' || student.section === sectionFilter;
 
         return matchesSearch && matchesClass && matchesSection;
     });
@@ -126,7 +127,7 @@ const BulkIDCards: React.FC = () => {
     };
 
     const selectByClass = (className: string) => {
-        const classStudents = students.filter(s => s.class_name === className);
+        const classStudents = students.filter(s => s.current_class === className);
         const newSelected = new Set(selectedStudents);
         classStudents.forEach(s => newSelected.add(s.id));
         setSelectedStudents(newSelected);
@@ -219,6 +220,9 @@ const BulkIDCards: React.FC = () => {
             box-sizing: border-box;
         `;
 
+        const className = student.current_class || 'N/A';
+        const section = student.section || 'N/A';
+
         let cardHTML = `
             <div style="text-align: center; margin-bottom: 10px; font-weight: bold; font-size: 12px;">
                 SCHOOL NAME
@@ -235,7 +239,7 @@ const BulkIDCards: React.FC = () => {
                         ${student.first_name} ${student.last_name}
                     </div>
                     <div style="font-size: 11px; margin-bottom: 3px;">
-                        Class: ${student.class_name} - ${student.section_name}
+                        Class: ${className} - ${section}
                     </div>
                     <div style="font-size: 10px; margin-bottom: 3px;">
                         Adm No: ${student.admission_number}
@@ -314,6 +318,8 @@ const BulkIDCards: React.FC = () => {
 
             for (const student of selectedList) {
                 const qrDataUrl = settings.includeQR ? await generateQRCode(student.admission_number) : '';
+                const className = student.current_class || 'N/A';
+                const section = student.section || 'N/A';
 
                 printContent += `
                     <div class="id-card">
@@ -332,7 +338,7 @@ const BulkIDCards: React.FC = () => {
                                     ${student.first_name} ${student.last_name}
                                 </div>
                                 <div style="font-size: 9pt; margin-bottom: 1mm;">
-                                    Class: ${student.class_name} - ${student.section_name}
+                                    Class: ${className} - ${section}
                                 </div>
                                 <div style="font-size: 8pt;">
                                     Adm: ${student.admission_number}
@@ -554,7 +560,7 @@ const BulkIDCards: React.FC = () => {
                                     <div className="student-info">
                                         <span className="name">{student.first_name} {student.last_name}</span>
                                         <span className="details">
-                                            {student.class_name} - {student.section_name}
+                                            {student.current_class || 'N/A'} - {student.section || 'N/A'}
                                         </span>
                                         <span className="admission">{student.admission_number}</span>
                                     </div>

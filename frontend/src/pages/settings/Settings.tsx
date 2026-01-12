@@ -36,6 +36,7 @@ const Settings: React.FC = () => {
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [smsNotifications, setSmsNotifications] = useState(false);
     const [savingFontSettings, setSavingFontSettings] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
 
     // Theme Context
     const { themeMode, setThemeMode, themeColor, setThemeColor } = useTheme();
@@ -103,9 +104,35 @@ const Settings: React.FC = () => {
         { value: 'extra-large', label: 'Extra Large (20px)' },
     ];
 
-    const handleSave = () => {
-        console.log('Saving settings...');
-        // TODO: Implement save functionality
+    const handleSave = async () => {
+        try {
+            setSavingSettings(true);
+            
+            // Prepare settings based on active tab
+            const settingsToUpdate: Partial<UserPreferences> = {};
+            
+            if (activeTab === 'general') {
+                settingsToUpdate.language = language;
+                settingsToUpdate.timezone = timezone;
+            } else if (activeTab === 'notifications') {
+                settingsToUpdate.notification_channels = {
+                    email: emailNotifications,
+                    sms: smsNotifications
+                };
+            } else if (activeTab === 'appearance') {
+                settingsToUpdate.theme_mode = themeMode;
+            }
+            
+            // Save to backend
+            await updatePreferences(settingsToUpdate);
+            
+            alert('Settings saved successfully!');
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            alert('Failed to save settings. Please try again.');
+        } finally {
+            setSavingSettings(false);
+        }
     };
 
     const handleSaveFontSettings = async () => {

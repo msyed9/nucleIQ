@@ -192,7 +192,18 @@ const IDCardDesigner: React.FC = () => {
         // Make elements draggable and resizable
         interact('.element')
             .draggable({
+                inertia: false,
+                modifiers: [
+                    interact.modifiers.restrict({
+                        restriction: 'parent',
+                        endOnly: false
+                    })
+                ],
                 listeners: {
+                    start(event) {
+                        const target = event.target;
+                        target.classList.add('dragging');
+                    },
                     move(event) {
                         const target = event.target;
                         const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
@@ -201,7 +212,12 @@ const IDCardDesigner: React.FC = () => {
                         target.style.transform = `translate(${x}px, ${y}px)`;
                         target.setAttribute('data-x', x.toString());
                         target.setAttribute('data-y', y.toString());
-
+                    },
+                    end(event) {
+                        const target = event.target;
+                        target.classList.remove('dragging');
+                        const x = parseFloat(target.getAttribute('data-x')) || 0;
+                        const y = parseFloat(target.getAttribute('data-y')) || 0;
                         // Update design (convert px back to mm)
                         updateElementPosition(target.id, x / 10, y / 10);
                     }
@@ -209,7 +225,16 @@ const IDCardDesigner: React.FC = () => {
             })
             .resizable({
                 edges: { left: true, right: true, bottom: true, top: true },
+                modifiers: [
+                    interact.modifiers.restrictSize({
+                        min: { width: 10, height: 10 }
+                    })
+                ],
                 listeners: {
+                    start(event) {
+                        const target = event.target;
+                        target.classList.add('resizing');
+                    },
                     move(event) {
                         const target = event.target;
                         let x = parseFloat(target.getAttribute('data-x')) || 0;
@@ -224,8 +249,13 @@ const IDCardDesigner: React.FC = () => {
                         target.style.transform = `translate(${x}px, ${y}px)`;
                         target.setAttribute('data-x', x.toString());
                         target.setAttribute('data-y', y.toString());
-
-                        updateElementSize(target.id, event.rect.width / 10, event.rect.height / 10);
+                    },
+                    end(event) {
+                        const target = event.target;
+                        target.classList.remove('resizing');
+                        const width = event.rect.width;
+                        const height = event.rect.height;
+                        updateElementSize(target.id, width / 10, height / 10);
                     }
                 }
             });
@@ -319,24 +349,34 @@ const IDCardDesigner: React.FC = () => {
 
     const saveDesign = async () => {
         try {
-            const response = await api.post('/students/idcards/templates/', {
+            const templateData = {
                 name: designName,
                 description: `${cardType} ID Card Design`,
-                template_design: design,
-                include_photo: design.elements.some((e: Element) => e.type === 'image'),
-                include_qr_code: design.elements.some((e: Element) => e.type === 'qrcode'),
-                include_barcode: design.elements.some((e: Element) => e.type === 'barcode'),
+                card_type: cardType,
+                orientation: design.dimensions && design.dimensions.width > design.dimensions.height ? 'LANDSCAPE' : 'PORTRAIT',
+                category: 'CUSTOM',
+                design_json: design,
                 is_active: true
-            });
+            };
+
+            console.log('Saving template:', templateData);
+
+            const response = await api.post('/students/idcards/templates/', templateData);
 
             if (response.status === 201 || response.status === 200) {
                 alert('Design saved successfully!');
+                await fetchTemplates(); // Reload templates
             } else {
                 alert('Error saving design');
             }
         } catch (error: any) {
             console.error('Error saving design:', error);
-            alert(error.response?.data?.detail || 'Error saving design');
+            console.error('Error details:', error.response?.data);
+            const errorMsg = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           JSON.stringify(error.response?.data) || 
+                           'Error saving design';
+            alert(`Failed to save: ${errorMsg}`);
         }
     };
 

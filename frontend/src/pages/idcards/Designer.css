@@ -311,6 +311,18 @@
     box-sizing: border-box;
     transition: border-color 0.2s;
     user-select: none;
+    position: absolute;
+    touch-action: none;
+}
+
+.element.dragging {
+    opacity: 0.7;
+    cursor: grabbing;
+    z-index: 1000;
+}
+
+.element.resizing {
+    opacity: 0.9;
 }
 
 .element.selected {

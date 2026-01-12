@@ -34,6 +34,9 @@ class BulkStudentImportService:
         'email',
         'phone',
         'blood_group',
+        'nationality',
+        'religion',
+        'caste',
         'father_email',
         'father_occupation',
         'mother_email',
@@ -139,9 +142,15 @@ class BulkStudentImportService:
         if dob and not pd.isna(dob):
             try:
                 if isinstance(dob, str):
-                    datetime.strptime(dob, '%Y-%m-%d')
+                    date_str = str(dob).strip()
+                    if ' ' in date_str:
+                        # Handle datetime format: "2020-10-10 00:00:00"
+                        datetime.strptime(date_str.split(' ')[0], '%Y-%m-%d')
+                    else:
+                        # Handle date format: "2020-10-10"
+                        datetime.strptime(date_str, '%Y-%m-%d')
             except:
-                errors.append(f'Invalid date format for date_of_birth: {dob}. Use YYYY-MM-DD')
+                errors.append(f'Invalid date format for date_of_birth: {dob}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
         
         # Validate admission number (if provided)
         admission_number = row.get('admission_number')
@@ -348,12 +357,32 @@ class BulkStudentImportService:
         if pd.isna(admission_date) or str(admission_date).strip() == '' or str(admission_date) == 'nan':
             admission_date = datetime.now().date()
         elif isinstance(admission_date, str):
-            admission_date = datetime.strptime(admission_date, '%Y-%m-%d').date()
+            # Handle both date and datetime formats
+            date_str = str(admission_date).strip()
+            if ' ' in date_str:
+                # Format: "2020-10-10 00:00:00"
+                admission_date = datetime.strptime(date_str.split(' ')[0], '%Y-%m-%d').date()
+            else:
+                # Format: "2020-10-10"
+                admission_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        elif hasattr(admission_date, 'date'):
+            # pandas Timestamp object
+            admission_date = admission_date.date()
         
         # Parse date of birth
         dob = row.get('date_of_birth')
         if isinstance(dob, str):
-            dob = datetime.strptime(dob, '%Y-%m-%d').date()
+            # Handle both date and datetime formats
+            date_str = str(dob).strip()
+            if ' ' in date_str:
+                # Format: "2020-10-10 00:00:00"
+                dob = datetime.strptime(date_str.split(' ')[0], '%Y-%m-%d').date()
+            else:
+                # Format: "2020-10-10"
+                dob = datetime.strptime(date_str, '%Y-%m-%d').date()
+        elif hasattr(dob, 'date'):
+            # pandas Timestamp object
+            dob = dob.date()
         
         # Map gender
         gender = self.GENDER_MAPPING.get(str(row.get('gender')).strip(), 'O')
@@ -412,6 +441,9 @@ class BulkStudentImportService:
             'date_of_birth': ['2015-05-15'],
             'gender': ['Male'],
             'blood_group': ['A+'],
+            'nationality': ['Indian'],
+            'religion': [''],
+            'caste': [''],
             'email': ['john.doe@school.edu'],
             'phone': ['+919876543210'],
             'address': ['123 Main Street, City'],
