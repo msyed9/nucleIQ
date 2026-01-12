@@ -98,7 +98,7 @@ const DigitalResources: React.FC = () => {
     const handleView = (resource: DigitalResource) => {
         trackAccessMutation.mutate(resource.id);
         if (resource.external_url) {
-            window.open(resource.external_url, '_blank');
+            openDownload(resource.external_url);
         } else if (resource.file) {
             openDownload(resource.file);
         }

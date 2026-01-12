@@ -6,12 +6,10 @@ export function getBackendBase(): string {
 export function getDownloadLink(url: string | undefined | null): string | undefined {
     if (!url) return undefined;
 
-    // Absolute URL -> return as-is
     if (/^https?:\/\//i.test(url)) return url;
 
     const normalized = url.replace(/^\/+/, '');
 
-    // media/ prefix -> use media-download endpoint
     if (normalized.startsWith('media/')) {
         const savedPath = normalized.replace(/^media\//, '');
         return `${getBackendBase()}/media-download/${savedPath}/`;
@@ -22,7 +20,6 @@ export function getDownloadLink(url: string | undefined | null): string | undefi
         return `${getBackendBase()}/media-download/${savedPath}/`;
     }
 
-    // Fallback: treat as storage path
     return `${getBackendBase()}/media-download/${normalized}/`;
 }
 

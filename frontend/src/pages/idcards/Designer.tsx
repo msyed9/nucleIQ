@@ -285,7 +285,18 @@ const IDCardDesigner: React.FC = () => {
                         endOnly: false
                     })
                 ],
+                inertia: false,
+                modifiers: [
+                    interact.modifiers.restrict({
+                        restriction: 'parent',
+                        endOnly: false
+                    })
+                ],
                 listeners: {
+                    start(event) {
+                        const target = event.target;
+                        target.classList.add('dragging');
+                    },
                     start(event) {
                         const target = event.target;
                         target.classList.add('dragging');
@@ -304,6 +315,12 @@ const IDCardDesigner: React.FC = () => {
                         target.classList.remove('dragging');
                         const x = parseFloat(target.getAttribute('data-x')) || 0;
                         const y = parseFloat(target.getAttribute('data-y')) || 0;
+                    },
+                    end(event) {
+                        const target = event.target;
+                        target.classList.remove('dragging');
+                        const x = parseFloat(target.getAttribute('data-x')) || 0;
+                        const y = parseFloat(target.getAttribute('data-y')) || 0;
                         // Update design (convert px back to mm)
                         updateElementPosition(target.id, x / MM_TO_PX, y / MM_TO_PX);
                     }
@@ -316,7 +333,16 @@ const IDCardDesigner: React.FC = () => {
                         min: { width: 10, height: 10 }
                     })
                 ],
+                modifiers: [
+                    interact.modifiers.restrictSize({
+                        min: { width: 10, height: 10 }
+                    })
+                ],
                 listeners: {
+                    start(event) {
+                        const target = event.target;
+                        target.classList.add('resizing');
+                    },
                     start(event) {
                         const target = event.target;
                         target.classList.add('resizing');
