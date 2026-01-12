@@ -23,18 +23,30 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const { user, updatePreferences } = useAuth();
-    const [themeMode, setThemeModeState] = useState<'light' | 'dark' | 'system'>('system');
+
+    // Initialize from localStorage for immediate application
+    const getInitialThemeMode = (): 'light' | 'dark' | 'system' => {
+        const savedMode = localStorage.getItem('nucleiq_theme_mode');
+        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
+            return savedMode;
+        }
+        return 'system';
+    };
+
+    const [themeMode, setThemeModeState] = useState<'light' | 'dark' | 'system'>(getInitialThemeMode);
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const [customColor, setCustomColorState] = useState<string>(localStorage.getItem('theme_color') || '');
 
     // Get user preference or default
-    const userThemeMode = user?.preference?.theme_mode || 'system';
+    const userThemeMode = user?.preference?.theme_mode || null;
     const userLanguage = user?.preference?.language || 'en';
     const branding = user?.tenant_branding || null;
 
-    // Update theme mode when user preference changes
+    // Update theme mode when user preference loads (but only if not already set in localStorage)
     useEffect(() => {
-        setThemeModeState(userThemeMode);
+        if (userThemeMode && !localStorage.getItem('nucleiq_theme_mode')) {
+            setThemeModeState(userThemeMode);
+        }
     }, [userThemeMode]);
 
     // Determine actual theme based on mode
@@ -104,12 +116,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const setThemeMode = async (mode: 'light' | 'dark' | 'system') => {
         setThemeModeState(mode);
 
+        // Save to localStorage for immediate persistence
+        localStorage.setItem('nucleiq_theme_mode', mode);
+
         // Update user preference if authenticated
         if (user) {
             try {
                 await updatePreferences({ theme_mode: mode });
             } catch (error) {
                 console.error('Failed to update theme preference:', error);
+                // Theme is still applied locally via localStorage
             }
         }
     };

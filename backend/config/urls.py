@@ -10,6 +10,9 @@ from django.views.generic import RedirectView
 from django.http import JsonResponse
 from django.db import connection
 from config.admin import admin_site  # Import custom admin
+from django.http import FileResponse, Http404
+from django.core.files.storage import default_storage
+import os
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -64,7 +67,7 @@ urlpatterns = [
     path('api/students/', include('students.urls')),
     path('api/parent/', include('students.parent_urls')),  # Parent Portal
     path('api/analytics/', include('analytics.urls')),
-    # path('api/idcards/', include('idcards.urls')),  # ID Card functionality is in students app
+    path('api/idcards/', include('idcards.urls')),  # ID Card system
     path('api/staff/', include('staff.urls')),
     path('api/attendance/', include('attendance.urls')),
     path('api/fees/', include('fees.urls')),
@@ -105,6 +108,24 @@ urlpatterns = [
     # Phase 8 - Notifications moved to communication app
     # path('api/notifications/', include('notifications.urls')),
 ]
+
+
+# Download media with attachment (forces browser to download)
+def media_download(request, file_path):
+    # file_path should be relative path inside MEDIA_ROOT, e.g. 'idcards/...zip'
+    try:
+        if not default_storage.exists(file_path):
+            raise Http404
+        f = default_storage.open(file_path, 'rb')
+        return FileResponse(f, as_attachment=True, filename=os.path.basename(file_path))
+    except Exception:
+        raise Http404
+
+
+# Expose a simple download endpoint at /media-download/<path:file_path>/
+urlpatterns = [
+    path('media-download/<path:file_path>/', media_download, name='media-download'),
+] + urlpatterns
 
 # Serve media files in development
 if settings.DEBUG:

@@ -40,6 +40,8 @@ pytz==2024.2
 qrcode[pil]==7.4.2
 python-barcode==0.15.1
 reportlab==4.2.5
+weasyprint==67.0  # Advanced PDF generation with CSS support
+cairocffi==1.4.0
 
 # Payment Gateways
 razorpay==1.4.2

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { openDownload } from '../../utils/downloadLink';
 
 const ReportBuilder: React.FC = () => {
     const { t } = useTranslation();
@@ -38,7 +39,7 @@ const ReportBuilder: React.FC = () => {
             
             // Download the file
             if (response.data.file_url) {
-                window.open(response.data.file_url, '_blank');
+                openDownload(response.data.file_url);
             }
             
             alert('Report generated successfully!');

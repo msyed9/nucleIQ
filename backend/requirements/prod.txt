@@ -40,6 +40,8 @@ pytz==2024.2
 qrcode[pil]==7.4.2
 python-barcode==0.15.1
 reportlab==4.2.5
+weasyprint==62.3
+cairocffi==1.4.0
 
 # Payment Gateways
 razorpay==1.4.2
@@ -58,3 +60,8 @@ gunicorn==23.0.0
 
 # Monitoring (Production)
 sentry-sdk==2.19.2
+
+# Face recognition (production)
+# Note: dlib can be heavy to build; ensure base image has build deps
+face_recognition==1.3.0
+dlib==19.24.4

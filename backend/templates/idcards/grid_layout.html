@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .page {
+            display: grid;
+            grid-template-columns: repeat({{ columns }}, 1fr);
+            grid-auto-rows: auto;
+            gap: {{ gap_mm }}mm;
+            page-break-after: always;
+        }
+        .card-slot {
+            width: 100%;
+            height: 100%;
+            min-height: {{ card_height_mm }}mm;
+            min-width: {{ card_width_mm }}mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .card-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    {% for page in pages %}
+        <div class="page">
+            {% for card in page %}
+                <div class="card-slot">
+                    {% if card.image_url %}
+                        <img src="{{ card.image_url }}" alt="ID Card">
+                    {% elif card.html %}
+                        {{ card.html|safe }}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</body>
+</html>

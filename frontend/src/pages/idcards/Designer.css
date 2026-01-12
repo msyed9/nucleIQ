@@ -1,9 +1,10 @@
 .designer-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
+    min-height: 0;
     background: #f5f5f5;
-    overflow: hidden;
+    /* Removed overflow: hidden to allow parent scrolling if needed */
 }
 
 /* Toolbar */
@@ -151,7 +152,9 @@
 .designer-main {
     display: flex;
     flex: 1;
-    overflow: hidden;
+    min-height: 600px;
+    /* Ensure minimum height for all content */
+    overflow: visible;
 }
 
 /* Template Library */
@@ -258,8 +261,11 @@
     flex-direction: column;
     align-items: center;
     padding: 1.5rem;
-    overflow: auto;
+    padding-bottom: 150px;
+    /* Extra space at bottom for scrolling */
     background: #f5f5f5;
+    min-height: 600px;
+    /* Ensure canvas area is always tall enough */
 }
 
 .canvas-toolbar {
@@ -311,6 +317,18 @@
     box-sizing: border-box;
     transition: border-color 0.2s;
     user-select: none;
+    position: absolute;
+    touch-action: none;
+}
+
+.element.dragging {
+    opacity: 0.7;
+    cursor: grabbing;
+    z-index: 1000;
+}
+
+.element.resizing {
+    opacity: 0.9;
 }
 
 .element.selected {

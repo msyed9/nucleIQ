@@ -43,12 +43,28 @@ interface PreferencesProviderProps {
 
 export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ children }) => {
     const { i18n } = useTranslation();
-    const [preferences, setPreferences] = useState<UserPreferences>({
-        language: 'en',
-        theme_mode: 'system',
-        timezone: 'UTC',
-    });
+
+    // Load initial preferences from localStorage for immediate application
+    const getInitialPreferences = (): UserPreferences => {
+        const savedTheme = localStorage.getItem('nucleiq_theme_mode');
+        const savedLanguage = localStorage.getItem('nucleiq_language');
+        return {
+            language: savedLanguage || 'en',
+            theme_mode: savedTheme || 'system',
+            timezone: 'UTC',
+        };
+    };
+
+    const [preferences, setPreferences] = useState<UserPreferences>(getInitialPreferences);
     const [loading, setLoading] = useState(true);
+
+    // Apply theme immediately on mount from localStorage
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('nucleiq_theme_mode');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+        }
+    }, []);
 
     // Apply theme to document
     const applyTheme = (theme: string) => {
@@ -165,6 +181,14 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
     // Update preferences
     const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
         try {
+            // Save to localStorage immediately for persistence
+            if (newPreferences.theme_mode) {
+                localStorage.setItem('nucleiq_theme_mode', newPreferences.theme_mode);
+            }
+            if (newPreferences.language) {
+                localStorage.setItem('nucleiq_language', newPreferences.language);
+            }
+
             const response = await api.patch('/users/preferences/', newPreferences);
             const updatedPrefs = response.data;
 
@@ -188,6 +212,17 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
             }
         } catch (error) {
             console.error('Failed to update preferences:', error);
+            // Still update local state and apply changes even if API fails
+            const mergedPrefs = { ...preferences, ...newPreferences };
+            setPreferences(mergedPrefs);
+
+            if (newPreferences.theme_mode) {
+                applyTheme(newPreferences.theme_mode);
+            }
+            if (newPreferences.language) {
+                i18n.changeLanguage(newPreferences.language);
+                applyDirection(newPreferences.language);
+            }
             throw error;
         }
     };

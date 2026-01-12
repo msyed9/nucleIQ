@@ -61,6 +61,11 @@ class Student(BaseModel):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, blank=True)
     
+    # Personal Details
+    nationality = models.CharField(max_length=100, blank=True, default='', help_text=_('Nationality'))
+    religion = models.CharField(max_length=100, blank=True, default='', help_text=_('Religion'))
+    caste = models.CharField(max_length=100, blank=True, default='', help_text=_('Caste'))
+    
     # Contact
     email = models.EmailField(
         blank=True,
@@ -1253,7 +1258,11 @@ class AlumniDonation(BaseModel):
 
 class StudentIDCard(BaseModel):
     """
-    Student ID card records
+    DEPRECATED: This model is superseded by the new idcards app.
+    Use idcards.models.IDCardRecord instead.
+    Retained for migration compatibility only.
+    
+    Student ID card records (legacy)
     """
     
     STATUS_CHOICES = [
@@ -1323,7 +1332,11 @@ class StudentIDCard(BaseModel):
 
 class IDCardTemplate(BaseModel):
     """
-    ID card templates
+    DEPRECATED: This model is superseded by the new idcards app.
+    Use idcards.models.IDCardTemplate instead.
+    Retained for migration compatibility only.
+    
+    ID card templates (legacy)
     """
     
     tenant = models.ForeignKey(

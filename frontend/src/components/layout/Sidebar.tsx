@@ -95,8 +95,6 @@ const menuItems: MenuItem[] = [
             { path: '/students/add', icon: UserPlus, labelKey: 'nav.add_student', label: 'Add Student' },
             { path: '/students/remarks', icon: MessageCircle, labelKey: 'nav.remarks', label: 'Remarks' },
             { path: '/students/documents', icon: FolderOpen, labelKey: 'nav.documents', label: 'Documents' },
-            { path: '/idcards/designer', icon: LayoutTemplate, labelKey: 'nav.id_cards', label: 'ID Designer' },
-            { path: '/idcards/bulk', icon: CreditCard, labelKey: 'nav.bulk_id_cards', label: 'Bulk ID Generation' },
         ]
     },
     {
@@ -151,6 +149,17 @@ const menuItems: MenuItem[] = [
         children: [
             { path: '/trackers/salah', icon: Sunrise, labelKey: 'nav.salah_tracker', label: 'Salah Tracker' },
             { path: '/trackers/habits', icon: Activity, labelKey: 'nav.habit_tracker', label: 'Habit Tracker' },
+        ]
+    },
+    {
+        icon: CreditCard,
+        labelKey: 'nav.idcards',
+        label: 'ID Cards',
+        children: [
+            { path: '/idcards/templates', icon: LayoutTemplate, labelKey: 'nav.id_templates', label: 'Templates' },
+            { path: '/idcards/designer', icon: Palette, labelKey: 'nav.id_designer', label: 'Designer' },
+            { path: '/idcards/generate', icon: Users, labelKey: 'nav.id_bulk', label: 'Bulk Generation' },
+            { path: '/idcards/scanner', icon: QrCode, labelKey: 'nav.id_scanner', label: 'QR Scanner' },
         ]
     },
     {

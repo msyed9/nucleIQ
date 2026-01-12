@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { openDownload } from '../../utils/downloadLink';
 import './AssignmentGrading.css';
 
 interface Assignment {
@@ -105,7 +106,7 @@ const AssignmentGrading: React.FC = () => {
     };
 
     const downloadSubmission = (fileUrl: string) => {
-        window.open(fileUrl, '_blank');
+        openDownload(fileUrl);
     };
 
     return (

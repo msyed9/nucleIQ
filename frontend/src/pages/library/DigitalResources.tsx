@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { openDownload } from '../../utils/downloadLink';
 
 interface DigitalResource {
     id: string;
@@ -99,7 +100,7 @@ const DigitalResources: React.FC = () => {
         if (resource.external_url) {
             window.open(resource.external_url, '_blank');
         } else if (resource.file) {
-            window.open(resource.file, '_blank');
+            openDownload(resource.file);
         }
     };
 

@@ -98,7 +98,9 @@ import SalaryStructure from './pages/payroll/SalaryStructure';
 import LibraryMembers from './pages/library/LibraryMembers';
 import VehicleMaintenance from './pages/transport/VehicleMaintenance';
 import DigitalResourcesLibrary from './pages/library/DigitalResources';
-import BulkIDCards from './pages/idcards/BulkIDCards';
+import IDCardTemplateManager from './pages/idcards/TemplateManager';
+import BulkGeneration from './pages/idcards/BulkGeneration';
+import QRScanner from './pages/idcards/QRScanner';
 import DataManagement from './pages/admin/DataManagement';
 import LibraryReports from './pages/library/LibraryReports';
 import LibrarySettings from './pages/library/LibrarySettings';
@@ -226,7 +228,9 @@ function App() {
                                                 <Route path="/students/analytics" element={<Layout><StudentAnalytics /></Layout>} />
                                                 {/* ID Cards routes */}
                                                 <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
-                                                <Route path="/idcards/bulk" element={<Layout><BulkIDCards /></Layout>} />
+                                                <Route path="/idcards/templates" element={<Layout><IDCardTemplateManager /></Layout>} />
+                                                <Route path="/idcards/generate" element={<Layout><BulkGeneration /></Layout>} />
+                                                <Route path="/idcards/scanner" element={<Layout><QRScanner /></Layout>} />
                                                 {/* Staff routes */}
                                                 <Route path="/staff/add" element={<Layout><AddStaff /></Layout>} />
                                                 <Route path="/staff/documents" element={<Layout><StaffDocuments /></Layout>} />

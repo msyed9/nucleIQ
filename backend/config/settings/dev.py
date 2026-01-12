@@ -40,3 +40,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 LOGGING['loggers']['core']['level'] = 'DEBUG'
 LOGGING['loggers']['tenants']['level'] = 'DEBUG'
 LOGGING['root']['level'] = 'DEBUG'
+
+# Celery - Run tasks synchronously in development (no Redis needed)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

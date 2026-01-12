@@ -293,6 +293,12 @@
     background: var(--color-bg-primary, #F5F7FA);
 }
 
+/* Full-height pages like Designer that need more space */
+.layout-content:has(.designer-container) {
+    padding: 0;
+    overflow-y: auto;
+}
+
 /* Scrollbar Styling */
 .sidebar::-webkit-scrollbar {
     width: 6px;

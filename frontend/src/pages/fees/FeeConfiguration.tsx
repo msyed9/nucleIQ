@@ -319,9 +319,10 @@ const FeeConfiguration: React.FC = () => {
                 termMonths[`term_${i}`] = [defaultMonths[i - 1] || i];
             }
         } else if (frequency === 'TERM') {
-            // Custom term months
+            // Trimester defaults: April, August, December (Indian academic year)
+            const defaultMonths = [4, 8, 12, 2]; // Supports up to 4 terms
             for (let i = 1; i <= numberOfTerms; i++) {
-                termMonths[`term_${i}`] = [i * 4 > 12 ? (i * 4 - 12) : i * 4];
+                termMonths[`term_${i}`] = [defaultMonths[i - 1] || i];
             }
         }
 
@@ -1104,7 +1105,7 @@ const FeeConfiguration: React.FC = () => {
             {/* Structure Modal */}
             {showStructureModal && (
                 <div className="modal-overlay" onClick={() => setShowStructureModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content modal-xl" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editingStructure ? t('fees.edit_structure') : t('fees.add_structure', { defaultValue: 'Add Fee Structure' })}</h2>
                             <button className="modal-close" onClick={() => setShowStructureModal(false)}>✕</button>
@@ -1193,8 +1194,8 @@ const FeeConfiguration: React.FC = () => {
                                                 <option value="YEARLY">📆 Yearly (Single Payment)</option>
                                                 <option value="ONE_TIME">🔖 One-Time (Admission/Registration)</option>
                                                 <option value="HALF_YEARLY">📅 Half-Yearly (2 Payments)</option>
+                                                <option value="TERM">📝 Trimester (3 Payments)</option>
                                                 <option value="QUARTERLY">📊 Quarterly (4 Payments)</option>
-                                                <option value="TERM">📝 Term-Based (Custom)</option>
                                                 <option value="MONTHLY">📆 Monthly (12 Payments)</option>
                                             </select>
                                         </div>
@@ -1359,22 +1360,19 @@ const FeeConfiguration: React.FC = () => {
                                             >
                                                 {structureForm.frequency === 'QUARTERLY' && (
                                                     <>
-                                                        <option value={2}>2 Terms</option>
-                                                        <option value={3}>3 Terms</option>
                                                         <option value={4}>4 Terms (Quarterly)</option>
                                                     </>
                                                 )}
                                                 {structureForm.frequency === 'HALF_YEARLY' && (
                                                     <>
-                                                        <option value={1}>1 Term</option>
                                                         <option value={2}>2 Terms (Half-Yearly)</option>
                                                     </>
                                                 )}
                                                 {structureForm.frequency === 'TERM' && (
                                                     <>
-                                                        <option value={1}>1 Term</option>
+                                                        <option value={3}>3 Terms (Trimester)</option>
                                                         <option value={2}>2 Terms</option>
-                                                        <option value={3}>3 Terms</option>
+                                                        <option value={4}>4 Terms</option>
                                                     </>
                                                 )}
                                             </select>

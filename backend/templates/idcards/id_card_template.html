@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+{% load idcard_filters %}
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Card</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: {{ width_mm }}mm {{ height_mm }}mm;
+            margin: 0;
+        }
+        
+        body {
+            width: {{ width_mm }}mm;
+            height: {{ height_mm }}mm;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .id-card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            
+            {% if background_type == 'color' %}
+            background-color: {{ background_value }};
+            {% elif background_type == 'gradient' %}
+            background: {{ background_value }};
+            {% elif background_type == 'image' %}
+            background-image: url('{{ background_value }}');
+            background-size: cover;
+            background-position: center;
+            {% endif %}
+        }
+        
+        .element {
+            position: absolute;
+            overflow: visible;
+        }
+        
+        .element-text {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: visible;
+        }
+        
+        .element-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .element-qr img, .element-barcode img {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="id-card">
+        {% for element in config.elements %}
+        <div class="element element-{{ element.type }}"
+             style="
+                left: {{ element.x }}mm;
+                top: {{ element.y }}mm;
+                width: {{ element.width }}mm;
+                height: {{ element.height }}mm;
+                z-index: {{ element.zIndex|default:'1' }};
+                opacity: {{ element.opacity|default:'1' }};
+                transform: rotate({{ element.rotation|default:'0' }}deg);
+                transform-origin: center;
+                {% if element.backgroundColor %}background-color: {{ element.backgroundColor }};{% endif %}
+                {% if element.borderRadius %}border-radius: {{ element.borderRadius|floatformat:2 }}mm;{% endif %}
+                {% if element.border %}border: {{ element.borderWidth|default:'1'|floatformat:2 }}mm solid {{ element.borderColor|default:'#000' }};{% endif %}
+                {% if element.boxShadow %}box-shadow: {{ element.boxShadow }};{% endif %}
+             ">
+            
+            {% if element.type == 'text' %}
+                <div
+                    style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: {% if element.textAlign == 'center' %}center{% elif element.textAlign == 'right' %}flex-end{% else %}flex-start{% endif %};
+                        width: 100%;
+                        height: 100%;
+                        {% if element.fontSize and config.mm_to_px %}font-size: {{ element.fontSize|div:config.mm_to_px|floatformat:3 }}mm;{% endif %}
+                        {% if element.fontWeight %}font-weight: {{ element.fontWeight }};{% endif %}
+                        {% if element.fontFamily %}font-family: {{ element.fontFamily }};{% endif %}
+                        {% if element.letterSpacing and config.mm_to_px %}letter-spacing: {{ element.letterSpacing|div:config.mm_to_px|floatformat:3 }}mm;{% endif %}
+                        {% if element.lineHeight %}line-height: {{ element.lineHeight }};{% endif %}
+                        {% if element.color %}color: {{ element.color }};{% endif %}
+                        text-align: {% if element.textAlign %}{{ element.textAlign }}{% else %}left{% endif %};
+                        white-space: nowrap;
+                        overflow: visible;
+                    "
+                >
+                    {{ element.text }}
+                </div>
+            
+            {% elif element.type == 'image' %}
+                {% if element.src %}
+                    <img src="{{ element.src }}" alt="">
+                {% elif element.url %}
+                    <img src="{{ element.url }}" alt="">
+                {% elif element.source %}
+                    {% with source_parts=element.source|split:'.' %}
+                        {% if source_parts.0 == 'student' and data.student %}
+                            <img src="{{ data.student|get_nested:source_parts.1 }}" alt="">
+                        {% elif source_parts.0 == 'staff' and data.staff %}
+                            <img src="{{ data.staff|get_nested:source_parts.1 }}" alt="">
+                        {% elif source_parts.0 == 'school' %}
+                            <img src="{{ data.school|get_nested:source_parts.1 }}" alt="">
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+            
+            {% elif element.type == 'qrcode' or element.type == 'qr' %}
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; {% if element.qrBackground %}background: {{ element.qrBackground }};{% else %}background: #FFFFFF;{% endif %}">
+                    {% if element.qr_image %}
+                        <img src="{{ element.qr_image }}" alt="QR Code" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+                    {% elif qr_code_image %}
+                        <img src="{{ qr_code_image }}" alt="QR Code" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+                    {% endif %}
+                </div>
+            
+            {% elif element.type == 'shape' %}
+                {% with fill_value=element.fillColor|default:element.fill|default:'transparent' %}
+                    {% if element.shape == 'rectangle' %}
+                    <div style="width:100%; height:100%; background-color:{{ fill_value }};"></div>
+                    {% elif element.shape == 'circle' %}
+                    <div style="width:100%; height:100%; border-radius:50%; background-color:{{ fill_value }};"></div>
+                    {% endif %}
+                {% endwith %}
+            
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

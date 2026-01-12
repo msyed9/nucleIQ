@@ -9,16 +9,38 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies including WeasyPrint requirements
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq-dev \
     gcc \
     g++ \
+    make \
     curl \
     cmake \
     libopenblas-dev \
     liblapack-dev \
+    # WeasyPrint dependencies for PDF generation (complete set)
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fontconfig \
+    fonts-liberation \
+    fonts-dejavu-core \
+    # Critical GLib/GObject libraries for WeasyPrint
+    libglib2.0-0 \
+    libharfbuzz0b \
+    # QR code dependencies  
+    libzbar0 \
+        # Build deps for dlib/face_recognition
+        libboost-all-dev \
+        libjpeg-dev \
+        libatlas3-base \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -50,11 +72,11 @@ ARG GIT_SHA
 
 # Labels for container metadata
 LABEL org.opencontainers.image.title="NucleIQ Backend" \
-      org.opencontainers.image.description="Django REST API for NucleIQ Multi-Tenant SaaS" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.revision="${GIT_SHA}" \
-      org.opencontainers.image.vendor="NucleIQ" \
-      org.opencontainers.image.source="https://github.com/nucleiq/nucleiq"
+    org.opencontainers.image.description="Django REST API for NucleIQ Multi-Tenant SaaS" \
+    org.opencontainers.image.created="${BUILD_DATE}" \
+    org.opencontainers.image.revision="${GIT_SHA}" \
+    org.opencontainers.image.vendor="NucleIQ" \
+    org.opencontainers.image.source="https://github.com/nucleiq/nucleiq"
 
 # Install production dependencies only
 COPY requirements/prod.txt /app/backend/requirements.txt
@@ -83,16 +105,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Run with Gunicorn (optimized for container environments)
 CMD ["gunicorn", "config.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
-     "--threads", "4", \
-     "--worker-class", "gthread", \
-     "--worker-tmp-dir", "/dev/shm", \
-     "--timeout", "120", \
-     "--keep-alive", "5", \
-     "--max-requests", "1000", \
-     "--max-requests-jitter", "50", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--capture-output", \
-     "--log-level", "info"]
+    "--bind", "0.0.0.0:8000", \
+    "--workers", "2", \
+    "--threads", "4", \
+    "--worker-class", "gthread", \
+    "--worker-tmp-dir", "/dev/shm", \
+    "--timeout", "120", \
+    "--keep-alive", "5", \
+    "--max-requests", "1000", \
+    "--max-requests-jitter", "50", \
+    "--access-logfile", "-", \
+    "--error-logfile", "-", \
+    "--capture-output", \
+    "--log-level", "info"]

@@ -27,6 +27,44 @@
     max-width: 800px;
 }
 
+.modal-content.modal-xl {
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.modal-xl .modal-header {
+    flex-shrink: 0;
+}
+
+/* Handle form element that wraps body and footer */
+.modal-content.modal-xl>form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.modal-content.modal-xl .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 24px;
+    padding-bottom: 16px;
+}
+
+.modal-content.modal-xl .modal-footer {
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;

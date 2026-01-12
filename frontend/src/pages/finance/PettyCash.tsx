@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Download, Wallet, CheckCircle, XCircle, Clock, Upload, Eye } from 'lucide-react';
 import api from '../../services/api';
+import { openDownload } from '../../utils/downloadLink';
 import { toast } from 'react-hot-toast';
 
 interface PettyCashRequest {
@@ -406,7 +407,7 @@ const PettyCash: React.FC = () => {
                                         <div className="flex items-center justify-center gap-2">
                                             {request.receipt_image && (
                                                 <button
-                                                    onClick={() => window.open(request.receipt_image, '_blank')}
+                                                    onClick={() => openDownload(request.receipt_image)}
                                                     className="p-1 text-gray-600 hover:text-blue-600"
                                                     title="View Receipt"
                                                 >

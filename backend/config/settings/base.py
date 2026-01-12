@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'search',
     'students',
     'analytics',
-    # 'idcards',  # ID Card functionality is in students app
+    'idcards',  # New ID Card system with templates and QR codes
     'staff',
     'attendance',
     'fees',
