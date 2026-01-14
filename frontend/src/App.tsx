@@ -42,6 +42,11 @@ import HabitBoard from './pages/trackers/HabitBoard';
 import TransportFleet from './pages/transport/TransportFleet';
 import FeeDefaulters from './pages/fees/FeeDefaulters';
 import FeePaymentHistory from './pages/fees/FeePaymentHistory';
+import AdvancePayments from './pages/fees/AdvancePayments';
+import FeeRefunds from './pages/fees/FeeRefunds';
+import PaymentHistory from './pages/fees/PaymentHistory';
+import CategoryWiseReport from './pages/fees/CategoryWiseReport';
+import StudentLedger from './pages/fees/StudentLedger';
 import FinancialReports from './pages/finance/FinancialReports';
 import LibraryManagement from './pages/library/LibraryManagement';
 
@@ -154,6 +159,7 @@ import ParentPortal from './pages/parent/ParentPortal';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentLayout from './components/layout/ParentLayout';
 import AuditLogs from './pages/admin/AuditLogs';
+import RecycleBin from './pages/admin/RecycleBin';
 
 // New pages added
 import TransportAllocations from './pages/transport/TransportAllocations';
@@ -249,6 +255,11 @@ function App() {
                                                 <Route path="/fees/collect" element={<Layout><CollectFees /></Layout>} />
                                                 <Route path="/fees/defaulters" element={<Layout><FeeDefaulters /></Layout>} />
                                                 <Route path="/fees/history" element={<Layout><FeePaymentHistory /></Layout>} />
+                                                <Route path="/fees/advances" element={<Layout><AdvancePayments /></Layout>} />
+                                                <Route path="/fees/refunds" element={<Layout><FeeRefunds /></Layout>} />
+                                                <Route path="/fees/payment-history" element={<Layout><PaymentHistory /></Layout>} />
+                                                <Route path="/fees/reports/category" element={<Layout><CategoryWiseReport /></Layout>} />
+                                                <Route path="/fees/ledger" element={<Layout><StudentLedger /></Layout>} />
                                                 {/* Other routes */}
                                                 <Route path="/attendance" element={<Layout><MarkAttendance /></Layout>} />
                                                 <Route path="/attendance/aggregates" element={<Layout><AttendanceAggregates /></Layout>} />
@@ -294,6 +305,7 @@ function App() {
                                                 <Route path="/parent/academics" element={<ParentLayout><ParentPortal /></ParentLayout>} />
                                                 <Route path="/parent/messages" element={<ParentLayout><ParentPortal /></ParentLayout>} />
                                                 <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
+                                                <Route path="/admin/recycle-bin" element={<Layout><RecycleBin /></Layout>} />
                                                 {/* Timetable routes */}
                                                 <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
                                                 <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />

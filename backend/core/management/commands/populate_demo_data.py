@@ -95,7 +95,8 @@ class Command(BaseCommand):
 
     def clear_tenant_data(self, tenant):
         """Clear all existing data for the tenant"""
-        Student.objects.filter(tenant=tenant).delete()
+        # Soft-delete students instead of hard delete to avoid DB cascade issues
+        Student.objects.filter(tenant=tenant).update(is_deleted=True, deleted_at=timezone.now())
         Staff.objects.filter(tenant=tenant).delete()
         FeeCategory.objects.filter(tenant=tenant).delete()
         FeeStructure.objects.filter(tenant=tenant).delete()

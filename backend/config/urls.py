@@ -109,6 +109,19 @@ urlpatterns = [
     # path('api/notifications/', include('notifications.urls')),
 ]
 
+# Recycle Bin routes (outside main urlpatterns for custom routing)
+from rest_framework.routers import DefaultRouter
+from core.recyclebin import RecycleBinViewSet
+from core.audit import AuditLogViewSet
+
+admin_router = DefaultRouter()
+admin_router.register(r'recycle-bin', RecycleBinViewSet, basename='recycle-bin')
+admin_router.register(r'audit-logs', AuditLogViewSet, basename='audit-logs')
+
+urlpatterns = [
+    path('api/', include(admin_router.urls)),
+] + urlpatterns
+
 
 # Download media with attachment (forces browser to download)
 def media_download(request, file_path):

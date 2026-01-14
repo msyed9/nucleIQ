@@ -208,7 +208,19 @@
         "search_placeholder": "Search by name or admission number...",
         "view": "View Profile",
         "no_data": "No students found",
-        "showing": "Showing {{shown}} of {{total}} students"
+        "showing": "Showing {{shown}} of {{total}} students",
+        "citizenship": "Citizenship",
+        "religion": "Religion",
+        "select_citizenship": "Select Citizenship",
+        "select_religion": "Select Religion",
+        "enter_country": "Enter country name",
+        "citizenship_duplicate_dropdown": "This country is already available in the dropdown. Please select it from the dropdown instead.",
+        "citizenship_enter_required": "Please enter the country name for Citizenship.",
+        "citizenship_duplicate_on_submit": "The country you entered already exists in the dropdown. Please select it from the dropdown.",
+        "load_failed": "Failed to load student data",
+        "enrollment_update_failed": "Student updated but enrollment update failed. Please update enrollment separately.",
+        "update_success": "Student updated successfully!",
+        "update_error": "Failed to update student. Please check all fields."
     },
     "designer": {
         "title": "ID Card Designer",

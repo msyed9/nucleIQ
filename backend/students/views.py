@@ -129,6 +129,15 @@ class StudentViewSet(viewsets.ModelViewSet):
             response.data['parent_logins'] = self._parent_login_info
         
         return response
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Override destroy to soft-delete the student record instead of
+        performing a hard delete which may trigger DB cascade deletes.
+        """
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     def _create_parent_login(self, student):
         """

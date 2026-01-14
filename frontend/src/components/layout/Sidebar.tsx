@@ -168,7 +168,11 @@ const menuItems: MenuItem[] = [
         label: 'Fees',
         children: [
             { path: '/fees/collect', icon: CreditCard, labelKey: 'nav.collect_fees', label: 'Collect Fees' },
-            { path: '/fees/history', icon: History, labelKey: 'nav.fee_history', label: 'Fee Paid History' },
+            { path: '/fees/payment-history', icon: History, labelKey: 'nav.payment_history', label: 'Payment History' },
+            { path: '/fees/advances', icon: TrendingUp, labelKey: 'nav.advances', label: 'Advance Payments' },
+            { path: '/fees/refunds', icon: Receipt, labelKey: 'nav.refunds', label: 'Refunds' },
+            { path: '/fees/ledger', icon: FileText, labelKey: 'nav.student_ledger', label: 'Student Ledger' },
+            { path: '/fees/reports/category', icon: PieChart, labelKey: 'nav.category_report', label: 'Category Report' },
             { path: '/fees/configure', icon: SettingsIcon, labelKey: 'nav.fee_config', label: 'Configure' },
             { path: '/fees/defaulters', icon: AlertTriangle, labelKey: 'nav.fee_defaulters', label: 'Defaulters' },
             { path: '/finance', icon: PieChart, labelKey: 'nav.finance', label: 'Finance' },
@@ -274,6 +278,7 @@ const menuItems: MenuItem[] = [
         label: 'Admin',
         children: [
             { path: '/admin/audit-logs', icon: FileText, labelKey: 'nav.audit_logs', label: 'Audit Logs' },
+            { path: '/admin/recycle-bin', icon: FolderOpen, labelKey: 'nav.recycle_bin', label: 'Recycle Bin' },
             { path: '/users/manage', icon: Users, labelKey: 'nav.user_management', label: 'User Management' },
         ]
     },

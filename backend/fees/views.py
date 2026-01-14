@@ -8,17 +8,23 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.db import transaction as db_transaction
 from rest_framework import serializers as drf_serializers
+from decimal import Decimal
 
 from core.permissions import IsTenantUser
 from .models import (
     FeeCategory, FeeStructure, FeeAllocation, FeeInvoice,
-    FeeInvoiceItem, FeeTransaction, FeeDefaulter, SiblingDiscount
+    FeeInvoiceItem, FeeTransaction, FeeDefaulter, SiblingDiscount,
+    FeeTransactionItem, FeeAdvancePayment, FeeRefund
 )
 from .serializers import (
     FeeCategorySerializer, FeeStructureSerializer, FeeAllocationSerializer,
     FeeInvoiceSerializer, FeeTransactionSerializer, FeeDefaulterSerializer,
-    SiblingDiscountSerializer
+    SiblingDiscountSerializer, FeeTransactionItemSerializer,
+    FeeAdvancePaymentSerializer, FeeRefundSerializer,
+    CollectPaymentSerializer, CreateAdvancePaymentSerializer,
+    RefundRequestSerializer, ProcessRefundSerializer
 )
 from .services import FeeCalculationService
 
@@ -173,6 +179,211 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def category_report(self, request):
+        """Get category-wise collection report."""
+        from django.db.models import Sum, Count
+        from datetime import datetime
+        
+        # Get date range from query params
+        date_from = request.query_params.get('from_date')
+        date_to = request.query_params.get('to_date')
+        
+        # Get all categories for this tenant
+        categories = FeeCategory.objects.filter(tenant=request.user.tenant, is_active=True)
+        
+        report_data = []
+        
+        for category in categories:
+            # Get invoice items for this category
+            invoice_items = FeeInvoiceItem.objects.filter(
+                invoice__tenant=request.user.tenant,
+                fee_allocation__fee_structure__category=category
+            )
+            
+            if date_from:
+                invoice_items = invoice_items.filter(
+                    invoice__invoice_date__gte=datetime.strptime(date_from, '%Y-%m-%d').date()
+                )
+            if date_to:
+                invoice_items = invoice_items.filter(
+                    invoice__invoice_date__lte=datetime.strptime(date_to, '%Y-%m-%d').date()
+                )
+            
+            totals = invoice_items.aggregate(
+                total_invoiced=Sum('amount'),
+                total_paid=Sum('paid_amount')
+            )
+            
+            total_invoiced = totals['total_invoiced'] or Decimal('0')
+            total_paid = totals['total_paid'] or Decimal('0')
+            total_pending = total_invoiced - total_paid
+            
+            # Count transactions for this category
+            transaction_count = FeeTransactionItem.objects.filter(
+                transaction__tenant=request.user.tenant,
+                invoice_item__fee_allocation__fee_structure__category=category
+            ).count()
+            
+            collection_percentage = 0
+            if total_invoiced > 0:
+                collection_percentage = float(total_paid / total_invoiced * 100)
+            
+            report_data.append({
+                'category_id': str(category.id),
+                'category_name': category.name,
+                'category_code': category.code,
+                'total_invoiced': float(total_invoiced),
+                'total_collected': float(total_paid),
+                'total_pending': float(total_pending),
+                'collection_percentage': round(collection_percentage, 2),
+                'transaction_count': transaction_count
+            })
+        
+        return Response(report_data)
+    
+    @action(detail=False, methods=['get'])
+    def student_ledger(self, request):
+        """Get complete ledger for a student."""
+        from students.models import Student
+        
+        student_id = request.query_params.get('student_id')
+        if not student_id:
+            return Response(
+                {'error': 'student_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            student = Student.objects.get(id=student_id, tenant=request.user.tenant)
+        except Student.DoesNotExist:
+            return Response(
+                {'error': 'Student not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        ledger_entries = []
+        running_balance = Decimal('0')
+        
+        # Get invoices
+        invoices = FeeInvoice.objects.filter(
+            student=student
+        ).prefetch_related('items').order_by('invoice_date')
+        
+        for inv in invoices:
+            running_balance += inv.total_amount
+            item_names = ', '.join([
+                item.fee_allocation.fee_structure.category.name 
+                for item in inv.items.all() 
+                if item.fee_allocation and item.fee_allocation.fee_structure
+            ]) or 'Monthly Fee'
+            
+            ledger_entries.append({
+                'date': inv.invoice_date.isoformat(),
+                'type': 'INVOICE',
+                'reference': inv.invoice_number,
+                'description': f'Fee Invoice - {item_names}',
+                'debit': float(inv.total_amount),
+                'credit': 0,
+                'balance': float(running_balance)
+            })
+        
+        # Get transactions
+        transactions = FeeTransaction.objects.filter(
+            invoice__student=student
+        ).order_by('transaction_date')
+        
+        for txn in transactions:
+            running_balance -= txn.amount
+            ref_info = f' ({txn.payment_reference})' if txn.payment_reference else ''
+            ledger_entries.append({
+                'date': txn.transaction_date.isoformat(),
+                'type': 'PAYMENT',
+                'reference': txn.receipt_number,
+                'description': f'Payment - {txn.payment_mode}{ref_info}',
+                'debit': 0,
+                'credit': float(txn.amount),
+                'balance': float(running_balance)
+            })
+        
+        # Get advance payments
+        advances = FeeAdvancePayment.objects.filter(
+            student=student
+        ).order_by('created_at')
+        
+        for adv in advances:
+            running_balance -= adv.amount
+            ledger_entries.append({
+                'date': adv.created_at.isoformat(),
+                'type': 'ADVANCE',
+                'reference': f'ADV-{str(adv.id)[:8]}',
+                'description': f'Advance Payment - {adv.fee_category.name}',
+                'debit': 0,
+                'credit': float(adv.amount),
+                'balance': float(running_balance),
+                'category': adv.fee_category.name
+            })
+        
+        # Get refunds
+        refunds = FeeRefund.objects.filter(
+            student=student,
+            status='PROCESSED'
+        ).order_by('processed_at')
+        
+        for ref in refunds:
+            running_balance += ref.refund_amount
+            ledger_entries.append({
+                'date': (ref.processed_at or ref.created_at).isoformat(),
+                'type': 'REFUND',
+                'reference': f'REF-{str(ref.id)[:8]}',
+                'description': f'Refund - {ref.fee_category.name}: {ref.reason}',
+                'debit': float(ref.refund_amount),
+                'credit': 0,
+                'balance': float(running_balance),
+                'category': ref.fee_category.name
+            })
+        
+        # Sort by date
+        ledger_entries.sort(key=lambda x: x['date'])
+        
+        # Recalculate running balance after sorting
+        balance = Decimal('0')
+        for entry in ledger_entries:
+            balance += Decimal(str(entry['debit'])) - Decimal(str(entry['credit']))
+            entry['balance'] = float(balance)
+        
+        # Category summary
+        category_summary = {}
+        for inv in invoices:
+            for item in inv.items.all():
+                if item.fee_allocation and item.fee_allocation.fee_structure:
+                    cat_name = item.fee_allocation.fee_structure.category.name
+                    if cat_name not in category_summary:
+                        category_summary[cat_name] = {
+                            'category_name': cat_name,
+                            'total_invoiced': 0,
+                            'total_paid': 0,
+                            'balance': 0
+                        }
+                    category_summary[cat_name]['total_invoiced'] += float(item.amount)
+                    category_summary[cat_name]['total_paid'] += float(item.paid_amount)
+                    category_summary[cat_name]['balance'] += float(item.balance_amount)
+        
+        return Response({
+            'student': {
+                'id': str(student.id),
+                'full_name': student.full_name,
+                'admission_number': student.admission_number,
+                'class_name': student.current_class.name if student.current_class else None,
+                'section_name': student.current_section.name if student.current_section else None
+            },
+            'ledger_entries': ledger_entries,
+            'category_summary': list(category_summary.values()),
+            'current_balance': float(balance),
+            'total_debit': sum(e['debit'] for e in ledger_entries),
+            'total_credit': sum(e['credit'] for e in ledger_entries)
+        })
 
 
 class FeeTransactionViewSet(viewsets.ModelViewSet):
@@ -186,7 +397,7 @@ class FeeTransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return FeeTransaction.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related('invoice', 'invoice__student', 'collected_by')
+        ).select_related('invoice', 'invoice__student', 'collected_by').prefetch_related('items')
     
     def perform_create(self, serializer):
         """Record payment and update invoice."""
@@ -219,6 +430,86 @@ class FeeTransactionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Override create to use custom logic."""
         return self.perform_create(None)
+    
+    @action(detail=False, methods=['post'])
+    def collect_with_breakdown(self, request):
+        """
+        Collect payment with category-wise breakdown.
+        Allows cashier to manually allocate payment to specific fee categories.
+        """
+        serializer = CollectPaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data = serializer.validated_data
+        
+        try:
+            invoice = FeeInvoice.objects.get(
+                id=data['invoice_id'],
+                tenant=request.user.tenant
+            )
+        except FeeInvoice.DoesNotExist:
+            return Response(
+                {'error': 'Invoice not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Calculate total amount
+        total_amount = sum(item['amount'] for item in data['items'])
+        
+        with db_transaction.atomic():
+            # Create the transaction
+            transaction = FeeCalculationService.record_payment(
+                invoice=invoice,
+                amount=total_amount,
+                payment_mode=data['payment_mode'],
+                payment_reference=data.get('payment_reference', ''),
+                collected_by=request.user,
+                remarks=data.get('remarks', '')
+            )
+            
+            # Create transaction items for category-wise tracking
+            for item_data in data['items']:
+                try:
+                    invoice_item = FeeInvoiceItem.objects.get(
+                        id=item_data['invoice_item_id'],
+                        invoice=invoice
+                    )
+                except FeeInvoiceItem.DoesNotExist:
+                    # Rollback will happen automatically
+                    return Response(
+                        {'error': f"Invoice item {item_data['invoice_item_id']} not found"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                FeeTransactionItem.objects.create(
+                    transaction=transaction,
+                    invoice_item=invoice_item,
+                    amount=item_data['amount'],
+                    is_advance=item_data.get('is_advance', False),
+                    remarks=item_data.get('remarks', '')
+                )
+        
+        # Return the transaction with items
+        transaction_serializer = FeeTransactionSerializer(transaction)
+        response_data = transaction_serializer.data
+        response_data['items'] = FeeTransactionItemSerializer(
+            transaction.items.all(), many=True
+        ).data
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['get'])
+    def breakdown(self, request, pk=None):
+        """Get category-wise breakdown of a transaction."""
+        transaction = self.get_object()
+        items = transaction.items.all().select_related(
+            'invoice_item__fee_allocation__fee_structure__category'
+        )
+        
+        return Response({
+            'transaction': FeeTransactionSerializer(transaction).data,
+            'items': FeeTransactionItemSerializer(items, many=True).data
+        })
 
 
 class FeeDefaulterViewSet(viewsets.ReadOnlyModelViewSet):
@@ -468,3 +759,250 @@ class SiblingDiscountViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
+
+
+class FeeAdvancePaymentViewSet(viewsets.ModelViewSet):
+    """ViewSet for Fee Advance Payments."""
+    
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = FeeAdvancePaymentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['student', 'fee_category', 'status']
+    
+    def get_queryset(self):
+        return FeeAdvancePayment.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related('student', 'fee_category', 'transaction')
+    
+    @action(detail=False, methods=['post'])
+    def create_advance(self, request):
+        """
+        Create an advance payment for a specific fee category.
+        """
+        serializer = CreateAdvancePaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data = serializer.validated_data
+        
+        from students.models import Student
+        
+        try:
+            student = Student.objects.get(
+                id=data['student_id'],
+                tenant=request.user.tenant
+            )
+        except Student.DoesNotExist:
+            return Response(
+                {'error': 'Student not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            category = FeeCategory.objects.get(
+                id=data['fee_category_id'],
+                tenant=request.user.tenant
+            )
+        except FeeCategory.DoesNotExist:
+            return Response(
+                {'error': 'Fee category not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        with db_transaction.atomic():
+            # Create a transaction without invoice (for advance)
+            transaction = FeeTransaction.objects.create(
+                tenant=request.user.tenant,
+                invoice=None,  # No invoice for advance payments
+                transaction_number=FeeCalculationService._generate_transaction_number(request.user.tenant),
+                amount=data['amount'],
+                payment_mode=data['payment_mode'],
+                payment_reference=data.get('payment_reference', ''),
+                collected_by=request.user,
+                remarks=f"Advance payment for {category.name}: {data.get('remarks', '')}"
+            )
+            
+            # Create advance payment record
+            advance = FeeAdvancePayment.objects.create(
+                tenant=request.user.tenant,
+                student=student,
+                fee_category=category,
+                transaction=transaction,
+                amount=data['amount'],
+                balance_amount=data['amount'],
+                advance_for_months=data.get('advance_for_months', 1),
+                remarks=data.get('remarks', '')
+            )
+        
+        return Response(
+            FeeAdvancePaymentSerializer(advance).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=False, methods=['get'])
+    def student_advances(self, request):
+        """Get all available advances for a student."""
+        student_id = request.query_params.get('student_id')
+        
+        if not student_id:
+            return Response(
+                {'error': 'student_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        advances = self.get_queryset().filter(
+            student_id=student_id,
+            status__in=['AVAILABLE', 'PARTIALLY_USED']
+        )
+        
+        return Response(FeeAdvancePaymentSerializer(advances, many=True).data)
+
+
+class FeeRefundViewSet(viewsets.ModelViewSet):
+    """ViewSet for Fee Refunds."""
+    
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    serializer_class = FeeRefundSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['student', 'fee_category', 'status']
+    
+    def get_queryset(self):
+        return FeeRefund.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related(
+            'student', 'fee_category', 'original_transaction',
+            'invoice_item', 'requested_by', 'approved_by'
+        )
+    
+    @action(detail=False, methods=['post'])
+    def request_refund(self, request):
+        """
+        Request a refund for a specific fee category.
+        """
+        serializer = RefundRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data = serializer.validated_data
+        
+        from students.models import Student
+        
+        try:
+            student = Student.objects.get(
+                id=data['student_id'],
+                tenant=request.user.tenant
+            )
+        except Student.DoesNotExist:
+            return Response(
+                {'error': 'Student not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            category = FeeCategory.objects.get(
+                id=data['fee_category_id'],
+                tenant=request.user.tenant
+            )
+        except FeeCategory.DoesNotExist:
+            return Response(
+                {'error': 'Fee category not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get optional related objects
+        invoice_item = None
+        original_transaction = None
+        
+        if 'invoice_item_id' in data and data['invoice_item_id']:
+            try:
+                invoice_item = FeeInvoiceItem.objects.get(
+                    id=data['invoice_item_id'],
+                    invoice__tenant=request.user.tenant
+                )
+            except FeeInvoiceItem.DoesNotExist:
+                return Response(
+                    {'error': 'Invoice item not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        if 'original_transaction_id' in data and data['original_transaction_id']:
+            try:
+                original_transaction = FeeTransaction.objects.get(
+                    id=data['original_transaction_id'],
+                    tenant=request.user.tenant
+                )
+            except FeeTransaction.DoesNotExist:
+                return Response(
+                    {'error': 'Original transaction not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        refund = FeeRefund.objects.create(
+            tenant=request.user.tenant,
+            student=student,
+            fee_category=category,
+            original_transaction=original_transaction,
+            invoice_item=invoice_item,
+            refund_amount=data['refund_amount'],
+            reason=data['reason'],
+            requested_by=request.user,
+            remarks=data.get('remarks', '')
+        )
+        
+        return Response(
+            FeeRefundSerializer(refund).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a refund request."""
+        refund = self.get_object()
+        
+        if refund.status != 'PENDING':
+            return Response(
+                {'error': 'Only pending refunds can be approved'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        refund.approve(request.user)
+        
+        return Response(FeeRefundSerializer(refund).data)
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a refund request."""
+        refund = self.get_object()
+        
+        if refund.status != 'PENDING':
+            return Response(
+                {'error': 'Only pending refunds can be rejected'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        refund.status = 'REJECTED'
+        refund.remarks = request.data.get('remarks', refund.remarks)
+        refund.save()
+        
+        return Response(FeeRefundSerializer(refund).data)
+    
+    @action(detail=True, methods=['post'])
+    def process(self, request, pk=None):
+        """Process an approved refund."""
+        refund = self.get_object()
+        
+        serializer = ProcessRefundSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data = serializer.validated_data
+        
+        try:
+            refund.process(
+                refund_mode=data['refund_mode'],
+                reference=data.get('refund_reference', '')
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return Response(FeeRefundSerializer(refund).data)

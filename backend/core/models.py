@@ -63,6 +63,14 @@ class BaseModel(models.Model):
         blank=True,
         help_text="Timestamp when this record was soft deleted"
     )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_deleted_set',
+        help_text="User who deleted this record"
+    )
     
     # Custom manager
     objects = BaseModelManager()
@@ -77,11 +85,13 @@ class BaseModel(models.Model):
         Soft delete this record.
         
         Args:
-            user: The user performing the deletion (ignored for now)
+            user: The user performing the deletion
         """
         self.is_deleted = True
         self.deleted_at = timezone.now()
-        self.save(update_fields=['is_deleted', 'deleted_at'])
+        if user:
+            self.deleted_by = user
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
     
     def restore(self):
         """Restore a soft-deleted record."""

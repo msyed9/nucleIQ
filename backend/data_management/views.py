@@ -31,6 +31,42 @@ from tenants.models import GradeLevel, Section, Subject, AcademicYear
 from fees.models import FeeCategory, FeeStructure, FeeAllocation
 
 
+def parse_date_flexible(date_str):
+    """
+    Parse date string in multiple formats:
+    - dd-mm-yyyy
+    - dd/mm/yyyy  
+    - yyyy-mm-dd (ISO format)
+    Returns a date object or None if parsing fails.
+    """
+    if not date_str:
+        return None
+    
+    # If already a date object, return as is
+    if hasattr(date_str, 'year'):
+        return date_str
+    
+    date_str = str(date_str).strip()
+    
+    # Try different formats
+    formats = [
+        '%d-%m-%Y',  # dd-mm-yyyy
+        '%d/%m/%Y',  # dd/mm/yyyy
+        '%Y-%m-%d',  # yyyy-mm-dd (ISO)
+        '%d-%m-%y',  # dd-mm-yy
+        '%d/%m/%y',  # dd/mm/yy
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    
+    # If all formats fail, return None
+    return None
+
+
 class TemplateInfo:
     """Template configuration for each module"""
     
@@ -47,14 +83,16 @@ class TemplateInfo:
                 'first_name': 'John',
                 'last_name': 'Doe',
                 'admission_number': 'STU001',
-                'date_of_birth': '2010-05-15',
+                'date_of_birth': '15-05-2010',
                 'gender': 'M',
+                'address': '123 Main Street, City',
                 'father_name': 'Robert Doe',
                 'mother_name': 'Mary Doe',
                 'father_phone': '9876543210',
                 'mother_phone': '9876543211',
                 'class_name': 'Class 10',
-                'section_name': 'A'
+                'section_name': 'A',
+                'admission_date': '01-04-2024'
             }
         },
         'staff': {
@@ -69,11 +107,12 @@ class TemplateInfo:
                 'last_name': 'Smith',
                 'employee_id': 'EMP001',
                 'email': 'jane@school.com',
-                'date_of_joining': '2020-06-01',
+                'date_of_joining': '01-06-2020',
                 'phone': '9876543212',
                 'gender': 'Female',
                 'department': 'Mathematics',
-                'designation': 'Senior Teacher'
+                'designation': 'Senior Teacher',
+                'date_of_birth': '15-03-1985'
             }
         },
         'classes': {
@@ -208,18 +247,47 @@ class DownloadTemplateView(APIView):
         # Add instructions sheet
         instructions_ws = wb.create_sheet('Instructions')
         instructions = [
+            ('📋 IMPORT INSTRUCTIONS', '', ''),
+            ('', '', ''),
+            ('📅 DATE FORMAT:', '', ''),
+            ('All date fields accept BOTH formats:', '', ''),
+            ('   • dd-mm-yyyy (e.g., 15-05-2010)', '', ''),
+            ('   • dd/mm/yyyy (e.g., 15/05/2010)', '', ''),
+            ('', '', ''),
+            ('📝 FIELD DETAILS:', '', ''),
             ('Field', 'Required', 'Description'),
         ]
         for field in config['required_fields']:
-            instructions.append((field, 'Yes', f'Required field: {field}'))
+            description = f'Required field'
+            if 'date' in field.lower():
+                description = f'Required date field. Format: dd-mm-yyyy or dd/mm/yyyy'
+            instructions.append((field, 'Yes', description))
         for field in config['optional_fields']:
-            instructions.append((field, 'No', f'Optional field: {field}'))
+            description = f'Optional field'
+            if 'date' in field.lower():
+                description = f'Optional date field. Format: dd-mm-yyyy or dd/mm/yyyy'
+            instructions.append((field, 'No', description))
+        
+        # Add additional instructions
+        instructions.append(('', '', ''))
+        instructions.append(('💡 TIPS:', '', ''))
+        instructions.append(('• Blue headers are REQUIRED fields', '', ''))
+        instructions.append(('• Gray headers are OPTIONAL fields', '', ''))
+        instructions.append(('• Do not modify the header row', '', ''))
+        instructions.append(('• Sample data is provided in row 2 of the main sheet', '', ''))
         
         for row_num, row_data in enumerate(instructions, 1):
             for col_num, value in enumerate(row_data, 1):
                 cell = instructions_ws.cell(row=row_num, column=col_num, value=value)
-                if row_num == 1:
+                if row_num == 1 or row_num == 9:
+                    cell.font = Font(bold=True, size=12)
+                elif '📅' in str(value) or '📝' in str(value) or '💡' in str(value):
                     cell.font = Font(bold=True)
+        
+        # Adjust column widths for instructions
+        instructions_ws.column_dimensions['A'].width = 45
+        instructions_ws.column_dimensions['B'].width = 12
+        instructions_ws.column_dimensions['C'].width = 55
         
         # Return response
         response = HttpResponse(
@@ -502,26 +570,30 @@ class ImportDataView(APIView):
     def _create_student(self, row, tenant):
         from users.models import User
         
+        # Parse dates with flexible format support
+        date_of_birth = parse_date_flexible(row.get('date_of_birth'))
+        admission_date = parse_date_flexible(row.get('admission_date')) or datetime.now().date()
+        
         student = Student.objects.create(
             tenant=tenant,
             first_name=row['first_name'],
             last_name=row['last_name'],
             admission_number=row['admission_number'],
-            date_of_birth=row.get('date_of_birth'),
-            gender=row.get('gender', 'Male'),
-            email=row.get('email'),
-            phone=row.get('phone'),
-            address=row.get('address'),
-            blood_group=row.get('blood_group'),
-            father_name=row['father_name'],
-            mother_name=row['mother_name'],
-            father_phone=row.get('father_phone', ''),
-            mother_phone=row.get('mother_phone', ''),
-            aadhar_number=row.get('aadhar_number'),
-            nationality=row.get('nationality', 'Indian'),
-            religion=row.get('religion'),
-            caste=row.get('caste'),
-            admission_date=row.get('admission_date') or datetime.now().date()
+            date_of_birth=date_of_birth,
+            gender=row.get('gender', 'M'),
+            email=row.get('email', '') or '',
+            phone=row.get('phone', '') or '',
+            address=row.get('address', '') or '',
+            blood_group=row.get('blood_group', '') or '',
+            father_name=row.get('father_name', '') or '',
+            mother_name=row.get('mother_name', '') or '',
+            father_phone=row.get('father_phone', '') or '',
+            mother_phone=row.get('mother_phone', '') or '',
+            aadhar_number=row.get('aadhar_number', '') or '',
+            nationality=row.get('nationality', 'Indian') or 'Indian',
+            religion=row.get('religion', '') or '',
+            caste=row.get('caste', '') or '',
+            admission_date=admission_date
         )
         
         # Create enrollment if class/section provided
@@ -553,17 +625,21 @@ class ImportDataView(APIView):
         return student
     
     def _create_staff(self, row, tenant):
+        # Parse dates with flexible format support
+        date_of_joining = parse_date_flexible(row.get('date_of_joining'))
+        date_of_birth = parse_date_flexible(row.get('date_of_birth'))
+        
         staff = Staff.objects.create(
             tenant=tenant,
             first_name=row['first_name'],
             last_name=row['last_name'],
             employee_id=row['employee_id'],
             email=row['email'],
-            date_of_joining=row.get('date_of_joining'),
+            date_of_joining=date_of_joining,
             phone=row.get('phone'),
             address=row.get('address'),
             blood_group=row.get('blood_group'),
-            date_of_birth=row.get('date_of_birth'),
+            date_of_birth=date_of_birth,
             gender=row.get('gender'),
             qualification=row.get('qualification'),
             department=row.get('department'),

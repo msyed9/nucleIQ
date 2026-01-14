@@ -5,7 +5,8 @@ Fee Collection Serializers
 from rest_framework import serializers
 from .models import (
     FeeCategory, FeeStructure, FeeAllocation, FeeInvoice,
-    FeeInvoiceItem, FeeTransaction, FeeDefaulter, SiblingDiscount
+    FeeInvoiceItem, FeeTransaction, FeeDefaulter, SiblingDiscount,
+    FeeTransactionItem, FeeAdvancePayment, FeeRefund
 )
 
 
@@ -118,10 +119,18 @@ class FeeAllocationSerializer(serializers.ModelSerializer):
 class FeeInvoiceItemSerializer(serializers.ModelSerializer):
     """Serializer for Invoice Items."""
     
+    category_id = serializers.UUIDField(source='fee_allocation.fee_structure.category.id', read_only=True)
+    category_name = serializers.CharField(source='fee_allocation.fee_structure.category.name', read_only=True)
+    category_code = serializers.CharField(source='fee_allocation.fee_structure.category.code', read_only=True)
+    
     class Meta:
         model = FeeInvoiceItem
-        fields = ['id', 'fee_allocation', 'description', 'amount']
-        read_only_fields = ['id']
+        fields = [
+            'id', 'fee_allocation', 'description', 'amount',
+            'paid_amount', 'balance_amount',
+            'category_id', 'category_name', 'category_code'
+        ]
+        read_only_fields = ['id', 'paid_amount', 'balance_amount']
 
 
 class FeeInvoiceSerializer(serializers.ModelSerializer):
@@ -225,3 +234,140 @@ class SiblingDiscountSerializer(serializers.ModelSerializer):
         model = SiblingDiscount
         fields = '__all__'
         read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']
+
+
+class FeeTransactionItemSerializer(serializers.ModelSerializer):
+    """Serializer for Fee Transaction Items - category-wise payment breakdown."""
+    
+    category_id = serializers.UUIDField(source='invoice_item.fee_allocation.fee_structure.category.id', read_only=True)
+    category_name = serializers.CharField(source='invoice_item.fee_allocation.fee_structure.category.name', read_only=True)
+    category_code = serializers.CharField(source='invoice_item.fee_allocation.fee_structure.category.code', read_only=True)
+    invoice_item_description = serializers.CharField(source='invoice_item.description', read_only=True)
+    
+    class Meta:
+        model = FeeTransactionItem
+        fields = [
+            'id', 'transaction', 'invoice_item', 'amount',
+            'is_advance', 'remarks',
+            'category_id', 'category_name', 'category_code',
+            'invoice_item_description'
+        ]
+        read_only_fields = ['id']
+
+
+class FeeTransactionItemInputSerializer(serializers.Serializer):
+    """Input serializer for creating transaction items during payment."""
+    
+    invoice_item_id = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    is_advance = serializers.BooleanField(default=False)
+    remarks = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+
+class CollectPaymentSerializer(serializers.Serializer):
+    """Serializer for collecting payment with category-wise breakdown."""
+    
+    invoice_id = serializers.UUIDField()
+    payment_mode = serializers.ChoiceField(choices=FeeTransaction.PAYMENT_MODE_CHOICES)
+    payment_reference = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    remarks = serializers.CharField(required=False, allow_blank=True)
+    
+    # Category-wise payment allocation
+    items = FeeTransactionItemInputSerializer(many=True)
+    
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one payment item is required")
+        
+        total = sum(item['amount'] for item in value)
+        if total <= 0:
+            raise serializers.ValidationError("Total payment amount must be greater than 0")
+        
+        return value
+
+
+class FeeAdvancePaymentSerializer(serializers.ModelSerializer):
+    """Serializer for Fee Advance Payments."""
+    
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_admission_number = serializers.CharField(source='student.admission_number', read_only=True)
+    category_name = serializers.CharField(source='fee_category.name', read_only=True)
+    
+    class Meta:
+        model = FeeAdvancePayment
+        fields = [
+            'id', 'tenant', 'student', 'student_name', 'student_admission_number',
+            'fee_category', 'category_name', 'transaction',
+            'amount', 'used_amount', 'balance_amount',
+            'advance_for_months', 'status', 'remarks',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'tenant', 'used_amount', 'balance_amount', 'status', 'created_at', 'updated_at']
+
+
+class CreateAdvancePaymentSerializer(serializers.Serializer):
+    """Serializer for creating advance payments."""
+    
+    student_id = serializers.UUIDField()
+    fee_category_id = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    payment_mode = serializers.ChoiceField(choices=FeeTransaction.PAYMENT_MODE_CHOICES)
+    payment_reference = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    advance_for_months = serializers.IntegerField(min_value=1, default=1)
+    remarks = serializers.CharField(required=False, allow_blank=True)
+
+
+class FeeRefundSerializer(serializers.ModelSerializer):
+    """Serializer for Fee Refunds."""
+    
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_admission_number = serializers.CharField(source='student.admission_number', read_only=True)
+    category_name = serializers.CharField(source='fee_category.name', read_only=True)
+    requested_by_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = FeeRefund
+        fields = [
+            'id', 'tenant', 'student', 'student_name', 'student_admission_number',
+            'original_transaction', 'invoice_item', 'fee_category', 'category_name',
+            'refund_amount', 'reason', 'status',
+            'refund_mode', 'refund_reference',
+            'requested_by', 'requested_by_name',
+            'approved_by', 'approved_by_name',
+            'approved_at', 'processed_at', 'remarks',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'tenant', 'status', 'approved_by', 'approved_at',
+            'processed_at', 'created_at', 'updated_at'
+        ]
+    
+    def get_requested_by_name(self, obj):
+        if obj.requested_by:
+            return obj.requested_by.get_full_name() if hasattr(obj.requested_by, 'get_full_name') else str(obj.requested_by)
+        return None
+    
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return obj.approved_by.get_full_name() if hasattr(obj.approved_by, 'get_full_name') else str(obj.approved_by)
+        return None
+
+
+class RefundRequestSerializer(serializers.Serializer):
+    """Serializer for creating a refund request."""
+    
+    student_id = serializers.UUIDField()
+    fee_category_id = serializers.UUIDField()
+    invoice_item_id = serializers.UUIDField(required=False)
+    original_transaction_id = serializers.UUIDField(required=False)
+    refund_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    reason = serializers.CharField()
+    remarks = serializers.CharField(required=False, allow_blank=True)
+
+
+class ProcessRefundSerializer(serializers.Serializer):
+    """Serializer for processing an approved refund."""
+    
+    refund_mode = serializers.ChoiceField(choices=FeeRefund.REFUND_MODE_CHOICES)
+    refund_reference = serializers.CharField(max_length=100, required=False, allow_blank=True)

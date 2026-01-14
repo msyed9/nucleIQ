@@ -46,7 +46,7 @@ const BulkGeneration: React.FC = () => {
     const [filters, setFilters] = useState<any>({});
     const [outputFormat, setOutputFormat] = useState<'pdf' | 'png' | 'jpg'>('pdf');
     const [layout, setLayout] = useState<'individual' | 'grid' | 'sheet'>('individual');
-    const [includeQR, setIncludeQR] = useState(true);
+    // QR codes are always included by default based on template design
     const [currentJob, setCurrentJob] = useState<GenerationJob | null>(null);
     const [jobHistory, setJobHistory] = useState<GenerationJob[]>([]);
 
@@ -312,7 +312,7 @@ const BulkGeneration: React.FC = () => {
                 entity_type: entityType,
                 filters: generationFilters,
                 template_id: selectedTemplate || undefined,
-                include_qr: includeQR,
+                include_qr: true, // QR codes are included by default
                 output_format: outputFormat,
                 layout,
             });
@@ -333,7 +333,7 @@ const BulkGeneration: React.FC = () => {
                 template_name: '',
                 output_format: outputFormat,
                 layout: layout,
-                include_qr: includeQR,
+                include_qr: true,
                 status: 'processing',
                 progress: 0,
                 total_cards: selectionMode === 'individual' ? selectedIds.size : 0,
@@ -435,23 +435,25 @@ const BulkGeneration: React.FC = () => {
                     {/* Step 2: Selection Mode */}
                     <div className="config-section">
                         <h2>2. Selection Mode</h2>
-                        <div className="selection-mode-toggle" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                        <div className="selection-mode-toggle" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
                             <button
                                 className={`mode-btn ${selectionMode === 'class' ? 'active' : ''}`}
                                 onClick={() => { setSelectionMode('class'); setSelectedIds(new Set()); }}
                                 style={{
-                                    flex: 1,
-                                    padding: '1rem',
-                                    border: selectionMode === 'class' ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                    background: selectionMode === 'class' ? '#eef2ff' : 'white',
-                                    borderRadius: '12px',
+                                    padding: '1.5rem',
+                                    border: selectionMode === 'class' ? '2px solid #6366f1' : '2px solid #e2e8f0',
+                                    background: selectionMode === 'class' ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.12) 100%)' : 'white',
+                                    borderRadius: '16px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: selectionMode === 'class' ? '0 4px 14px rgba(99, 102, 241, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
                                 }}
                             >
-                                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🏫</div>
-                                <div style={{ fontWeight: 600 }}>Entire Class/Section</div>
-                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', filter: selectionMode === 'class' ? 'none' : 'grayscale(0.3)' }}>🏫</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: selectionMode === 'class' ? '#4f46e5' : '#1f2937' }}>Entire Class/Section</div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>
                                     Generate for all students in selected class
                                 </div>
                             </button>
@@ -459,18 +461,20 @@ const BulkGeneration: React.FC = () => {
                                 className={`mode-btn ${selectionMode === 'individual' ? 'active' : ''}`}
                                 onClick={() => setSelectionMode('individual')}
                                 style={{
-                                    flex: 1,
-                                    padding: '1rem',
-                                    border: selectionMode === 'individual' ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                    background: selectionMode === 'individual' ? '#eef2ff' : 'white',
-                                    borderRadius: '12px',
+                                    padding: '1.5rem',
+                                    border: selectionMode === 'individual' ? '2px solid #6366f1' : '2px solid #e2e8f0',
+                                    background: selectionMode === 'individual' ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.12) 100%)' : 'white',
+                                    borderRadius: '16px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: selectionMode === 'individual' ? '0 4px 14px rgba(99, 102, 241, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
                                 }}
                             >
-                                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>👤</div>
-                                <div style={{ fontWeight: 600 }}>Individual Selection</div>
-                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', filter: selectionMode === 'individual' ? 'none' : 'grayscale(0.3)' }}>👤</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: selectionMode === 'individual' ? '#4f46e5' : '#1f2937' }}>Individual Selection</div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>
                                     Pick specific students from a class
                                 </div>
                             </button>
@@ -751,34 +755,31 @@ const BulkGeneration: React.FC = () => {
                                     <option value="sheet">Print Sheet</option>
                                 </select>
                             </div>
-                            <div className="output-group checkbox-group">
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        checked={includeQR}
-                                        onChange={(e) => setIncludeQR(e.target.checked)}
-                                    />
-                                    <span>Include QR Codes</span>
-                                </label>
-                            </div>
                         </div>
                     </div>
 
                     {/* Summary & Generate */}
-                    <div className="config-section" style={{ background: '#f8fafc', borderRadius: '12px', padding: '1.5rem' }}>
-                        <h2 style={{ marginBottom: '1rem' }}>📋 Generation Summary</h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                            <div>
-                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Entity Type</div>
-                                <div style={{ fontWeight: 600 }}>{entityType === 'student' ? 'Students' : 'Staff'}</div>
+                    <div className="config-section" style={{
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.08) 100%)',
+                        borderRadius: '16px',
+                        padding: '1.75rem',
+                        border: '1px solid rgba(99, 102, 241, 0.1)'
+                    }}>
+                        <h2 style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>📋</span> Generation Summary
+                        </h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                            <div style={{ background: 'white', padding: '1rem 1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Entity Type</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0f172a' }}>{entityType === 'student' ? '👨‍🎓 Students' : '👨‍💼 Staff'}</div>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Selection</div>
-                                <div style={{ fontWeight: 600 }}>{getSelectionSummary()}</div>
+                            <div style={{ background: 'white', padding: '1rem 1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Selection</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0f172a' }}>{getSelectionSummary()}</div>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Output Format</div>
-                                <div style={{ fontWeight: 600 }}>{outputFormat.toUpperCase()} - {layout}</div>
+                            <div style={{ background: 'white', padding: '1rem 1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Output Format</div>
+                                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0f172a' }}>{outputFormat.toUpperCase()} • {layout === 'individual' ? 'Individual Files' : layout === 'grid' ? 'Grid Layout' : 'Print Sheet'}</div>
                             </div>
                         </div>
                     </div>

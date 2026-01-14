@@ -872,11 +872,16 @@ const IDCardDesigner: React.FC = () => {
                             className={cardType === 'STUDENT' ? 'active' : ''}
                             onClick={() => setCardType('STUDENT')}
                             style={{
-                                padding: '0.5rem 1rem',
-                                border: cardType === 'STUDENT' ? '2px solid #1976D2' : '1px solid #ccc',
-                                background: cardType === 'STUDENT' ? '#E3F2FD' : 'white',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                padding: '0.6rem 1.2rem',
+                                border: cardType === 'STUDENT' ? '2px solid #6366f1' : '2px solid #e2e8f0',
+                                background: cardType === 'STUDENT' ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.15) 100%)' : 'rgba(255,255,255,0.8)',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: cardType === 'STUDENT' ? 700 : 500,
+                                color: cardType === 'STUDENT' ? '#4f46e5' : '#64748b',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: cardType === 'STUDENT' ? '0 2px 8px rgba(99, 102, 241, 0.2)' : 'none'
                             }}
                         >
                             👨‍🎓 Student
@@ -885,11 +890,16 @@ const IDCardDesigner: React.FC = () => {
                             className={cardType === 'STAFF' ? 'active' : ''}
                             onClick={() => setCardType('STAFF')}
                             style={{
-                                padding: '0.5rem 1rem',
-                                border: cardType === 'STAFF' ? '2px solid #1976D2' : '1px solid #ccc',
-                                background: cardType === 'STAFF' ? '#E3F2FD' : 'white',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                padding: '0.6rem 1.2rem',
+                                border: cardType === 'STAFF' ? '2px solid #6366f1' : '2px solid #e2e8f0',
+                                background: cardType === 'STAFF' ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.15) 100%)' : 'rgba(255,255,255,0.8)',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: cardType === 'STAFF' ? 700 : 500,
+                                color: cardType === 'STAFF' ? '#4f46e5' : '#64748b',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: cardType === 'STAFF' ? '0 2px 8px rgba(99, 102, 241, 0.2)' : 'none'
                             }}
                         >
                             👨‍💼 Staff
@@ -960,16 +970,19 @@ const IDCardDesigner: React.FC = () => {
                 </div>
                 <button onClick={generatePreview} className="btn-preview" style={{
                     marginLeft: 'auto',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: 'white',
                     border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '10px',
                     cursor: 'pointer',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem'
+                    gap: '0.5rem',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontSize: '0.9rem'
                 }}>
                     👁️ Preview with Real Data
                 </button>

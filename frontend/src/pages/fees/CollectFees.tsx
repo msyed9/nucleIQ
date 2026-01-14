@@ -6,8 +6,20 @@ import { ExportColumn } from '../../utils/exportUtils';
 import FeeReceipt from '../../components/fees/FeeReceipt';
 import './CollectFees.css';
 
+interface InvoiceItem {
+    id: string;
+    fee_allocation: string;
+    description: string;
+    amount: number;
+    paid_amount: number;
+    balance_amount: number;
+    category_id?: string;
+    category_name?: string;
+    category_code?: string;
+}
+
 interface Invoice {
-    id: number;
+    id: string;
     invoice_number: string;
     student: number;
     student_name: string;
@@ -20,7 +32,14 @@ interface Invoice {
     paid_amount: number;
     balance_amount: number;
     status: string;
-    items?: { description: string; amount: number }[];
+    items?: InvoiceItem[];
+}
+
+// State for category-wise payment allocation
+interface PaymentAllocation {
+    invoice_item_id: string;
+    amount: number;
+    category_name: string;
 }
 
 interface ReceiptData {
@@ -60,6 +79,10 @@ const CollectFees: React.FC = () => {
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
     const [tenantSettings, setTenantSettings] = useState<any>(null);
+
+    // Category-wise payment allocation
+    const [showBreakdown, setShowBreakdown] = useState(true); // Default to showing breakdown
+    const [paymentAllocations, setPaymentAllocations] = useState<Record<string, string>>({});
 
     // Filter state variables
     const [classFilter, setClassFilter] = useState('');
@@ -119,24 +142,89 @@ const CollectFees: React.FC = () => {
         }
     };
 
-
     const handlePayment = async () => {
-        if (!selectedInvoice || !paymentAmount) {
-            alert('Please enter payment amount');
+        if (!selectedInvoice) {
+            alert('Please select an invoice');
             return;
         }
 
+        // Calculate total from allocations or use single payment amount
+        let totalPayment = 0;
+        let paymentItems: { invoice_item_id: string; amount: number; is_advance: boolean; remarks: string }[] = [];
+
+        if (showBreakdown && selectedInvoice.items && selectedInvoice.items.length > 0) {
+            // Category-wise payment mode
+            for (const item of selectedInvoice.items) {
+                const allocation = paymentAllocations[item.id];
+                const amount = parseFloat(allocation || '0');
+                if (amount > 0) {
+                    paymentItems.push({
+                        invoice_item_id: item.id,
+                        amount: amount,
+                        is_advance: false,
+                        remarks: ''
+                    });
+                    totalPayment += amount;
+                }
+            }
+
+            if (paymentItems.length === 0) {
+                alert('Please enter payment amount for at least one fee category');
+                return;
+            }
+        } else {
+            // Simple payment mode
+            if (!paymentAmount) {
+                alert('Please enter payment amount');
+                return;
+            }
+            totalPayment = parseFloat(paymentAmount);
+        }
+
         try {
-            const response = await api.post('/fees/transactions/', {
-                invoice: selectedInvoice.id,
-                amount: parseFloat(paymentAmount),
-                payment_mode: paymentMode,
-                payment_reference: paymentReference
-            });
+            let response;
+
+            if (showBreakdown && paymentItems.length > 0) {
+                // Use category-wise payment endpoint
+                response = await api.post('/fees/transactions/collect_with_breakdown/', {
+                    invoice_id: selectedInvoice.id,
+                    payment_mode: paymentMode,
+                    payment_reference: paymentReference,
+                    remarks: '',
+                    items: paymentItems
+                });
+            } else {
+                // Use simple payment endpoint
+                response = await api.post('/fees/transactions/', {
+                    invoice: selectedInvoice.id,
+                    amount: totalPayment,
+                    payment_mode: paymentMode,
+                    payment_reference: paymentReference
+                });
+            }
 
             if (response.status === 201 || response.status === 200) {
                 const transactionData = response.data;
-                const newBalanceAmount = Number(selectedInvoice.balance_amount) - parseFloat(paymentAmount);
+                const newBalanceAmount = Number(selectedInvoice.balance_amount) - totalPayment;
+
+                // Build receipt items - show category-wise breakdown if available
+                let receiptItems: { description: string; amount: number }[] = [];
+                if (showBreakdown && paymentItems.length > 0 && selectedInvoice.items) {
+                    for (const paymentItem of paymentItems) {
+                        const invoiceItem = selectedInvoice.items.find(i => i.id === paymentItem.invoice_item_id);
+                        if (invoiceItem) {
+                            receiptItems.push({
+                                description: invoiceItem.category_name || invoiceItem.description,
+                                amount: paymentItem.amount
+                            });
+                        }
+                    }
+                } else {
+                    receiptItems = selectedInvoice.items?.map(i => ({
+                        description: i.category_name || i.description,
+                        amount: Number(i.amount)
+                    })) || [{ description: 'Fee Payment', amount: Number(selectedInvoice.total_amount) }];
+                }
 
                 // Generate receipt data
                 const generatedReceiptData: ReceiptData = {
@@ -151,11 +239,9 @@ const CollectFees: React.FC = () => {
                     paymentDate: new Date().toISOString(),
                     paymentMode: paymentMode,
                     paymentReference: paymentReference || undefined,
-                    items: selectedInvoice.items || [
-                        { description: 'Fee Payment', amount: Number(selectedInvoice.total_amount) }
-                    ],
+                    items: receiptItems,
                     totalAmount: Number(selectedInvoice.total_amount),
-                    paidAmount: parseFloat(paymentAmount),
+                    paidAmount: totalPayment,
                     balanceAmount: Math.max(0, newBalanceAmount),
                     collectedBy: transactionData.collected_by_name || undefined,
                     schoolName: tenantSettings?.school_name || tenantSettings?.tenant_name || 'School Name',
@@ -174,14 +260,15 @@ const CollectFees: React.FC = () => {
                 setSelectedInvoice(null);
                 setPaymentAmount('');
                 setPaymentReference('');
+                setPaymentAllocations({});
                 fetchPendingInvoices();
             } else {
                 alert('Error recording payment');
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error recording payment:', error);
-            alert('Error recording payment');
+            alert(error.response?.data?.error || 'Error recording payment');
         }
     };
 
@@ -510,7 +597,10 @@ const CollectFees: React.FC = () => {
                                 <div
                                     key={invoice.id}
                                     className={`invoice-card ${selectedInvoice?.id === invoice.id ? 'selected' : ''}`}
-                                    onClick={() => setSelectedInvoice(invoice)}
+                                    onClick={() => {
+                                        setSelectedInvoice(invoice);
+                                        setPaymentAllocations({});
+                                    }}
                                 >
                                     <div className="invoice-header">
                                         <span className="invoice-number">{invoice.invoice_number}</span>
@@ -606,17 +696,144 @@ const CollectFees: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label>💵 {t('fees.payment_amount')}</label>
-                                <input
-                                    type="number"
-                                    value={paymentAmount}
-                                    onChange={(e) => setPaymentAmount(e.target.value)}
-                                    placeholder={t('fees.pay_amount_placeholder')}
-                                    max={Number(selectedInvoice.balance_amount)}
-                                    step="0.01"
-                                />
-                            </div>
+                            {/* Category-wise Fee Breakdown */}
+                            {selectedInvoice.items && selectedInvoice.items.length > 0 && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <h3 style={{ margin: 0, fontSize: '1rem', color: '#374151' }}>
+                                            📋 Fee Breakdown
+                                        </h3>
+                                        <label style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={showBreakdown}
+                                                onChange={(e) => setShowBreakdown(e.target.checked)}
+                                            />
+                                            Pay by Category
+                                        </label>
+                                    </div>
+
+                                    <div style={{
+                                        background: '#f9fafb',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f3f4f6' }}>
+                                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                        Category
+                                                    </th>
+                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                        Amount
+                                                    </th>
+                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                        Paid
+                                                    </th>
+                                                    <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                        Balance
+                                                    </th>
+                                                    {showBreakdown && (
+                                                        <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                            Pay Now
+                                                        </th>
+                                                    )}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedInvoice.items.map((item) => (
+                                                    <tr key={item.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                                                        <td style={{ padding: '10px', fontSize: '0.9rem' }}>
+                                                            <div style={{ fontWeight: '500' }}>
+                                                                {item.category_name || item.description}
+                                                            </div>
+                                                            {item.category_code && (
+                                                                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                                    {item.category_code}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '0.9rem' }}>
+                                                            ₹{Number(item.amount).toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '0.9rem', color: '#059669' }}>
+                                                            ₹{Number(item.paid_amount || 0).toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '0.9rem', color: '#dc2626', fontWeight: '500' }}>
+                                                            ₹{Number(item.balance_amount || item.amount).toFixed(2)}
+                                                        </td>
+                                                        {showBreakdown && (
+                                                            <td style={{ padding: '10px', textAlign: 'right' }}>
+                                                                <input
+                                                                    type="number"
+                                                                    value={paymentAllocations[item.id] || ''}
+                                                                    onChange={(e) => setPaymentAllocations({
+                                                                        ...paymentAllocations,
+                                                                        [item.id]: e.target.value
+                                                                    })}
+                                                                    placeholder="0.00"
+                                                                    max={Number(item.balance_amount || item.amount)}
+                                                                    min={0}
+                                                                    step="0.01"
+                                                                    style={{
+                                                                        width: '90px',
+                                                                        padding: '6px 8px',
+                                                                        borderRadius: '6px',
+                                                                        border: '1px solid #d1d5db',
+                                                                        textAlign: 'right',
+                                                                        fontSize: '0.9rem'
+                                                                    }}
+                                                                />
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                            {showBreakdown && (
+                                                <tfoot>
+                                                    <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6' }}>
+                                                        <td colSpan={4} style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>
+                                                            Total Payment:
+                                                        </td>
+                                                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: '600', color: '#2563eb' }}>
+                                                            ₹{Object.values(paymentAllocations).reduce(
+                                                                (sum, val) => sum + (parseFloat(val) || 0), 0
+                                                            ).toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Simple payment amount - only show if not using breakdown */}
+                            {!showBreakdown && (
+                                <div className="form-group">
+                                    <label>💵 {t('fees.payment_amount')}</label>
+                                    <input
+                                        type="number"
+                                        value={paymentAmount}
+                                        onChange={(e) => setPaymentAmount(e.target.value)}
+                                        placeholder={t('fees.pay_amount_placeholder')}
+                                        max={Number(selectedInvoice.balance_amount)}
+                                        step="0.01"
+                                    />
+                                </div>
+                            )}
 
                             <div className="form-group">
                                 <label>💳 Payment Mode</label>

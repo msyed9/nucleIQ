@@ -51,11 +51,11 @@ const TEMPLATES: ModuleTemplate[] = [
         name: 'Students',
         icon: Users,
         description: 'Import student data including personal info, class, section, and parent details',
-        requiredFields: ['first_name', 'last_name', 'admission_number', 'class_name', 'section_name', 'date_of_birth', 'gender'],
-        optionalFields: ['email', 'phone', 'address', 'blood_group', 'father_name', 'mother_name', 'parent_phone', 'parent_email', 'aadhar_number', 'nationality', 'religion', 'caste', 'admission_date'],
+        requiredFields: ['first_name', 'last_name', 'admission_number', 'date_of_birth', 'gender', 'father_name', 'mother_name', 'father_phone', 'mother_phone'],
+        optionalFields: ['email', 'phone', 'address', 'blood_group', 'aadhar_number', 'nationality', 'religion', 'caste', 'admission_date', 'class_name', 'section_name'],
         sampleData: [
-            ['first_name', 'last_name', 'admission_number', 'class_name', 'section_name', 'date_of_birth', 'gender', 'email', 'phone', 'father_name', 'mother_name', 'parent_phone', 'parent_email', 'blood_group', 'address'],
-            ['John', 'Doe', 'STU001', 'Class 10', 'A', '2010-05-15', 'Male', 'john.doe@example.com', '9876543210', 'Robert Doe', 'Mary Doe', '9876543211', 'parent@example.com', 'O+', '123 Main Street']
+            ['first_name', 'last_name', 'admission_number', 'date_of_birth', 'gender', 'father_name', 'mother_name', 'father_phone', 'mother_phone', 'class_name', 'section_name', 'email', 'phone', 'blood_group', 'address'],
+            ['John', 'Doe', 'STU001', '15-05-2010', 'M', 'Robert Doe', 'Mary Doe', '9876543210', '9876543211', 'Class 10', 'A', 'john.doe@example.com', '9876543212', 'O+', '123 Main Street']
         ]
     },
     {
@@ -67,7 +67,7 @@ const TEMPLATES: ModuleTemplate[] = [
         optionalFields: ['phone', 'address', 'blood_group', 'date_of_birth', 'gender', 'qualification', 'experience_years', 'salary', 'bank_account', 'aadhar_number'],
         sampleData: [
             ['first_name', 'last_name', 'employee_id', 'email', 'department', 'designation', 'date_of_joining', 'phone', 'gender', 'qualification'],
-            ['Jane', 'Smith', 'EMP001', 'jane.smith@school.com', 'Mathematics', 'Senior Teacher', '2020-06-01', '9876543212', 'Female', 'M.Sc Mathematics']
+            ['Jane', 'Smith', 'EMP001', 'jane.smith@school.com', 'Mathematics', 'Senior Teacher', '01-06-2020', '9876543212', 'Female', 'M.Sc Mathematics']
         ]
     },
     {
@@ -379,6 +379,24 @@ const DataManagement: React.FC = () => {
                     <div className="section-header">
                         <h2>📥 Import Data</h2>
                         <p>Select a module and download the template, fill in your data, then upload</p>
+                        <div style={{
+                            background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)',
+                            padding: '1rem',
+                            borderRadius: '12px',
+                            marginTop: '1rem',
+                            border: '1px solid #bae6fd',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.75rem'
+                        }}>
+                            <span style={{ fontSize: '1.5rem' }}>📅</span>
+                            <div>
+                                <strong style={{ color: '#0369a1' }}>Date Format:</strong>
+                                <span style={{ marginLeft: '0.5rem', color: '#0c4a6e' }}>
+                                    All date fields accept both <code style={{ background: '#e0f2fe', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>dd-mm-yyyy</code> and <code style={{ background: '#e0f2fe', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>dd/mm/yyyy</code> formats (e.g., 15-05-2010 or 15/05/2010)
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Module Selection */}

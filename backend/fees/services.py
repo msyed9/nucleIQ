@@ -147,11 +147,16 @@ class FeeCalculationService:
         return invoices_created
     
     @staticmethod
-    def record_payment(invoice, amount, payment_mode, payment_reference, collected_by):
+    def _generate_transaction_number(tenant):
+        """Generate unique transaction number."""
+        return f"TXN{timezone.now().strftime('%Y%m%d%H%M%S%f')[:17]}"
+    
+    @staticmethod
+    def record_payment(invoice, amount, payment_mode, payment_reference, collected_by, remarks=''):
         """
         Record a fee payment and update invoice status.
         """
-        transaction_number = f"TXN{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        transaction_number = FeeCalculationService._generate_transaction_number(invoice.tenant)
         
         transaction = FeeTransaction.objects.create(
             tenant=invoice.tenant,
@@ -161,7 +166,8 @@ class FeeCalculationService:
             payment_mode=payment_mode,
             payment_reference=payment_reference,
             collected_by=collected_by,
-            receipt_number=f"REC{transaction_number}"
+            receipt_number=f"REC{transaction_number}",
+            remarks=remarks
         )
         
         # Update invoice
@@ -213,4 +219,8 @@ class FeeCalculationService:
                     defaulter.stop_access_date = date.today()
                     defaulter.save()
             else:
-                FeeDefaulter.objects.filter(tenant=tenant, student=student).delete()
+                # Use soft-delete for defaulter records to avoid hard deletes
+                FeeDefaulter.objects.filter(tenant=tenant, student=student).update(
+                    is_deleted=True,
+                    deleted_at=timezone.now()
+                )

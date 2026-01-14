@@ -326,12 +326,40 @@ class FeeInvoiceItem(BaseModel):
     description = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     
+    # Track payment status per line item
+    paid_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Amount paid for this specific fee item"
+    )
+    
+    balance_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Remaining balance for this fee item"
+    )
+    
     class Meta:
         db_table = 'fee_invoice_items'
         verbose_name = 'Invoice Item'
     
     def __str__(self):
         return f"{self.invoice.invoice_number} - {self.description}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate balance
+        if self.balance_amount is None:
+            self.balance_amount = self.amount - self.paid_amount
+        super().save(*args, **kwargs)
+    
+    def update_payment(self, payment_amount):
+        """Update paid amount and recalculate balance."""
+        self.paid_amount += payment_amount
+        self.balance_amount = self.amount - self.paid_amount
+        self.save()
 
 
 class FeeTransaction(BaseModel):
@@ -358,7 +386,10 @@ class FeeTransaction(BaseModel):
     invoice = models.ForeignKey(
         FeeInvoice,
         on_delete=models.CASCADE,
-        related_name='transactions'
+        related_name='transactions',
+        null=True,
+        blank=True,
+        help_text="Null for advance payments"
     )
     
     transaction_number = models.CharField(
@@ -489,3 +520,302 @@ class SiblingDiscount(BaseModel):
     def __str__(self):
         return self.name or f"{self.sibling_count} siblings - {self.discount_percentage}%"
 
+
+class FeeTransactionItem(BaseModel):
+    """
+    Tracks how a payment is allocated across different fee categories/invoice items.
+    Enables category-wise payment tracking and manual allocation by cashier.
+    """
+    
+    transaction = models.ForeignKey(
+        FeeTransaction,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    
+    invoice_item = models.ForeignKey(
+        FeeInvoiceItem,
+        on_delete=models.CASCADE,
+        related_name='transaction_items'
+    )
+    
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Amount allocated to this fee category in this transaction"
+    )
+    
+    # For advance payments
+    is_advance = models.BooleanField(
+        default=False,
+        help_text="Whether this is an advance payment"
+    )
+    
+    remarks = models.CharField(max_length=200, blank=True)
+    
+    class Meta:
+        db_table = 'fee_transaction_items'
+        verbose_name = 'Fee Transaction Item'
+        verbose_name_plural = 'Fee Transaction Items'
+    
+    def __str__(self):
+        category = self.invoice_item.fee_allocation.fee_structure.category.name
+        return f"{self.transaction.transaction_number} - {category}: ₹{self.amount}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update the invoice item's paid amount
+        if not self.is_advance:
+            self.invoice_item.update_payment(self.amount)
+
+
+class FeeAdvancePayment(BaseModel):
+    """
+    Track advance payments for specific fee categories.
+    These are payments made before the invoice is generated.
+    """
+    
+    ADVANCE_STATUS_CHOICES = [
+        ('AVAILABLE', 'Available'),
+        ('PARTIALLY_USED', 'Partially Used'),
+        ('FULLY_USED', 'Fully Used'),
+        ('REFUNDED', 'Refunded'),
+    ]
+    
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='fee_advance_payments'
+    )
+    
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='fee_advance_payments'
+    )
+    
+    fee_category = models.ForeignKey(
+        FeeCategory,
+        on_delete=models.CASCADE,
+        related_name='advance_payments',
+        help_text="Fee category for which advance is paid"
+    )
+    
+    transaction = models.ForeignKey(
+        FeeTransaction,
+        on_delete=models.CASCADE,
+        related_name='advance_payments',
+        null=True,
+        blank=True,
+        help_text="Original transaction that created this advance"
+    )
+    
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Original advance amount"
+    )
+    
+    used_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Amount already applied to invoices"
+    )
+    
+    balance_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Remaining advance balance"
+    )
+    
+    advance_for_months = models.IntegerField(
+        default=1,
+        help_text="Number of months this advance covers"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=ADVANCE_STATUS_CHOICES,
+        default='AVAILABLE'
+    )
+    
+    remarks = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'fee_advance_payments'
+        verbose_name = 'Fee Advance Payment'
+        verbose_name_plural = 'Fee Advance Payments'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.student.get_full_name()} - {self.fee_category.name}: ₹{self.balance_amount}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate balance
+        self.balance_amount = self.amount - self.used_amount
+        
+        # Update status
+        if self.used_amount == 0:
+            self.status = 'AVAILABLE'
+        elif self.used_amount < self.amount:
+            self.status = 'PARTIALLY_USED'
+        else:
+            self.status = 'FULLY_USED'
+        
+        super().save(*args, **kwargs)
+    
+    def apply_to_invoice(self, invoice_item, amount_to_apply):
+        """Apply advance payment to an invoice item."""
+        if amount_to_apply > self.balance_amount:
+            amount_to_apply = self.balance_amount
+        
+        self.used_amount += amount_to_apply
+        self.save()
+        
+        # Update invoice item
+        invoice_item.update_payment(amount_to_apply)
+        
+        return amount_to_apply
+
+
+class FeeRefund(BaseModel):
+    """
+    Track refunds for specific fee categories.
+    Supports partial refunds and tracks approval workflow.
+    """
+    
+    REFUND_STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('PROCESSED', 'Processed'),
+        ('REJECTED', 'Rejected'),
+    ]
+    
+    REFUND_MODE_CHOICES = [
+        ('CASH', 'Cash'),
+        ('CHEQUE', 'Cheque'),
+        ('BANK_TRANSFER', 'Bank Transfer'),
+        ('ADJUSTMENT', 'Adjusted to Future Fees'),
+        ('OTHER', 'Other'),
+    ]
+    
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='fee_refunds'
+    )
+    
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='fee_refunds'
+    )
+    
+    # Link to original transaction or invoice item
+    original_transaction = models.ForeignKey(
+        FeeTransaction,
+        on_delete=models.CASCADE,
+        related_name='refunds',
+        null=True,
+        blank=True,
+        help_text="Original transaction being refunded"
+    )
+    
+    invoice_item = models.ForeignKey(
+        FeeInvoiceItem,
+        on_delete=models.CASCADE,
+        related_name='refunds',
+        null=True,
+        blank=True,
+        help_text="Specific fee item being refunded"
+    )
+    
+    fee_category = models.ForeignKey(
+        FeeCategory,
+        on_delete=models.CASCADE,
+        related_name='refunds',
+        help_text="Fee category being refunded"
+    )
+    
+    refund_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+    
+    reason = models.TextField(
+        help_text="Reason for refund"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=REFUND_STATUS_CHOICES,
+        default='PENDING'
+    )
+    
+    refund_mode = models.CharField(
+        max_length=20,
+        choices=REFUND_MODE_CHOICES,
+        blank=True
+    )
+    
+    refund_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Cheque number, Bank reference, etc."
+    )
+    
+    requested_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='fee_refund_requests'
+    )
+    
+    approved_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='fee_refund_approvals'
+    )
+    
+    approved_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    remarks = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'fee_refunds'
+        verbose_name = 'Fee Refund'
+        verbose_name_plural = 'Fee Refunds'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Refund: {self.student.get_full_name()} - {self.fee_category.name}: ₹{self.refund_amount}"
+    
+    def approve(self, user):
+        """Approve the refund request."""
+        from django.utils import timezone
+        self.status = 'APPROVED'
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.save()
+    
+    def process(self, refund_mode, reference=''):
+        """Process the approved refund."""
+        from django.utils import timezone
+        if self.status != 'APPROVED':
+            raise ValidationError("Only approved refunds can be processed")
+        
+        self.status = 'PROCESSED'
+        self.refund_mode = refund_mode
+        self.refund_reference = reference
+        self.processed_at = timezone.now()
+        self.save()
+        
+        # Update invoice item if linked
+        if self.invoice_item:
+            self.invoice_item.paid_amount -= self.refund_amount
+            self.invoice_item.balance_amount = self.invoice_item.amount - self.invoice_item.paid_amount
+            self.invoice_item.save()
