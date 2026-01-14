@@ -25,6 +25,7 @@ const EditStudent: React.FC = () => {
         admission_number: '',
         admission_date: '',
         first_name: '',
+        middle_name: '',
         last_name: '',
         date_of_birth: '',
         gender: 'M',
@@ -34,11 +35,20 @@ const EditStudent: React.FC = () => {
         address: '',
         father_name: '',
         father_phone: '',
+        father_profession: '',
         mother_name: '',
         mother_phone: '',
+        mother_profession: '',
         pen_number: '',
         aadhar_number: '',
         aapar_number: '',
+        citizenship: '',
+        religion: '',
+        caste: '',
+        previous_school_name: '',
+        previous_school_address: '',
+        previous_school_class: '',
+        transfer_certificate_number: '',
     });
 
     const [photo, setPhoto] = useState<File | null>(null);
@@ -319,12 +329,32 @@ const EditStudent: React.FC = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>{t('students.first_name')}</label>
+                                <label>{t('students.first_name')} *</label>
                                 <input name="first_name" value={formData.first_name} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('students.last_name')}</label>
-                                <input name="last_name" value={formData.last_name} onChange={handleChange} required />
+                                <label>{t('students.middle_name', 'Middle Name')}</label>
+                                <input name="middle_name" value={formData.middle_name} onChange={handleChange} />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.last_name', 'Last Name')}</label>
+                                <input name="last_name" value={formData.last_name} onChange={handleChange} />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('students.blood_group', 'Blood Group')}</label>
+                                <select name="blood_group" value={formData.blood_group} onChange={handleChange}>
+                                    <option value="">Select Blood Group</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
                             </div>
                         </div>
                         <div className="form-row">
@@ -339,6 +369,25 @@ const EditStudent: React.FC = () => {
                                     <option value="F">Female</option>
                                     <option value="O">Other</option>
                                 </select>
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.citizenship', 'Citizenship')}</label>
+                                <input name="citizenship" value={formData.citizenship} onChange={handleChange} placeholder="e.g., Indian, US Citizen" />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('students.religion', 'Religion')}</label>
+                                <input name="religion" value={formData.religion} onChange={handleChange} />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.caste', 'Caste')}</label>
+                                <input name="caste" value={formData.caste} onChange={handleChange} />
+                            </div>
+                            <div className="form-group">
+                                {/* Empty for alignment */}
                             </div>
                         </div>
                     </Card>
@@ -367,6 +416,15 @@ const EditStudent: React.FC = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
+                                <label>{t('students.father_profession', 'Father Profession')}</label>
+                                <input name="father_profession" value={formData.father_profession} onChange={handleChange} placeholder="e.g., Engineer, Doctor" />
+                            </div>
+                            <div className="form-group">
+                                {/* Empty for alignment */}
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
                                 <label>{t('students.mother_name', 'Mother Name')} *</label>
                                 <input name="mother_name" value={formData.mother_name} onChange={handleChange} required />
                             </div>
@@ -375,9 +433,42 @@ const EditStudent: React.FC = () => {
                                 <input name="mother_phone" value={formData.mother_phone} onChange={handleChange} required />
                             </div>
                         </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.mother_profession', 'Mother Profession')}</label>
+                                <input name="mother_profession" value={formData.mother_profession} onChange={handleChange} placeholder="e.g., Teacher, Homemaker" />
+                            </div>
+                            <div className="form-group">
+                                {/* Empty for alignment */}
+                            </div>
+                        </div>
                         <div className="form-group">
                             <label>{t('students.address')}</label>
                             <textarea name="address" value={formData.address} onChange={handleChange} rows={3} required />
+                        </div>
+                    </Card>
+
+                    {/* Previous School Details */}
+                    <Card title={t('students.previous_school', { defaultValue: 'Previous School Details' })}>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.previous_school_name', 'Previous School Name')}</label>
+                                <input name="previous_school_name" value={formData.previous_school_name} onChange={handleChange} placeholder="Name of previous school" />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('students.previous_school_class', 'Last Class Attended')}</label>
+                                <input name="previous_school_class" value={formData.previous_school_class} onChange={handleChange} placeholder="e.g., Class 9, Grade 10" />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>{t('students.previous_school_address', 'Previous School Address')}</label>
+                                <textarea name="previous_school_address" value={formData.previous_school_address} onChange={handleChange} rows={2} placeholder="Address of previous school" />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('students.transfer_certificate_number', 'Transfer Certificate Number')}</label>
+                                <input name="transfer_certificate_number" value={formData.transfer_certificate_number} onChange={handleChange} placeholder="TC Number" />
+                            </div>
                         </div>
                     </Card>
 

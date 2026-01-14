@@ -56,13 +56,15 @@ class Student(BaseModel):
     )
     
     first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, help_text=_('Middle Name (Optional)'))
+    last_name = models.CharField(max_length=100, blank=True, help_text=_('Last Name (Optional)'))
     date_of_birth = models.DateField()
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, blank=True)
     
     # Personal Details
     nationality = models.CharField(max_length=100, blank=True, default='', help_text=_('Nationality'))
+    citizenship = models.CharField(max_length=100, blank=True, default='', help_text=_('Citizenship Status'))
     religion = models.CharField(max_length=100, blank=True, default='', help_text=_('Religion'))
     caste = models.CharField(max_length=100, blank=True, default='', help_text=_('Caste'))
     
@@ -89,6 +91,7 @@ class Student(BaseModel):
         validators=[EmailValidator(), validate_email_enhanced]
     )
     father_occupation = models.CharField(max_length=100, blank=True)
+    father_profession = models.CharField(max_length=150, blank=True, help_text=_('Father Profession/Job Title'))
     
     mother_name = models.CharField(max_length=100)
     mother_phone = models.CharField(
@@ -100,6 +103,7 @@ class Student(BaseModel):
         validators=[EmailValidator(), validate_email_enhanced]
     )
     mother_occupation = models.CharField(max_length=100, blank=True)
+    mother_profession = models.CharField(max_length=150, blank=True, help_text=_('Mother Profession/Job Title'))
     
     guardian_name = models.CharField(max_length=100, blank=True)
     guardian_phone = models.CharField(
@@ -127,6 +131,27 @@ class Student(BaseModel):
         max_length=50,
         blank=True,
         help_text=_('Aapar Number / Other ID')
+    )
+    
+    # Previous School Details
+    previous_school_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('Name of Previous School')
+    )
+    previous_school_address = models.TextField(
+        blank=True,
+        help_text=_('Address of Previous School')
+    )
+    previous_school_class = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text=_('Last Class/Grade Attended')
+    )
+    transfer_certificate_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_('Transfer Certificate Number')
     )
     
     # Sibling Logic
@@ -173,7 +198,12 @@ class Student(BaseModel):
     
     def get_full_name(self):
         """Get student's full name."""
-        return f"{self.first_name} {self.last_name}"
+        parts = [self.first_name]
+        if self.middle_name:
+            parts.append(self.middle_name)
+        if self.last_name:
+            parts.append(self.last_name)
+        return ' '.join(parts)
     
     def get_siblings(self):
         """Get all siblings (students with same family_id)."""

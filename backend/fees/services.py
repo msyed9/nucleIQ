@@ -213,4 +213,7 @@ class FeeCalculationService:
                     defaulter.stop_access_date = date.today()
                     defaulter.save()
             else:
-                FeeDefaulter.objects.filter(tenant=tenant, student=student).delete()
+                FeeDefaulter.objects.filter(tenant=tenant, student=student).update(
+                    is_deleted=True,
+                    deleted_at=timezone.now()
+                )
