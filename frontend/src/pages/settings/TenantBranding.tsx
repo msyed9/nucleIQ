@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTenantBranding } from '../../contexts/TenantBrandingContext';
+import { useIconSet } from '../../contexts/IconSetContext';
 import { useToast, ToastContainer } from '@/design-system';
 import api from '../../services/api';
 import { Paintbrush, Eye, Save, RefreshCw } from 'lucide-react';
+import IconThemeSelector from '../../components/settings/IconThemeSelector';
+import IconSetSelector from '../../components/settings/IconSetSelector';
+import { applyIconTheme } from '../../config/iconThemes';
+import { IconSetType } from '../../config/iconSets';
 import './Settings.css';
 
 interface BrandingForm {
@@ -12,18 +17,23 @@ interface BrandingForm {
     secondary_color: string;
     sidebar_color: string;
     font_family: string;
+    icon_theme: string;
+    icon_set: IconSetType;
 }
 
 const TenantBranding: React.FC = () => {
     const { t } = useTranslation();
     const { branding, loading, refreshBranding } = useTenantBranding();
+    const { iconSet, setIconSet } = useIconSet();
     const { toasts, removeToast, success, error } = useToast();
     const [formData, setFormData] = useState<BrandingForm>({
         logo_url: '',
         primary_color: '#1976D2',
         secondary_color: '#424242',
         sidebar_color: '#263238',
-        font_family: 'Inter, sans-serif'
+        font_family: 'Inter, sans-serif',
+        icon_theme: 'modern_gradient',
+        icon_set: 'lucide'
     });
     const [saving, setSaving] = useState(false);
     const [showPreview, setShowPreview] = useState(true);
@@ -35,7 +45,9 @@ const TenantBranding: React.FC = () => {
                 primary_color: branding.primary_color || '#1976D2',
                 secondary_color: branding.secondary_color || '#424242',
                 sidebar_color: branding.sidebar_color || '#263238',
-                font_family: branding.font_family || 'Inter, sans-serif'
+                font_family: branding.font_family || 'Inter, sans-serif',
+                icon_theme: branding.icon_theme || 'modern_gradient',
+                icon_set: (branding as any).icon_set || 'lucide'
             });
         }
     }, [branding]);
@@ -53,7 +65,10 @@ const TenantBranding: React.FC = () => {
         setSaving(true);
 
         try {
-            await api.patch('/tenants/branding/', formData);
+            await api.patch('/tenants/branding/update/', {
+                ...formData,
+                icon_set: iconSet
+            });
             success('Branding updated successfully!');
             await refreshBranding();
         } catch (err: any) {
@@ -72,9 +87,22 @@ const TenantBranding: React.FC = () => {
                 primary_color: branding.primary_color || '#1976D2',
                 secondary_color: branding.secondary_color || '#424242',
                 sidebar_color: branding.sidebar_color || '#263238',
-                font_family: branding.font_family || 'Inter, sans-serif'
+                font_family: branding.font_family || 'Inter, sans-serif',
+                icon_theme: branding.icon_theme || 'modern_gradient',
+                icon_set: (branding as any).icon_set || 'lucide'
             });
+            const brandingIconSet = (branding as any).icon_set || 'lucide';
+            setIconSet(brandingIconSet);
         }
+    };
+
+    const handleThemeSelect = (themeId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            icon_theme: themeId
+        }));
+        // Apply theme immediately for preview
+        applyIconTheme(themeId);
     };
 
     if (loading) {
@@ -225,6 +253,18 @@ const TenantBranding: React.FC = () => {
                                     e.g., Inter, Roboto, Arial, sans-serif
                                 </small>
                             </div>
+
+                            {/* Icon Theme Selector (styling) */}
+                            <IconThemeSelector
+                                selectedTheme={formData.icon_theme}
+                                onSelect={handleThemeSelect}
+                            />
+
+                            {/* Icon Set Selector (different icon libraries) */}
+                            <IconSetSelector
+                                selectedIconSet={iconSet}
+                                onSelect={(newIconSet) => setIconSet(newIconSet)}
+                            />
 
                             {/* Actions */}
                             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>

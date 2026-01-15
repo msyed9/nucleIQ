@@ -398,6 +398,15 @@ class StudentRemark(BaseModel):
         on_delete=models.CASCADE,
         related_name='remarks'
     )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_remarks',
+        help_text=_('Academic year for this remark')
+    )
     
     remark_type = models.CharField(
         max_length=20,
@@ -546,6 +555,15 @@ class StudentDocument(BaseModel):
         Student,
         on_delete=models.CASCADE,
         related_name='documents'
+    )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_documents',
+        help_text=_('Academic year for this document')
     )
     
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPE_CHOICES)
@@ -721,6 +739,15 @@ class StudentHealthRecord(BaseModel):
         Student,
         on_delete=models.CASCADE,
         related_name='health_records'
+    )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_health_records',
+        help_text=_('Academic year for this health record')
     )
     
     date = models.DateField()
@@ -998,6 +1025,15 @@ class StudentTransfer(BaseModel):
         Student,
         on_delete=models.CASCADE,
         related_name='transfers'
+    )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_transfers',
+        help_text=_('Academic year for this transfer')
     )
     
     transfer_type = models.CharField(max_length=20, choices=TRANSFER_TYPE_CHOICES)
@@ -1502,6 +1538,15 @@ class LeaveApplication(BaseModel):
         on_delete=models.CASCADE,
         related_name='leave_applications'
     )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_leave_applications',
+        help_text=_('Academic year for this leave application')
+    )
     
     applied_by_parent = models.ForeignKey(
         ParentUser,
@@ -1754,6 +1799,15 @@ class StudentBehaviorPoint(BaseModel):
         on_delete=models.CASCADE,
         related_name='behavior_points'
     )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_behavior_points',
+        help_text=_('Academic year for this behavior record')
+    )
     
     point_type = models.CharField(max_length=20, choices=POINT_TYPE_CHOICES)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
@@ -1818,6 +1872,15 @@ class DisciplinaryAction(BaseModel):
         Student,
         on_delete=models.CASCADE,
         related_name='disciplinary_actions'
+    )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_disciplinary_actions',
+        help_text=_('Academic year for this disciplinary action')
     )
     
     action_type = models.CharField(max_length=30, choices=ACTION_TYPE_CHOICES)
@@ -1894,6 +1957,15 @@ class CounselingRecord(BaseModel):
         on_delete=models.CASCADE,
         related_name='counseling_records'
     )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_counseling_records',
+        help_text=_('Academic year for this counseling record')
+    )
     
     session_date = models.DateField()
     session_time = models.TimeField()
@@ -1956,6 +2028,15 @@ class ParentTeacherMeeting(BaseModel):
         Student,
         on_delete=models.CASCADE,
         related_name='parent_teacher_meetings'
+    )
+
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_parent_teacher_meetings',
+        help_text=_('Academic year for this meeting')
     )
     
     meeting_date = models.DateField()

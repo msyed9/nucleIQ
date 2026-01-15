@@ -79,29 +79,39 @@ class Student360Service:
     
     def _get_kpis(self):
         """Get key performance indicators."""
+        current_year = None
+        enrollment = self.student.get_current_enrollment()
+        if enrollment:
+            current_year = enrollment.academic_year
+
+        remarks_qs = StudentRemark.objects.filter(student=self.student)
+        if current_year:
+            remarks_qs = remarks_qs.filter(academic_year=current_year)
+
         return {
             'attendance_percentage': self._get_attendance_percentage(),
             'fee_balance': self._get_fee_balance(),
             'upcoming_exams': self._get_upcoming_exams_count(),
             'library_books_issued': self._get_library_books_count(),
             'pending_assignments': self._get_pending_assignments_count(),
-            'total_remarks': StudentRemark.objects.filter(student=self.student).count(),
-            'positive_remarks': StudentRemark.objects.filter(
-                student=self.student, remark_type='POSITIVE'
-            ).count(),
-            'negative_remarks': StudentRemark.objects.filter(
-                student=self.student, remark_type='NEGATIVE'
-            ).count(),
-            'pending_actions': StudentRemark.objects.filter(
-                student=self.student, requires_action=True, action_taken=False
-            ).count(),
+            'total_remarks': remarks_qs.count(),
+            'positive_remarks': remarks_qs.filter(remark_type='POSITIVE').count(),
+            'negative_remarks': remarks_qs.filter(remark_type='NEGATIVE').count(),
+            'pending_actions': remarks_qs.filter(requires_action=True, action_taken=False).count(),
         }
     
     def _get_recent_activity(self, limit=10):
         """Get recent activity feed (remarks)."""
-        remarks = StudentRemark.objects.filter(
-            student=self.student
-        ).select_related('created_by_staff').order_by('-created_at')[:limit]
+        current_year = None
+        enrollment = self.student.get_current_enrollment()
+        if enrollment:
+            current_year = enrollment.academic_year
+
+        remarks = StudentRemark.objects.filter(student=self.student)
+        if current_year:
+            remarks = remarks.filter(academic_year=current_year)
+
+        remarks = remarks.select_related('created_by_staff').order_by('-created_at')[:limit]
         
         return [
             {
@@ -442,8 +452,12 @@ def create_system_remark(student, title, description, category, source_module, s
             source_reference="book_issue_123"
         )
     """
+    enrollment = student.get_current_enrollment()
+    academic_year = enrollment.academic_year if enrollment else None
+
     return StudentRemark.objects.create(
         student=student,
+        academic_year=academic_year,
         remark_type=remark_type,
         category=category,
         title=title,

@@ -1,0 +1,92 @@
+/**
+ * Themed Icon Styles
+ * 
+ * Applies the tenant's icon theme CSS variables to icons
+ */
+
+.themed-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.themed-icon svg {
+    stroke-width: var(--icon-stroke-width, 2px);
+}
+
+/* Variants */
+.themed-icon--default svg {
+    color: currentColor;
+}
+
+.themed-icon--primary svg {
+    color: var(--icon-primary, #6366F1);
+}
+
+.themed-icon--secondary svg {
+    color: var(--icon-secondary, #8B5CF6);
+}
+
+.themed-icon--accent svg {
+    color: var(--icon-accent, #EC4899);
+}
+
+.themed-icon--muted svg {
+    color: var(--color-text-secondary, #6B7280);
+}
+
+/* With Background */
+.themed-icon--with-bg {
+    padding: 10px;
+    border-radius: var(--menu-item-radius, 10px);
+}
+
+.themed-icon--with-bg.themed-icon--primary {
+    background: rgba(99, 102, 241, var(--icon-bg-opacity, 0.1));
+}
+
+.themed-icon--with-bg.themed-icon--secondary {
+    background: rgba(139, 92, 246, var(--icon-bg-opacity, 0.1));
+}
+
+.themed-icon--with-bg.themed-icon--accent {
+    background: rgba(236, 72, 153, var(--icon-bg-opacity, 0.1));
+}
+
+/* Animated */
+.themed-icon--animated:hover {
+    transform: scale(var(--icon-hover-scale, 1.05));
+}
+
+.themed-icon--animated.themed-icon--primary:hover {
+    box-shadow: var(--icon-glow, 0 0 20px rgba(99, 102, 241, 0.3));
+}
+
+/* Theme-specific adjustments */
+[data-icon-theme="neon_glow"] .themed-icon svg {
+    filter: drop-shadow(var(--icon-glow));
+}
+
+[data-icon-theme="retro_flat"] .themed-icon--with-bg {
+    box-shadow: var(--icon-shadow);
+}
+
+[data-icon-theme="minimal_outline"] .themed-icon svg {
+    stroke-width: 1.5px;
+}
+
+[data-icon-theme="classic_solid"] .themed-icon--primary svg,
+[data-icon-theme="classic_solid"] .themed-icon--secondary svg,
+[data-icon-theme="classic_solid"] .themed-icon--accent svg {
+    fill: currentColor;
+    stroke-width: 0;
+}
+
+/* Gradient text for modern_gradient theme */
+[data-icon-theme="modern_gradient"] .themed-icon--primary svg {
+    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}

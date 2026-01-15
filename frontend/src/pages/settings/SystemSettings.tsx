@@ -289,6 +289,32 @@ const SystemSettings: React.FC = () => {
                         </CardContent>
                     </Card>
 
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                Icon & UI Theme
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Select a visual style for icons and UI elements across the platform.
+                            </Typography>
+                            <FormControl fullWidth>
+                                <InputLabel>Icon Theme</InputLabel>
+                                <Select
+                                    value={branding.icon_theme || 'modern_gradient'}
+                                    label="Icon Theme"
+                                    onChange={(e) => handleBrandingChange('icon_theme', e.target.value)}
+                                >
+                                    <MenuItem value="modern_gradient">Modern Gradient (Default)</MenuItem>
+                                    <MenuItem value="minimal_outline">Minimal Outline</MenuItem>
+                                    <MenuItem value="duotone">Duotone</MenuItem>
+                                    <MenuItem value="retro_flat">Retro Flat</MenuItem>
+                                    <MenuItem value="neon_glow">Neon Glow</MenuItem>
+                                    <MenuItem value="classic_solid">Classic Solid</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>

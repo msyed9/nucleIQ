@@ -13,6 +13,7 @@ from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment, ParentUser
+from tenants.models import AcademicYear
 from .serializers import (
     StudentBasicSerializer,
     StudentDetailSerializer,
@@ -31,6 +32,10 @@ from .notifications import StudentNotificationService
 from . import tasks
 import io
 import pandas as pd
+
+
+def _get_active_academic_year(tenant):
+    return AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
 
 
 class IsNotParent(BasePermission):
@@ -381,6 +386,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         """Get all remarks for a student."""
         student = self.get_object()
         remarks = StudentRemark.objects.filter(student=student).order_by('-created_at')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            remarks = remarks.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                remarks = remarks.filter(academic_year=active_year)
         
         # Filter by type if provided
         remark_type = request.query_params.get('type')
@@ -400,6 +413,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         """Get all documents for a student."""
         student = self.get_object()
         documents = StudentDocument.objects.filter(student=student).order_by('-created_at')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            documents = documents.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                documents = documents.filter(academic_year=active_year)
         
         serializer = StudentDocumentSerializer(documents, many=True)
         return Response(serializer.data)
@@ -409,6 +430,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         """Get health records for a student."""
         student = self.get_object()
         records = StudentHealthRecord.objects.filter(student=student).order_by('-date')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            records = records.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                records = records.filter(academic_year=active_year)
         
         serializer = StudentHealthRecordSerializer(records, many=True)
         return Response(serializer.data)
@@ -805,6 +834,9 @@ class StudentViewSet(viewsets.ModelViewSet):
         
         student = self.get_object()
         transfer_type = request.data.get('transfer_type')
+
+        current_enrollment = student.get_current_enrollment()
+        transfer_academic_year = current_enrollment.academic_year if current_enrollment else None
         
         if transfer_type not in ['SECTION', 'SCHOOL']:
             return Response(
@@ -816,6 +848,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         transfer = StudentTransfer.objects.create(
             tenant=request.user.tenant,
             student=student,
+            academic_year=transfer_academic_year,
             transfer_type=transfer_type,
             transfer_reason=request.data.get('transfer_reason', ''),
             effective_date=request.data.get('effective_date', timezone.now().date()),
@@ -836,7 +869,6 @@ class StudentViewSet(viewsets.ModelViewSet):
             section_to = Section.objects.get(id=section_to_id, tenant=request.user.tenant)
             
             # Get current enrollment
-            current_enrollment = student.get_current_enrollment()
             if current_enrollment:
                 transfer.section_from = current_enrollment.section
                 transfer.section_to = section_to
@@ -1165,12 +1197,20 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = StudentRemark.objects.filter(
             student__tenant=self.request.user.tenant
-        ).select_related('student', 'created_by_staff').order_by('-created_at')
+        ).select_related('student', 'created_by_staff', 'academic_year').order_by('-created_at')
         
         # Filter by student if provided
         student_id = self.request.query_params.get('student_id')
         if student_id:
             queryset = queryset.filter(student_id=student_id)
+
+        academic_year_id = self.request.query_params.get('academic_year')
+        if academic_year_id:
+            queryset = queryset.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(self.request.user.tenant)
+            if active_year:
+                queryset = queryset.filter(academic_year=active_year)
         
         # Filter by type if provided
         remark_type = self.request.query_params.get('type')
@@ -1229,12 +1269,32 @@ class StudentDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentDocumentSerializer
     
     def get_queryset(self):
-        return StudentDocument.objects.filter(
+        queryset = StudentDocument.objects.filter(
             student__tenant=self.request.user.tenant
-        ).select_related('student').order_by('-created_at')
+        ).select_related('student', 'academic_year').order_by('-created_at')
+
+        academic_year_id = self.request.query_params.get('academic_year')
+        if academic_year_id:
+            queryset = queryset.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(self.request.user.tenant)
+            if active_year:
+                queryset = queryset.filter(academic_year=active_year)
+
+        return queryset
     
     def perform_create(self, serializer):
-        serializer.save(uploaded_by=self.request.user)
+        student = serializer.validated_data.get('student')
+        academic_year = serializer.validated_data.get('academic_year')
+
+        if not academic_year and student:
+            enrollment = student.get_current_enrollment()
+            if enrollment and enrollment.academic_year:
+                academic_year = enrollment.academic_year
+            else:
+                academic_year = _get_active_academic_year(self.request.user.tenant)
+
+        serializer.save(uploaded_by=self.request.user, academic_year=academic_year)
     
     @action(detail=True, methods=['post'])
     def verify(self, request, pk=None):
@@ -1260,12 +1320,32 @@ class StudentHealthRecordViewSet(viewsets.ModelViewSet):
     serializer_class = StudentHealthRecordSerializer
     
     def get_queryset(self):
-        return StudentHealthRecord.objects.filter(
+        queryset = StudentHealthRecord.objects.filter(
             student__tenant=self.request.user.tenant
-        ).select_related('student').order_by('-date')
+        ).select_related('student', 'academic_year').order_by('-date')
+
+        academic_year_id = self.request.query_params.get('academic_year')
+        if academic_year_id:
+            queryset = queryset.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(self.request.user.tenant)
+            if active_year:
+                queryset = queryset.filter(academic_year=active_year)
+
+        return queryset
     
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user.tenant)
+        student = serializer.validated_data.get('student')
+        academic_year = serializer.validated_data.get('academic_year')
+
+        if not academic_year and student:
+            enrollment = student.get_current_enrollment()
+            if enrollment and enrollment.academic_year:
+                academic_year = enrollment.academic_year
+            else:
+                academic_year = _get_active_academic_year(self.request.user.tenant)
+
+        serializer.save(academic_year=academic_year)
 
 
 

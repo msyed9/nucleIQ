@@ -1,0 +1,260 @@
+/**
+ * Icon Theme Selector Styles
+ * 
+ * Premium, polished styling for the theme selection interface
+ */
+
+.icon-theme-selector {
+    margin-top: 24px;
+}
+
+.icon-theme-header {
+    margin-bottom: 24px;
+}
+
+.icon-theme-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin-bottom: 8px;
+}
+
+.icon-theme-title svg {
+    color: var(--color-primary, #6366F1);
+}
+
+.icon-theme-description {
+    color: var(--color-text-secondary, #666);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.icon-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.icon-theme-card {
+    position: relative;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.icon-theme-card:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
+    transform: translateY(-2px);
+}
+
+.icon-theme-card.selected {
+    border-color: var(--color-primary, #6366F1);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.03) 100%);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+}
+
+.theme-selected-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--color-primary, #6366F1) 0%, #8B5CF6 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Theme Preview */
+.theme-preview {
+    width: 100%;
+    height: 140px;
+    border-radius: 10px;
+    display: flex;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.preview-sidebar {
+    width: 40px;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.preview-sidebar-item {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.2s;
+}
+
+.preview-sidebar-item.active {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.preview-content {
+    flex: 1;
+    padding: 12px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.preview-title {
+    width: 80px;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 4px;
+}
+
+.preview-button {
+    width: 50px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+.preview-cards {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.preview-card {
+    flex: 1;
+    background: #f9fafb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.preview-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Theme Info */
+.theme-info {
+    margin-bottom: 12px;
+}
+
+.theme-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 6px 0;
+}
+
+.theme-desc {
+    font-size: 12px;
+    color: var(--color-text-secondary, #666);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Color Swatches */
+.theme-swatches {
+    display: flex;
+    gap: 8px;
+}
+
+.swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s;
+}
+
+.swatch:hover {
+    transform: scale(1.15);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .icon-theme-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .theme-preview {
+        height: 120px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .icon-theme-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    
+    .icon-theme-card:hover {
+        border-color: #4b5563;
+    }
+    
+    .icon-theme-card.selected {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(236, 72, 153, 0.08) 100%);
+    }
+    
+    .theme-name {
+        color: #f9fafb;
+    }
+    
+    .theme-desc {
+        color: #9ca3af;
+    }
+    
+    .preview-content {
+        background: #111827;
+    }
+    
+    .preview-title {
+        background: #374151;
+    }
+    
+    .preview-card {
+        background: #1f2937;
+    }
+}

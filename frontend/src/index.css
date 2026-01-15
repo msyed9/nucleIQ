@@ -6,14 +6,29 @@
   :root {
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    
+
     /* Light mode variables */
     --color-bg-primary: #FFFFFF;
     --color-bg-secondary: #F5F7FA;
     --color-text-primary: #212121;
     --color-text-secondary: #546E7A;
+
+    /* Icon Theme CSS Variables - Default (Modern Gradient) */
+    --icon-primary: #6366F1;
+    --icon-secondary: #8B5CF6;
+    --icon-accent: #EC4899;
+    --icon-stroke-width: 2px;
+    --icon-bg-opacity: 0.1;
+    --icon-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+    --icon-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    --icon-hover-scale: 1.05;
+    --button-radius: 12px;
+    --card-radius: 16px;
+    --menu-item-radius: 10px;
+    --gradient-start: #6366F1;
+    --gradient-end: #EC4899;
   }
-  
+
   /* Dark mode variables - class based */
   .dark,
   html.dark {
@@ -22,7 +37,7 @@
     --color-text-primary: #FFFFFF;
     --color-text-secondary: #B0BEC5;
   }
-  
+
   /* System preference fallback */
   @media (prefers-color-scheme: dark) {
     :root:not(.light) {
@@ -32,11 +47,11 @@
       --color-text-secondary: #B0BEC5;
     }
   }
-  
+
   * {
     @apply border-gray-200 dark:border-gray-700;
   }
-  
+
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -44,8 +59,77 @@
   }
 }
 
+/* ========================================
+   ICON THEME STYLES - Global Application
+   These styles MUST be outside @layer for specificity
+   ======================================== */
+
+/* Apply stroke width to ALL SVG icons when a theme is active */
+[data-icon-theme] svg {
+  stroke-width: var(--icon-stroke-width, 2px) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* NEON GLOW Theme - Glowing cyan/purple effects */
+[data-icon-theme="neon_glow"] svg {
+  filter: drop-shadow(0 0 4px var(--icon-primary)) !important;
+}
+
+[data-icon-theme="neon_glow"] .sidebar-item.active svg,
+[data-icon-theme="neon_glow"] .sidebar-subitem.active svg {
+  filter: drop-shadow(0 0 8px var(--icon-primary)) drop-shadow(0 0 16px var(--icon-primary)) !important;
+}
+
+/* MINIMAL OUTLINE Theme - Clean thin lines */
+[data-icon-theme="minimal_outline"] svg {
+  stroke-width: 1.5px !important;
+}
+
+/* CLASSIC SOLID Theme - Filled icons */
+[data-icon-theme="classic_solid"] svg {
+  fill: currentColor !important;
+  stroke-width: 0 !important;
+}
+
+/* RETRO FLAT Theme - Bold with drop shadows */
+[data-icon-theme="retro_flat"] svg {
+  stroke-width: 2.5px !important;
+}
+
+[data-icon-theme="retro_flat"] .sidebar-item svg,
+[data-icon-theme="retro_flat"] button svg {
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.15)) !important;
+}
+
+/* DUOTONE Theme - Two-tone depth */
+[data-icon-theme="duotone"] svg {
+  opacity: 0.9;
+}
+
+[data-icon-theme="duotone"] .sidebar-item.active svg {
+  opacity: 1;
+}
+
+/* MODERN GRADIENT Theme - Vibrant gradients */
+[data-icon-theme="modern_gradient"] .sidebar-item.active svg {
+  color: var(--icon-primary) !important;
+}
+
+/* Hover effects for interactive elements with icons */
+[data-icon-theme] .sidebar-item:hover svg,
+[data-icon-theme] button:hover svg,
+[data-icon-theme] a:hover svg {
+  transform: scale(var(--icon-hover-scale, 1.05));
+}
+
+/* Active sidebar icon color - use theme primary */
+[data-icon-theme] .sidebar-item.active svg,
+[data-icon-theme] .sidebar-subitem.active svg {
+  color: var(--icon-primary) !important;
+}
+
 @layer components {
   .container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply px-4 mx-auto max-w-7xl;
   }
 }

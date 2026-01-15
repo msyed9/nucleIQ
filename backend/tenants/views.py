@@ -188,6 +188,8 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
                 'school_phone': branding_data.get('school_phone', ''),
                 'school_email': branding_data.get('school_email', ''),
                 'logo_url': branding_data.get('logo_url', ''),
+                'icon_theme': branding_data.get('icon_theme', 'modern_gradient'),
+                'icon_set': branding_data.get('icon_set', 'lucide'),
                 'receipt_copies': branding_data.get('receipt_copies', 3),
                 'receipt_footer_text': branding_data.get('receipt_footer_text', 'This is a computer generated receipt.'),
             })

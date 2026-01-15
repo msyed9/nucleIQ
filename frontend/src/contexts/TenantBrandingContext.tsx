@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { applyIconTheme } from '../config/iconThemes';
+import { setCurrentIconSet } from '../config/iconSets';
 
 interface TenantBranding {
     id: number;
@@ -13,6 +15,8 @@ interface TenantBranding {
     secondary_color: string;
     sidebar_color: string;
     font_family: string;
+    icon_theme: string;
+    icon_set: string;
     gallery_images: string[];
     custom_css: string;
 }
@@ -58,6 +62,8 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
                 secondary_color: '#424242',
                 sidebar_color: '#263238',
                 font_family: 'Inter, sans-serif',
+                icon_theme: 'modern_gradient',
+                icon_set: 'lucide',
                 gallery_images: [],
                 custom_css: ''
             };
@@ -100,6 +106,15 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
         // Update page title with tenant name
         if (brandingData.tenant_name) {
             document.title = `${brandingData.tenant_name} - NucleIQ`;
+        }
+
+        // Apply icon theme
+        if (brandingData.icon_theme) {
+            applyIconTheme(brandingData.icon_theme);
+        }
+
+        if (brandingData.icon_set) {
+            setCurrentIconSet(brandingData.icon_set);
         }
     };
 

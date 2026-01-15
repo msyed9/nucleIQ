@@ -153,6 +153,26 @@ class TenantBranding(BaseModel):
         (3, 'Three Copies'),
     ]
     
+    ICON_THEME_CHOICES = [
+        ('modern_gradient', 'Modern Gradient'),
+        ('minimal_outline', 'Minimal Outline'),
+        ('duotone', 'Duotone'),
+        ('retro_flat', 'Retro Flat'),
+        ('neon_glow', 'Neon Glow'),
+        ('classic_solid', 'Classic Solid'),
+    ]
+
+    ICON_SET_CHOICES = [
+        ('lucide', 'Modern Line'),
+        ('heroicons_outline', 'Heroicons Outline'),
+        ('heroicons_solid', 'Heroicons Solid'),
+        ('phosphor_regular', 'Phosphor Regular'),
+        ('phosphor_bold', 'Phosphor Bold'),
+        ('phosphor_fill', 'Phosphor Fill'),
+        ('tabler', 'Tabler Icons'),
+        ('material_outlined', 'Material Outlined'),
+    ]
+    
     tenant = models.OneToOneField(
         Tenant,
         on_delete=models.CASCADE,
@@ -261,6 +281,21 @@ class TenantBranding(BaseModel):
         blank=True,
         default="This is a computer generated receipt.",
         help_text="Custom footer text for fee receipts"
+    )
+    
+    # Icon/UI Theme
+    icon_theme = models.CharField(
+        max_length=30,
+        choices=ICON_THEME_CHOICES,
+        default='modern_gradient',
+        help_text="Icon and UI theme style for the tenant"
+    )
+
+    icon_set = models.CharField(
+        max_length=30,
+        choices=ICON_SET_CHOICES,
+        default='lucide',
+        help_text="Icon library set for the tenant"
     )
     
     # Additional customization

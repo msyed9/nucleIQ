@@ -38,6 +38,10 @@
     transition: color 200ms ease-in-out;
 }
 
+.sidebar-logo-icon {
+    color: var(--icon-primary, var(--color-primary-600, #1976D2));
+}
+
 .sidebar-nav {
     flex: 1;
     padding: 1rem 0;
@@ -96,7 +100,56 @@
 /* Sidebar Icon */
 .sidebar-icon {
     flex-shrink: 0;
-    color: inherit;
+    color: var(--icon-secondary, inherit);
+    stroke-width: var(--icon-stroke-width, 2px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Icon Theme Overrides for Sidebar */
+[data-icon-theme] .sidebar-icon {
+    stroke-width: var(--icon-stroke-width, 2px);
+}
+
+/* Active sidebar icon uses primary color */
+.sidebar-item.active .sidebar-icon,
+.sidebar-subitem.active .sidebar-icon {
+    color: var(--icon-primary, var(--color-primary-700, #1976D2));
+}
+
+/* Hover effect on icons */
+.sidebar-item:hover .sidebar-icon {
+    color: var(--icon-primary, var(--color-primary-600));
+    transform: scale(var(--icon-hover-scale, 1.05));
+}
+
+/* Theme-specific sidebar icon styles */
+[data-icon-theme="neon_glow"] .sidebar-icon {
+    filter: drop-shadow(0 0 3px var(--icon-primary));
+}
+
+[data-icon-theme="neon_glow"] .sidebar-item.active .sidebar-icon {
+    filter: drop-shadow(0 0 8px var(--icon-primary)) drop-shadow(0 0 16px var(--icon-primary));
+}
+
+[data-icon-theme="minimal_outline"] .sidebar-icon {
+    stroke-width: 1.5px;
+}
+
+[data-icon-theme="retro_flat"] .sidebar-icon {
+    stroke-width: 2.5px;
+}
+
+[data-icon-theme="classic_solid"] .sidebar-icon {
+    fill: currentColor;
+    stroke-width: 0;
+}
+
+[data-icon-theme="duotone"] .sidebar-item.active .sidebar-icon {
+    opacity: 1;
+}
+
+[data-icon-theme="duotone"] .sidebar-icon {
+    opacity: 0.85;
 }
 
 /* Sidebar Label */

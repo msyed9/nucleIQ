@@ -185,11 +185,12 @@ class StudentRemarkSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     color_class = serializers.CharField(source='get_color_class', read_only=True)
     student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = StudentRemark
         fields = [
-            'id', 'student', 'student_name', 'remark_type', 'category', 
+            'id', 'student', 'student_name', 'academic_year', 'academic_year_name', 'remark_type', 'category', 
             'title', 'description', 'created_by_staff', 'created_by_name',
             'visible_to_parent', 'visible_to_student', 'is_important',
             'is_system_generated', 'source_module', 'source_reference',
@@ -197,7 +198,7 @@ class StudentRemarkSerializer(serializers.ModelSerializer):
             'parent_acknowledged', 'parent_acknowledged_at',
             'attachment', 'created_at', 'updated_at', 'color_class'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by_name', 'color_class', 'student_name']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by_name', 'color_class', 'student_name', 'academic_year_name']
     
     def get_created_by_name(self, obj):
         if obj.created_by_staff:
@@ -211,7 +212,7 @@ class CreateRemarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentRemark
         fields = [
-            'student', 'remark_type', 'category', 'title', 'description',
+            'student', 'academic_year', 'remark_type', 'category', 'title', 'description',
             'visible_to_parent', 'visible_to_student', 'is_important',
             'requires_action', 'attachment'
         ]
@@ -219,6 +220,19 @@ class CreateRemarkSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Set created_by_staff from request user
         validated_data['created_by_staff'] = self.context['request'].user
+        if not validated_data.get('academic_year'):
+            student = validated_data.get('student')
+            enrollment = student.get_current_enrollment() if student else None
+            if enrollment and enrollment.academic_year:
+                validated_data['academic_year'] = enrollment.academic_year
+            else:
+                request = self.context.get('request')
+                tenant = getattr(request, 'tenant', None) if request else None
+                if tenant:
+                    from tenants.models import AcademicYear
+                    active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+                    if active_year:
+                        validated_data['academic_year'] = active_year
         return super().create(validated_data)
 
 
@@ -226,16 +240,17 @@ class StudentDocumentSerializer(serializers.ModelSerializer):
     """Student document serializer."""
     uploaded_by_name = serializers.SerializerMethodField()
     verified_by_name = serializers.SerializerMethodField()
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = StudentDocument
         fields = [
-            'id', 'student', 'document_type', 'title', 'description',
+            'id', 'student', 'academic_year', 'academic_year_name', 'document_type', 'title', 'description',
             'file', 'uploaded_by', 'uploaded_by_name', 'is_verified',
             'verified_by', 'verified_by_name', 'verified_at',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'uploaded_by', 'verified_by', 'verified_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'uploaded_by', 'verified_by', 'verified_at', 'created_at', 'updated_at', 'academic_year_name']
     
     def get_uploaded_by_name(self, obj):
         return obj.uploaded_by.get_full_name() if obj.uploaded_by else None
@@ -247,16 +262,17 @@ class StudentDocumentSerializer(serializers.ModelSerializer):
 class StudentHealthRecordSerializer(serializers.ModelSerializer):
     """Student health record serializer."""
     bmi = serializers.SerializerMethodField()
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = StudentHealthRecord
         fields = [
-            'id', 'student', 'date', 'height_cm', 'weight_kg', 'bmi',
+            'id', 'student', 'academic_year', 'academic_year_name', 'date', 'height_cm', 'weight_kg', 'bmi',
             'diagnosis', 'treatment', 'prescription', 'allergies',
             'vaccination_name', 'vaccination_date', 'notes',
             'examined_by', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'bmi', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'bmi', 'created_at', 'updated_at', 'academic_year_name']
     
     def get_bmi(self, obj):
         return obj.get_bmi()

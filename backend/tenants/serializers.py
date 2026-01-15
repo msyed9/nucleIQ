@@ -124,6 +124,8 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
             'primary_color', 'secondary_color', 'sidebar_color',
             # Typography
             'font_family',
+            # Icon/UI Theme
+            'icon_theme', 'icon_set',
             # Gallery
             'gallery_images',
             # Receipt Configuration

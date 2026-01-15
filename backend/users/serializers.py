@@ -493,6 +493,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 'secondary_color': branding.secondary_color,
                 'sidebar_color': branding.sidebar_color,
                 'font_family': branding.font_family,
+                'icon_theme': branding.icon_theme,
+                'icon_set': branding.icon_set,
             }
         return None
 
