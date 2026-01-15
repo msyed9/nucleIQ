@@ -1,70 +1,77 @@
-# Multi-stage Dockerfile for Django Backend
+# Multi-stage Dockerfile for Django Backend (reworked for smaller final image)
 
-# Base stage with common dependencies
-FROM python:3.12-slim as base
+# Builder: install build-time packages and build wheels
+FROM python:3.12-slim as builder
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies including WeasyPrint requirements
+WORKDIR /wheels
+
+# Install build dependencies required to compile some packages (kept only in builder)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    libpq-dev \
+    build-essential \
     gcc \
     g++ \
-    make \
-    curl \
-    cmake \
+    python3-dev \
+    libpq-dev \
+    libatlas-base-dev \
     libopenblas-dev \
     liblapack-dev \
-    # WeasyPrint dependencies for PDF generation (complete set)
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf-2.0-0 \
-    libffi-dev \
-    shared-mime-info \
-    fontconfig \
-    fonts-liberation \
-    fonts-dejavu-core \
-    # Critical GLib/GObject libraries for WeasyPrint
-    libglib2.0-0 \
-    libharfbuzz0b \
-    # QR code dependencies  
-    libzbar0 \
-        # Build deps for dlib/face_recognition
-        libboost-all-dev \
-        libjpeg-dev \
-        libatlas3-base \
-        python3-dev \
+    libjpeg-dev \
+    libboost-all-dev \
+    cmake \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app directory
+# Copy only requirements to leverage Docker cache
+COPY requirements/prod.txt /wheels/requirements-prod.txt
+
+# Build wheels for all requirements into /wheels
+RUN python -m pip install --upgrade pip wheel setuptools && \
+    pip wheel -r requirements-prod.txt --wheel-dir /wheels
+
+
+# Production image: minimal runtime with only required system libs and wheels from builder
+FROM python:3.12-slim as production
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 WORKDIR /app/backend
 
-# Development stage
-FROM base as development
+# Install only runtime system packages (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    libpq5 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libharfbuzz0b \
+    libffi7 || true && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements/dev.txt /app/backend/requirements.txt
+# Copy pre-built wheels from builder and install them (no compilation in final image)
+COPY --from=builder /wheels /wheels
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install --no-index --find-links=/wheels -r /wheels/requirements-prod.txt && \
+    pip install gunicorn
 
 # Copy application code
 COPY . /app/backend/
 
-# Expose port
-EXPOSE 8000
+# Create necessary directories and non-root user
+RUN mkdir -p /app/backend/staticfiles /app/backend/media && \
+    useradd -m -u 1000 nucleiq && \
+    chown -R nucleiq:nucleiq /app/backend
 
-# Default command (overridden in docker-compose)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-
-# Production stage
-FROM base as production
+USER nucleiq
 
 # Build arguments for metadata
 ARG BUILD_DATE
@@ -77,24 +84,6 @@ LABEL org.opencontainers.image.title="NucleIQ Backend" \
     org.opencontainers.image.revision="${GIT_SHA}" \
     org.opencontainers.image.vendor="NucleIQ" \
     org.opencontainers.image.source="https://github.com/nucleiq/nucleiq"
-
-# Install production dependencies only
-COPY requirements/prod.txt /app/backend/requirements.txt
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    pip install gunicorn
-
-# Copy application code
-COPY . /app/backend/
-
-# Create necessary directories
-RUN mkdir -p /app/backend/staticfiles /app/backend/media
-
-# Create non-root user
-RUN useradd -m -u 1000 nucleiq && \
-    chown -R nucleiq:nucleiq /app/backend
-
-USER nucleiq
 
 # Expose port
 EXPOSE 8000
