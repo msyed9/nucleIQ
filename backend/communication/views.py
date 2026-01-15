@@ -10,15 +10,16 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import models
 from django.utils import timezone
+from datetime import datetime
 
 from .models import (
     CommunicationProvider, MessageTemplate, Notice,
-    MessageLog, BroadcastMessage
+    MessageLog, BroadcastMessage, SchoolEvent
 )
 from .serializers import (
     CommunicationProviderSerializer, MessageTemplateSerializer,
     NoticeSerializer, MessageLogSerializer, BroadcastMessageSerializer,
-    SendMessageSerializer
+    SendMessageSerializer, SchoolEventSerializer
 )
 
 from core.middleware import get_current_tenant
@@ -197,3 +198,85 @@ class BroadcastMessageViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class SchoolEventViewSet(viewsets.ModelViewSet):
+    """ViewSet for SchoolEvent management (Calendar Events)."""
+    
+    serializer_class = SchoolEventSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['event_type', 'is_published']
+    search_fields = ['title', 'description', 'location']
+    ordering = ['start_date', 'start_time']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        queryset = SchoolEvent.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        )
+        
+        # Only show published events to non-staff users
+        if not (self.request.user.is_staff or getattr(self.request.user, 'role', '') == 'STAFF'):
+            queryset = queryset.filter(is_published=True)
+            
+        queryset = queryset.prefetch_related('target_classes')
+        
+        # Filter by date range
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__gte=start)
+            except ValueError:
+                pass
+        
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__lte=end)
+            except ValueError:
+                pass
+        
+        return queryset
+    
+    def perform_create(self, serializer):
+        tenant = get_current_tenant()
+        if not tenant and hasattr(self.request.user, 'tenant'):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
+    
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Get upcoming events."""
+        today = timezone.now().date()
+        limit = int(request.query_params.get('limit', 10))
+        
+        events = self.get_queryset().filter(
+            start_date__gte=today
+        ).order_by('start_date', 'start_time')[:limit]
+        
+        serializer = self.get_serializer(events, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def by_month(self, request):
+        """Get events for a specific month."""
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+        
+        from calendar import monthrange
+        first_day = datetime(year, month, 1).date()
+        last_day = datetime(year, month, monthrange(year, month)[1]).date()
+        
+        events = self.get_queryset().filter(
+            start_date__gte=first_day,
+            start_date__lte=last_day
+        )
+        
+        serializer = self.get_serializer(events, many=True)
+        return Response(serializer.data)
+

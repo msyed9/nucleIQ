@@ -767,6 +767,172 @@ class StudentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
+    @action(detail=False, methods=['post'])
+    def bulk_promote(self, request):
+        """
+        Simplified bulk promotion endpoint for the Student Promotions wizard.
+        
+        Body:
+            - student_ids: list of UUIDs
+            - target_grade_id: UUID of target grade level
+            - target_section_id: UUID of target section (optional)
+            - target_academic_year_id: UUID of target academic year
+            - action: 'promote', 'graduate', or 'retain'
+        """
+        from tenants.models import GradeLevel, Section, AcademicYear
+        
+        student_ids = request.data.get('student_ids', [])
+        target_grade_id = request.data.get('target_grade_id')
+        target_section_id = request.data.get('target_section_id')
+        target_academic_year_id = request.data.get('target_academic_year_id')
+        action_type = request.data.get('action', 'promote')
+        
+        if not student_ids:
+            return Response(
+                {'error': 'student_ids is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not target_academic_year_id:
+            return Response(
+                {'error': 'target_academic_year_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            target_year = AcademicYear.objects.get(
+                id=target_academic_year_id,
+                tenant=request.user.tenant
+            )
+        except AcademicYear.DoesNotExist:
+            return Response(
+                {'error': 'Invalid target academic year'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get target grade and section if provided
+        target_grade = None
+        target_section = None
+        
+        if target_grade_id:
+            try:
+                target_grade = GradeLevel.objects.get(
+                    id=target_grade_id,
+                    tenant=request.user.tenant
+                )
+            except GradeLevel.DoesNotExist:
+                return Response(
+                    {'error': 'Invalid target grade'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if target_section_id:
+            try:
+                target_section = Section.objects.get(
+                    id=target_section_id,
+                    tenant=request.user.tenant
+                )
+            except Section.DoesNotExist:
+                pass  # Section is optional
+        
+        # Get students
+        students = Student.objects.filter(
+            id__in=student_ids,
+            tenant=request.user.tenant
+        )
+        
+        promoted_count = 0
+        errors = []
+        
+        for student in students:
+            try:
+                if action_type == 'graduate':
+                    # Mark as alumni
+                    from .models import AlumniProfile
+                    if not AlumniProfile.objects.filter(student=student).exists():
+                        AlumniProfile.objects.create(
+                            student=student,
+                            tenant=request.user.tenant,
+                            graduation_year=timezone.now().year,
+                            notes='Graduated via bulk promotion'
+                        )
+                        student.status = 'ALUMNI'
+                        student.save()
+                        promoted_count += 1
+                        
+                        # Create system remark
+                        create_system_remark(
+                            student=student,
+                            title='Graduated',
+                            description=f'Graduated and marked as alumni',
+                            category='ACHIEVEMENT'
+                        )
+                else:
+                    # Promote to next grade
+                    current_enrollment = student.get_current_enrollment()
+                    
+                    if current_enrollment:
+                        # End current enrollment
+                        current_enrollment.is_current = False
+                        current_enrollment.end_date = timezone.now().date()
+                        current_enrollment.save()
+                    
+                    # Determine new class name and section
+                    new_class_name = target_grade.name if target_grade else student.current_class
+                    new_section = target_section.name if target_section else student.section
+                    
+                    # Update student record
+                    student.current_class = new_class_name
+                    if new_section:
+                        student.section = new_section
+                    student.save()
+                    
+                    # Create new enrollment
+                    new_enrollment_section = target_section
+                    if not new_enrollment_section and current_enrollment and target_grade:
+                        # Try to find matching section name in new grade
+                        new_enrollment_section = Section.objects.filter(
+                            tenant=request.user.tenant,
+                            grade_level=target_grade,
+                            name=current_enrollment.section.name if current_enrollment.section else ''
+                        ).first()
+                    
+                    if new_enrollment_section:
+                        StudentEnrollment.objects.create(
+                            student=student,
+                            tenant=request.user.tenant,
+                            academic_year=target_year,
+                            section=new_enrollment_section,
+                            enrollment_date=timezone.now().date(),
+                            is_current=True,
+                            status='ACTIVE'
+                        )
+                    
+                    promoted_count += 1
+                    
+                    # Create system remark
+                    create_system_remark(
+                        student=student,
+                        title='Promoted',
+                        description=f'Promoted to {new_class_name} for academic year {target_year.name}',
+                        category='ADMINISTRATIVE'
+                    )
+                    
+            except Exception as e:
+                errors.append({
+                    'student_id': str(student.id),
+                    'name': f'{student.first_name} {student.last_name}',
+                    'error': str(e)
+                })
+        
+        return Response({
+            'success': True,
+            'promoted_count': promoted_count,
+            'total_students': len(student_ids),
+            'errors': errors,
+            'message': f'Successfully promoted {promoted_count} students'
+        })
+    
     @action(detail=True, methods=['post'])
     def mark_as_alumni(self, request, pk=None):
         """

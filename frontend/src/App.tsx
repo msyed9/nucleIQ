@@ -179,6 +179,14 @@ import LibraryCirculation from './pages/library/LibraryCirculation';
 import VisitorLog from './pages/security/VisitorLog';
 import GatePasses from './pages/security/GatePasses';
 
+// Calendar & Events
+import SchoolCalendar from './pages/calendar/SchoolCalendar';
+import HolidaysManagement from './pages/calendar/HolidaysManagement';
+import EventsManagement from './pages/calendar/EventsManagement';
+
+// Student Promotions
+import StudentPromotions from './pages/students/StudentPromotions';
+
 // Import i18n configuration
 import './i18n';
 
@@ -234,6 +242,11 @@ function App() {
                                                     <Route path="/students/:id" element={<Layout><Student360 /></Layout>} />
                                                     <Route path="/students" element={<Layout><StudentList /></Layout>} />
                                                     <Route path="/students/analytics" element={<Layout><StudentAnalytics /></Layout>} />
+                                                    <Route path="/students/promotions" element={<Layout><StudentPromotions /></Layout>} />
+                                                    {/* Calendar routes */}
+                                                    <Route path="/calendar" element={<Layout><SchoolCalendar /></Layout>} />
+                                                    <Route path="/calendar/holidays" element={<Layout><HolidaysManagement /></Layout>} />
+                                                    <Route path="/calendar/events" element={<Layout><EventsManagement /></Layout>} />
                                                     {/* ID Cards routes */}
                                                     <Route path="/idcards/designer" element={<Layout><IDCardDesigner /></Layout>} />
                                                     <Route path="/idcards/templates" element={<Layout><IDCardTemplateManager /></Layout>} />

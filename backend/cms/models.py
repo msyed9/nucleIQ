@@ -40,11 +40,23 @@ class Website(TenantAwareModel):
 
 class Page(TenantAwareModel):
     """Website pages"""
+    PAGE_TYPES = [
+        ('HOME', 'Home'),
+        ('ABOUT', 'About'),
+        ('ACADEMICS', 'Academics'),
+        ('ADMISSIONS', 'Admissions'),
+        ('CONTACT', 'Contact'),
+        ('GALLERY', 'Gallery'),
+        ('EVENTS', 'Events'),
+        ('CUSTOM', 'Custom'),
+    ]
+    
     website = models.ForeignKey(Website, on_delete=models.CASCADE, related_name='pages')
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200)
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPES, default='CUSTOM')
     
-    # Content
+    # Content (Can be empty if using sections)
     content = models.TextField(blank=True)
     
     # SEO
@@ -84,16 +96,37 @@ class Section(TenantAwareModel):
         ('CONTACT', 'Contact Form'),
         ('CTA', 'Call to Action'),
         ('TEXT', 'Text Block'),
+        ('TEXT_BLOCK', 'Rich Text Block'),
         ('HTML', 'Custom HTML'),
+        ('STATS', 'Statistics'),
+        ('PRINCIPAL_MESSAGE', 'Principal Message'),
+        ('PAGE_HEADER', 'Page Header'),
+        ('TEXT_WITH_IMAGE', 'Text with Image'),
+        ('MISSION_VISION', 'Mission & Vision'),
+        ('IMAGE_GRID', 'Image Grid'),
+        ('TIMELINE', 'Timeline'),
+        ('PROGRAMS', 'Programs'),
+        ('MAP', 'Map'),
+        ('FAQ', 'FAQ'),
+        ('NEWS', 'News Feed'),
+        ('EVENTS', 'Events Display'),
+        ('FACULTY', 'Faculty Grid'),
+        ('VIDEO', 'Video Section'),
     ]
     
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name='sections')
-    section_type = models.CharField(max_length=20, choices=SECTION_TYPES, default='TEXT')
+    section_type = models.CharField(max_length=30, choices=SECTION_TYPES, default='TEXT')
     title = models.CharField(max_length=200, blank=True)
-    content = models.TextField(blank=True)
     
-    # Configuration (JSON field for flexibility)
+    # Content can store JSON for structured sections
+    content = models.JSONField(default=dict, blank=True)
+    
+    # Configuration (extra styles, etc)
     config = models.JSONField(default=dict, blank=True)
+    
+    # Styles
+    background_color = models.CharField(max_length=20, blank=True, null=True)
+    text_color = models.CharField(max_length=20, blank=True, null=True)
     
     # Ordering
     order = models.IntegerField(default=0)

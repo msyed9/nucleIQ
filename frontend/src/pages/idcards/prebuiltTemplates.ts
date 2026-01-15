@@ -28,6 +28,7 @@ export interface PrebuiltTemplate {
             type: 'color' | 'gradient' | 'image';
             value?: string;
             gradient?: string;
+            image_url?: string;
         };
         elements: any[];
     };
@@ -136,9 +137,9 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
     // === STUDENT PORTRAIT TEMPLATES (1-30) ===
     // ==========================================
     {
-        id: 'student-portrait-modern-blue',
-        name: 'Student Portrait - Modern Blue',
-        description: 'Clean modern portrait design with blue gradient',
+        id: 'student-portrait-premium-corporate',
+        name: 'Student Portrait - Premium Corporate',
+        description: 'Elite corporate design with professional background image',
         category: 'student',
         orientation: 'portrait',
         style: 'modern',
@@ -146,22 +147,21 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/corporate_portrait.png' },
             elements: [
-                createShapeElement('header', 0, 0, 54, 14, '#FFFFFF20'),
-                createTextElement('school-name', '{{school_name}}', 2, 3, 10, '#FFFFFF', 'bold', 50, 8),
-                createImageElement('photo', 12, 18, 30, 36, '{{photo}}'),
-                createTextElement('name', '{{student_name}}', 2, 58, 11, '#FFFFFF', 'bold', 50, 7),
-                createTextElement('class', 'Class: {{class}} - {{section}}', 2, 66, 8, '#FFFFFF', 'normal', 50, 5),
-                createTextElement('adm', 'Adm: {{admission_number}}', 2, 73, 7, '#FFFFFF', 'normal', 30, 5),
-                createQRElement('qr', 36, 68, 14, '{{admission_number}}')
+                createTextElement('school-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
+                createImageElement('photo', 6, 30, 26, 32, '{{photo}}'),
+                createTextElement('name', '{{student_name}}', 2, 64, 11, '#FFFFFF', 'bold', 50, 7),
+                createTextElement('class', 'Class: {{class}} - {{section}}', 2, 72, 8, '#CCCCCC', 'normal', 50, 5),
+                createTextElement('adm', 'Adm: {{admission_number}}', 2, 78, 7, '#FFFFFF', 'normal', 30, 5),
+                createQRElement('qr', 38, 72, 12, '{{admission_number}}')
             ]
         }
     },
     {
-        id: 'student-portrait-modern-green',
-        name: 'Student Portrait - Fresh Green',
-        description: 'Nature-inspired green portrait ID',
+        id: 'student-portrait-premium-fresh',
+        name: 'Student Portrait - Premium Fresh',
+        description: 'Fresh eco-inspired design with background image',
         category: 'student',
         orientation: 'portrait',
         style: 'modern',
@@ -169,16 +169,14 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #11998e 0%, #38ef7d 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/fresh_green_portrait.png' },
             elements: [
-                createShapeElement('header', 0, 0, 54, 12, '#FFFFFF30'),
-                createTextElement('school-name', '{{school_name}}', 2, 2, 9, '#FFFFFF', 'bold', 50, 7),
-                createImageElement('photo', 12, 16, 30, 36, '{{photo}}'),
-                createTextElement('name', '{{student_name}}', 2, 56, 10, '#FFFFFF', 'bold', 50, 7),
-                createTextElement('class', '{{class}} | {{section}}', 2, 64, 8, '#FFFFFF', 'normal', 50, 5),
-                createTextElement('dob', 'DOB: {{date_of_birth}}', 2, 71, 6, '#FFFFFF', 'normal', 26, 4),
-                createTextElement('blood', 'Blood: {{blood_group}}', 28, 71, 6, '#FFFFFF', 'normal', 24, 4),
-                createQRElement('qr', 36, 76, 14, '{{admission_number}}')
+                createTextElement('school-name', '{{school_name}}', 2, 12, 10, '#11998e', 'bold', 50, 7),
+                createImageElement('photo', 12, 26, 30, 36, '{{photo}}'),
+                createTextElement('name', '{{student_name}}', 2, 64, 11, '#11998e', 'bold', 50, 7),
+                createTextElement('class', '{{class}} | {{section}}', 2, 73, 9, '#333333', 'normal', 50, 5),
+                createTextElement('adm', 'Adm: {{admission_number}}', 2, 80, 7, '#666666', 'normal', 30, 5),
+                createQRElement('qr', 38, 70, 12, '{{admission_number}}')
             ]
         }
     },
@@ -503,6 +501,28 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
     // === STAFF PORTRAIT TEMPLATES (31-60) ===
     // ===========================================
     {
+        id: 'staff-portrait-premium-navy',
+        name: 'Staff Portrait - Premium Elite',
+        description: 'Elite professional staff ID with premium background',
+        category: 'staff',
+        orientation: 'portrait',
+        style: 'professional',
+        colors: PALETTES.corporate,
+        dimensions: PORTRAIT_DIMS,
+        design: {
+            version: '1.0',
+            background: { type: 'image', image_url: '/media/idcards/bgs/corporate_portrait.png' },
+            elements: [
+                createTextElement('org-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
+                createImageElement('photo', 6, 28, 24, 30, '{{photo}}'),
+                createTextElement('name', '{{staff_name}}', 2, 62, 11, '#FFFFFF', 'bold', 50, 7),
+                createTextElement('designation', '{{designation}}', 2, 70, 8, '#CCCCCC', 'normal', 50, 5),
+                createTextElement('dept', '{{department}}', 2, 78, 7, '#FFFFFF', 'normal', 30, 4),
+                createQRElement('qr', 38, 72, 12, '{{employee_id}}')
+            ]
+        }
+    },
+    {
         id: 'staff-portrait-professional-navy',
         name: 'Staff Portrait - Professional Navy',
         description: 'Corporate professional staff ID',
@@ -709,24 +729,24 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
     // === LANDSCAPE TEMPLATES (61-100) ===
     // ==========================================
     {
-        id: 'student-landscape-blue',
-        name: 'Student Landscape - Blue',
-        description: 'Horizontal layout student ID',
+        id: 'student-landscape-premium-vibrant',
+        name: 'Student Landscape - Premium Vibrant',
+        description: 'Vibrant horizontal layout with background image',
         category: 'student',
         orientation: 'landscape',
-        style: 'modern',
-        colors: PALETTES.sky,
+        style: 'colorful',
+        colors: PALETTES.sunset,
         dimensions: LANDSCAPE_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(90deg, #039BE5 0%, #4FC3F7 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/vibrant_landscape.png' },
             elements: [
-                createImageElement('photo', 3, 8, 28, 35, '{{photo}}'),
-                createTextElement('school-name', '{{school_name}}', 35, 3, 10, '#FFFFFF', 'bold', 48, 6),
-                createTextElement('name', '{{student_name}}', 35, 14, 12, '#FFFFFF', 'bold', 48, 7),
-                createTextElement('class', 'Class: {{class}} - {{section}}', 35, 24, 9, '#FFFFFF', 'normal', 48, 5),
-                createTextElement('adm', 'Adm: {{admission_number}}', 35, 32, 8, '#FFFFFF', 'normal', 30, 5),
-                createQRElement('qr', 68, 28, 15, '{{admission_number}}')
+                createImageElement('photo', 6, 12, 24, 30, '{{photo}}'),
+                createTextElement('school-name', '{{school_name}}', 32, 6, 12, '#FFFFFF', 'bold', 50, 8),
+                createTextElement('name', '{{student_name}}', 32, 18, 14, '#BF360C', 'bold', 50, 10),
+                createTextElement('class', 'Class: {{class}} - {{section}}', 32, 32, 10, '#D84315', 'normal', 50, 7),
+                createTextElement('adm', 'Adm: {{admission_number}}', 32, 42, 9, '#FFFFFF', 'normal', 30, 6),
+                createQRElement('qr', 68, 30, 14, '{{admission_number}}')
             ]
         }
     },

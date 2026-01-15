@@ -60,7 +60,7 @@ urlpatterns = [
     
     # API endpoints
     path('api/', include('users.urls')),
-# Trigger reload
+    path('api/communication/', include('communication.urls')),
     path('api/billing/', include('billing.urls')),
     path('api/dashboard/', include('dashboard.urls')),
     path('api/search/', include('search.urls')),
@@ -78,7 +78,6 @@ urlpatterns = [
     path('api/exams/', include('exams.urls')),
     path('api/hr/', include('hr.urls')),
     path('api/payroll/', include('payroll.urls')),
-    path('api/communication/', include('communication.urls')),
     path('api/crm/', include('crm.urls')),
     path('api/cms/', include('cms.urls')),
     path('api/library/', include('library.urls')),

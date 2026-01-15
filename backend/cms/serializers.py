@@ -5,7 +5,11 @@ from .models import Website, Page, Section, Media, MenuItem
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
-        fields = ['id', 'section_type', 'title', 'content', 'config', 'order', 'is_active', 'created_at', 'updated_at']
+        fields = [
+            'id', 'page', 'section_type', 'title', 'content', 'config', 
+            'order', 'is_active', 'background_color', 'text_color',
+            'created_at', 'updated_at'
+        ]
         read_only_fields = ['created_at', 'updated_at']
 
 
@@ -15,7 +19,7 @@ class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = [
-            'id', 'website', 'title', 'slug', 'content', 
+            'id', 'website', 'title', 'slug', 'page_type', 'content', 
             'meta_title', 'meta_description', 'meta_keywords',
             'is_homepage', 'is_published', 'show_in_menu', 'menu_order',
             'template', 'sections', 'created_at', 'updated_at'

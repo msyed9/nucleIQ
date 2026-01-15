@@ -1,0 +1,786 @@
+/* Trackers - Salah Tracker & Habit Board Styles */
+
+.tracker-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+/* View Tabs */
+.view-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--color-bg-secondary);
+    padding: 0.25rem;
+    border-radius: 10px;
+}
+
+.view-tab {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-tab:hover {
+    color: var(--color-text-primary);
+}
+
+.view-tab.active {
+    background: var(--color-bg-primary);
+    color: #6366f1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Filters Card */
+.filters-card {
+    margin-bottom: 1.5rem;
+}
+
+.tracker-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    background: var(--color-bg-primary);
+    min-width: 200px;
+}
+
+/* Salah Tabs */
+.salah-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.salah-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 70px;
+}
+
+.salah-tab:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+}
+
+.salah-tab.active {
+    border-color: #6366f1;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.salah-icon {
+    font-size: 1.25rem;
+}
+
+.salah-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+/* Stats Bar */
+.stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    min-width: 80px;
+}
+
+.stat-chip.total {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+}
+
+.stat-chip.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.stat-chip.info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.stat-chip.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.stat-chip.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.stat-chip.muted {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-tertiary);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+}
+
+.quick-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.quick-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--btn-color);
+    color: white;
+    transition: all 0.2s;
+}
+
+.quick-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Student Grid - Salah */
+.student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.student-card {
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.student-card.marked {
+    border-color: var(--status-color);
+    background: linear-gradient(135deg, rgba(var(--status-color), 0.05) 0%, transparent 100%);
+}
+
+.student-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.student-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.student-avatar.small {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+}
+
+.student-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.student-card .student-info {
+    margin-bottom: 1rem;
+}
+
+.student-card .student-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0.25rem 0;
+}
+
+.student-card .student-info p {
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+    margin: 0;
+}
+
+.current-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+}
+
+.status-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.25rem;
+}
+
+.status-btn:hover {
+    background: var(--btn-color);
+    color: white;
+    transform: scale(1.05);
+}
+
+.status-btn.selected {
+    background: var(--btn-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Habit Board Specific */
+.habit-student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.habit-student-card {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: all 0.2s;
+}
+
+.habit-student-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.habit-student-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.habit-student-header .student-info {
+    flex: 1;
+}
+
+.habit-student-header .student-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.habit-student-header .student-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+}
+
+.points-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.points-badge.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.points-badge.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.quick-habit-section h5 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin: 0 0 0.5rem 0;
+}
+
+.habit-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.habit-chip {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.habit-chip.good {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.habit-chip.good:hover {
+    background: #10b981;
+    transform: scale(1.15);
+}
+
+.habit-chip.bad {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.habit-chip.bad:hover {
+    background: #ef4444;
+    transform: scale(1.15);
+}
+
+.habit-chip.more {
+    background: var(--color-bg-secondary);
+    border: 2px dashed var(--color-border);
+}
+
+.habit-chip.more:hover {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+}
+
+/* Leaderboard */
+.leaderboard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.leaderboard-item.rank-1 {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 193, 7, 0.1) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+}
+
+.leaderboard-item.rank-2 {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.15) 0%, rgba(169, 169, 169, 0.1) 100%);
+    border: 2px solid rgba(192, 192, 192, 0.5);
+}
+
+.leaderboard-item.rank-3 {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.1) 100%);
+    border: 2px solid rgba(205, 127, 50, 0.5);
+}
+
+.rank-badge {
+    font-size: 1.5rem;
+    width: 40px;
+    text-align: center;
+}
+
+.leaderboard-info {
+    flex: 1;
+}
+
+.leaderboard-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.leaderboard-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+}
+
+/* Activity Timeline */
+.activity-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: var(--color-bg-secondary);
+}
+
+.timeline-item.positive {
+    border-left: 4px solid #10b981;
+}
+
+.timeline-item.negative {
+    border-left: 4px solid #ef4444;
+}
+
+.timeline-icon {
+    font-size: 1.5rem;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.timeline-header .points {
+    font-weight: 700;
+}
+
+.timeline-header .points.good {
+    color: #10b981;
+}
+
+.timeline-header .points.bad {
+    color: #ef4444;
+}
+
+.timeline-meta {
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+    margin: 0;
+}
+
+.timeline-remarks {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--color-text-secondary);
+    margin: 0.5rem 0 0 0;
+}
+
+/* Award Modal */
+.award-modal {
+    max-width: 600px;
+}
+
+.award-student-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.award-student-preview h3 {
+    margin: 0 0 0.25rem 0;
+}
+
+.award-student-preview p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary);
+}
+
+.habit-selection h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin: 1rem 0 0.75rem 0;
+}
+
+.habit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+}
+
+.habit-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem;
+    border: 2px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.habit-option:hover {
+    border-color: currentColor;
+}
+
+.habit-option.good {
+    color: #10b981;
+}
+
+.habit-option.good.selected {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+}
+
+.habit-option.bad {
+    color: #ef4444;
+}
+
+.habit-option.bad.selected {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+.habit-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.habit-name {
+    font-size: 0.75rem;
+    text-align: center;
+    color: var(--color-text-primary);
+}
+
+.habit-points {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 0.25rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--color-text-tertiary);
+}
+
+/* Modal Styles (Shared) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--color-bg-primary);
+    border-radius: 16px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: var(--color-bg-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+    }
+
+    .tracker-filters {
+        flex-direction: column;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+    }
+
+    .student-grid,
+    .habit-student-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .habit-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

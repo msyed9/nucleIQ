@@ -1,0 +1,312 @@
+/* Student Promotions Page Styles */
+
+.promotions-page {
+    padding: 1.5rem;
+}
+
+/* Progress Steps */
+.promotion-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 2rem 0 3rem;
+    padding: 1.5rem;
+    background: var(--color-bg-primary);
+    border-radius: 16px;
+    border: 1px solid var(--color-border);
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: all 0.3s;
+}
+
+.step.active .step-number {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 4px 12px var(--color-primary-alpha);
+}
+
+.step.completed .step-number {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: white;
+}
+
+.step.completed .step-number::after {
+    content: '✓';
+}
+
+.step-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.step.active .step-label {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.step-connector {
+    width: 80px;
+    height: 2px;
+    background: var(--color-border);
+    margin: 0 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Section Styles */
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.section-desc {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Step Actions */
+.step-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+/* No Students State */
+.no-students {
+    text-align: center;
+    padding: 3rem;
+    color: var(--color-text-secondary);
+}
+
+.no-students .icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+/* Select All Row */
+.select-all-row {
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* Students Grid */
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.student-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.student-card:hover {
+    border-color: var(--color-primary);
+}
+
+.student-card.selected {
+    border-color: var(--color-primary);
+    background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.1) 0%, rgba(var(--color-primary-rgb), 0.05) 100%);
+}
+
+.student-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.student-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.student-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-info strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-info span {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+/* Promotion Summary */
+.promotion-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.1) 0%, rgba(var(--color-primary-rgb), 0.05) 100%);
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+}
+
+.summary-stat {
+    text-align: center;
+}
+
+.summary-stat .stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.summary-stat .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.summary-arrow {
+    font-size: 2rem;
+    color: var(--color-primary);
+}
+
+/* Preview Table */
+.preview-table {
+    margin-bottom: 1.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.more-students {
+    text-align: center;
+    padding: 1rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Warning Box */
+.warning-box {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.warning-box strong {
+    color: #ca8a04;
+}
+
+/* Status Badges */
+.status-promote {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.status-graduate {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.status-retain {
+    background: rgba(234, 179, 8, 0.1);
+    color: #eab308;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .promotion-steps {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .step-connector {
+        display: none;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .students-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .promotion-summary {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .summary-arrow {
+        transform: rotate(90deg);
+    }
+}

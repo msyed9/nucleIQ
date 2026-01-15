@@ -78,12 +78,13 @@ class Student(BaseModel):
         blank=True,
         validators=[validate_indian_phone]
     )
-    address = models.TextField()
+    address = models.TextField(blank=True)
     
     # Family
-    father_name = models.CharField(max_length=100)
+    father_name = models.CharField(max_length=100, blank=True)
     father_phone = models.CharField(
         max_length=20,
+        blank=True,
         validators=[validate_indian_phone]
     )
     father_email = models.EmailField(
@@ -93,9 +94,10 @@ class Student(BaseModel):
     father_occupation = models.CharField(max_length=100, blank=True)
     father_profession = models.CharField(max_length=150, blank=True, help_text=_('Father Profession/Job Title'))
     
-    mother_name = models.CharField(max_length=100)
+    mother_name = models.CharField(max_length=100, blank=True)
     mother_phone = models.CharField(
         max_length=20,
+        blank=True,
         validators=[validate_indian_phone]
     )
     mother_email = models.EmailField(

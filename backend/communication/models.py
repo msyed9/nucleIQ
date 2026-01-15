@@ -599,3 +599,121 @@ class BroadcastMessage(TenantAwareModel):
     
     def __str__(self):
         return self.title
+
+
+class SchoolEvent(TenantAwareModel):
+    """
+    School events for the calendar system.
+    """
+    
+    EVENT_TYPE_CHOICES = [
+        ('ACADEMIC', 'Academic'),
+        ('CULTURAL', 'Cultural'),
+        ('SPORTS', 'Sports'),
+        ('MEETING', 'Meeting'),
+        ('EXAM', 'Exam'),
+        ('OTHER', 'Other'),
+    ]
+    
+    title = models.CharField(
+        max_length=500,
+        help_text=_('Event title')
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text=_('Event description')
+    )
+    
+    event_type = models.CharField(
+        max_length=20,
+        choices=EVENT_TYPE_CHOICES,
+        default='OTHER',
+        help_text=_('Type of event')
+    )
+    
+    start_date = models.DateField(
+        help_text=_('Event start date')
+    )
+    
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=_('Event end date (optional for single-day events)')
+    )
+    
+    start_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text=_('Event start time (optional for all-day events)')
+    )
+    
+    end_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text=_('Event end time (optional)')
+    )
+    
+    is_all_day = models.BooleanField(
+        default=True,
+        help_text=_('Whether this is an all-day event')
+    )
+    
+    location = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('Event location')
+    )
+    
+    # Target audience
+    target_classes = models.ManyToManyField(
+        'tenants.GradeLevel',
+        blank=True,
+        related_name='school_events',
+        help_text=_('Specific classes (leave blank for all)')
+    )
+    
+    # Notifications
+    notify_parents = models.BooleanField(
+        default=False,
+        help_text=_('Send notification to parents')
+    )
+    
+    notify_staff = models.BooleanField(
+        default=False,
+        help_text=_('Send notification to staff')
+    )
+    
+    # Organizer
+    organizer = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='organized_events',
+        help_text=_('Staff organizing this event')
+    )
+    
+    is_published = models.BooleanField(
+        default=True,
+        help_text=_('Whether this event is visible')
+    )
+    
+    class Meta:
+        db_table = 'school_events'
+        verbose_name = _('School Event')
+        verbose_name_plural = _('School Events')
+        ordering = ['start_date', 'start_time']
+        indexes = [
+            models.Index(fields=['tenant', 'start_date']),
+            models.Index(fields=['event_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} ({self.start_date})"
+    
+    def save(self, *args, **kwargs):
+        # Set end_date to start_date if not provided
+        if not self.end_date:
+            self.end_date = self.start_date
+        super().save(*args, **kwargs)

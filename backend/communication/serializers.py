@@ -5,8 +5,22 @@ Communication Serializers
 from rest_framework import serializers
 from .models import (
     CommunicationProvider, MessageTemplate, Notice,
-    MessageLog, BroadcastMessage
+    MessageLog, BroadcastMessage, SchoolEvent
 )
+
+
+class SchoolEventSerializer(serializers.ModelSerializer):
+    """Serializer for SchoolEvent."""
+    
+    class Meta:
+        model = SchoolEvent
+        fields = [
+            'id', 'title', 'description', 'event_type',
+            'start_date', 'end_date', 'start_time', 'end_time',
+            'is_all_day', 'location', 'notify_parents', 'notify_staff',
+            'is_published', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class CommunicationProviderSerializer(serializers.ModelSerializer):

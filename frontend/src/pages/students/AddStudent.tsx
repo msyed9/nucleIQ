@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
-import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { useToast, ToastContainer } from '@/design-system';
 import { citizenshipOptions, religionOptions } from '../../config/options';
-import './Students.css';
+import './AddStudent.css';
 
 interface Section {
     id: number;
@@ -14,12 +13,19 @@ interface Section {
     grade_level_name: string;
 }
 
+const STEPS = [
+    { key: 'basic', label: 'Basic Info', icon: '👤' },
+    { key: 'family', label: 'Family', icon: '👨‍👩‍👧' },
+    { key: 'academic', label: 'Academic', icon: '🎓' },
+    { key: 'documents', label: 'Documents', icon: '📄' },
+];
+
 const AddStudent: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
+    const [currentStep, setCurrentStep] = useState(0);
     const [sections, setSections] = useState<Section[]>([]);
-    
     const [citizenshipOther, setCitizenshipOther] = useState('');
 
     const [formData, setFormData] = useState({
@@ -73,14 +79,11 @@ const AddStudent: React.FC = () => {
 
     const fetchTenantSettings = async () => {
         try {
-            // First get general settings
             const response = await api.get('/tenants/settings/');
             const settings = response.data;
 
             if (settings.auto_generate_admission_number) {
                 setAutoGenerateAdmission(true);
-
-                // Fetch the actual next admission number from backend
                 try {
                     const admissionRes = await api.get('/tenants/settings/next_admission_number/');
                     if (admissionRes.data.auto_generate && admissionRes.data.admission_number) {
@@ -89,24 +92,6 @@ const AddStudent: React.FC = () => {
                     }
                 } catch (admErr) {
                     console.error('Error fetching admission number preview:', admErr);
-                    // Fallback: Generate preview locally
-                    const year = new Date().getFullYear();
-                    const format = settings.admission_number_format || 'ADM{YEAR}{SEQUENCE:04d}';
-                    const sequence = settings.admission_number_sequence || 1;
-
-                    let preview = format.replace('{YEAR}', year.toString());
-                    preview = preview.replace('{PREFIX}', settings.admission_number_prefix || 'ADM');
-
-                    const sequenceMatch = format.match(/\{SEQUENCE:(\d+)d\}/);
-                    if (sequenceMatch) {
-                        const width = parseInt(sequenceMatch[1]);
-                        preview = preview.replace(/\{SEQUENCE:\d+d\}/, sequence.toString().padStart(width, '0'));
-                    } else {
-                        preview = preview.replace('{SEQUENCE}', sequence.toString());
-                    }
-
-                    setAdmissionNumberPreview(preview);
-                    setFormData(prev => ({ ...prev, admission_number: preview }));
                 }
             }
         } catch (error) {
@@ -117,27 +102,16 @@ const AddStudent: React.FC = () => {
     const fetchSections = async () => {
         try {
             const sectionsRes = await api.get('/tenants/sections/');
-            console.log('Sections API Response:', sectionsRes.data);
-
-            // Handle different response structures
             let sectionsData: any[] = [];
             if (Array.isArray(sectionsRes.data)) {
-                // Direct array response
                 sectionsData = sectionsRes.data;
             } else if (sectionsRes.data?.results && Array.isArray(sectionsRes.data.results)) {
-                // Paginated response with results array
                 sectionsData = sectionsRes.data.results;
-            } else {
-                console.warn('Unexpected sections response structure:', sectionsRes.data);
-                sectionsData = [];
             }
-
-            console.log('Processed sections data:', sectionsData);
-            console.log('Number of sections:', sectionsData.length);
             setSections(sectionsData);
         } catch (error) {
             console.error('Error fetching sections:', error);
-            setSections([]); // Set empty array on error
+            setSections([]);
         }
     };
 
@@ -145,25 +119,12 @@ const AddStudent: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
 
-        // Reset selected parent when phone number changes to allow re-checking
         if (name === 'father_phone' || name === 'mother_phone') {
             setSelectedParent(null);
         }
     };
 
-    const handleCitizenshipOtherChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        // If user types a value that already exists in options, ask them to pick from dropdown
-        const exists = citizenshipOptions.some(opt => opt.toLowerCase() === val.trim().toLowerCase());
-        if (exists) {
-            error(t('students.citizenship_duplicate_dropdown', { defaultValue: 'This country is already available in the dropdown. Please select it from the dropdown instead.' }));
-            setCitizenshipOther('');
-            return;
-        }
-        setCitizenshipOther(val);
-    };
-
-    // Automatic sibling detection when parent phone is entered
+    // Automatic sibling detection
     useEffect(() => {
         const checkForExistingParents = async (phone: string) => {
             if (!phone || phone.length < 10) {
@@ -183,7 +144,6 @@ const AddStudent: React.FC = () => {
                     setShowParentSuggestions(false);
                 }
             } catch (err) {
-                console.error('Error checking for siblings:', err);
                 setExistingParents([]);
                 setShowParentSuggestions(false);
             } finally {
@@ -191,13 +151,12 @@ const AddStudent: React.FC = () => {
             }
         };
 
-        // Debounce the search to avoid excessive API calls
         const timeoutId = setTimeout(() => {
             const phone = formData.father_phone || formData.mother_phone;
             if (phone) {
                 checkForExistingParents(phone);
             }
-        }, 800); // Wait 800ms after user stops typing
+        }, 800);
 
         return () => clearTimeout(timeoutId);
     }, [formData.father_phone, formData.mother_phone]);
@@ -213,15 +172,13 @@ const AddStudent: React.FC = () => {
         }));
         setSelectedParent(sibling);
         setShowParentSuggestions(false);
-        success(t('students.parent_info_applied', { defaultValue: '✅ Parent information copied from sibling record!' }));
+        success('✅ Parent information copied from sibling record!');
     };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setPhoto(file);
-
-            // Create preview
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPhotoPreview(reader.result as string);
@@ -235,24 +192,71 @@ const AddStudent: React.FC = () => {
         setPhotoPreview(null);
     };
 
+    const validateStep = (step: number): boolean => {
+        switch (step) {
+            case 0: // Basic Info
+                if (!formData.first_name.trim()) {
+                    error('First name is required');
+                    return false;
+                }
+                if (!formData.date_of_birth) {
+                    error('Date of birth is required');
+                    return false;
+                }
+                return true;
+            case 1: // Family
+                if (!formData.father_name.trim() && !formData.mother_name.trim()) {
+                    error('At least one parent name is required');
+                    return false;
+                }
+                if (!formData.father_phone && !formData.mother_phone) {
+                    error('At least one parent phone number is required');
+                    return false;
+                }
+                if (!formData.address.trim()) {
+                    error('Residential address is required');
+                    return false;
+                }
+                return true;
+            case 2: // Academic
+                return true;
+            case 3: // Documents
+                return true;
+            default:
+                return true;
+        }
+    };
+
+    const nextStep = () => {
+        if (validateStep(currentStep)) {
+            setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+        }
+    };
+
+    const prevStep = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 0));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!validateStep(currentStep)) return;
+
         setLoading(true);
         try {
-            // Get tenant ID from localStorage
             const tenantId = localStorage.getItem('current_tenant');
             if (!tenantId) {
-                error(t('students.tenant_error', { defaultValue: 'Tenant information not found. Please login again.' }));
+                error('Tenant information not found. Please login again.');
                 setLoading(false);
                 return;
             }
 
-            // 1. Create Student Profile
             const studentPayload: any = {
                 tenant: parseInt(tenantId),
                 admission_number: formData.admission_number,
                 admission_date: formData.admission_date,
                 first_name: formData.first_name,
+                middle_name: formData.middle_name,
                 last_name: formData.last_name,
                 date_of_birth: formData.date_of_birth,
                 gender: formData.gender,
@@ -267,122 +271,82 @@ const AddStudent: React.FC = () => {
                 pen_number: formData.pen_number,
                 aadhar_number: formData.aadhar_number,
                 aapar_number: formData.aapar_number,
-                create_parent_login: true, // Flag to create parent login
+                citizenship: formData.citizenship === 'Other' ? citizenshipOther : formData.citizenship,
+                religion: formData.religion,
+                caste: formData.caste,
+                create_parent_login: true,
             };
 
-            // Resolve citizenship: if 'Other' selected, use the free text value
-            if (formData.citizenship === 'Other') {
-                if (!citizenshipOther || citizenshipOther.trim() === '') {
-                    error(t('students.citizenship_enter_required', { defaultValue: 'Please enter the country name for Citizenship.' }));
-                    setLoading(false);
-                    return;
-                }
-                // If user typed a name that matches existing option, ask to pick from dropdown
-                const duplicate = citizenshipOptions.some(opt => opt.toLowerCase() === citizenshipOther.trim().toLowerCase());
-                if (duplicate) {
-                    error(t('students.citizenship_duplicate_on_submit', { defaultValue: 'The country you entered already exists in the dropdown. Please select it from the dropdown.' }));
-                    setLoading(false);
-                    return;
-                }
-                studentPayload.citizenship = citizenshipOther.trim();
-            } else {
-                studentPayload.citizenship = formData.citizenship;
-            }
-
-            // Include religion as selected
-            studentPayload.religion = formData.religion;
-
-            // If sibling/parent is selected, link family_id
-            if (selectedParent && selectedParent.family_id) {
+            if (selectedParent?.family_id) {
                 studentPayload.family_id = selectedParent.family_id;
             }
 
             const studentRes = await api.post('/students/students/', studentPayload);
-
             const studentId = studentRes.data.id;
 
-            // 2. Upload Photo (if provided)
+            // Upload photo if provided
             if (photo && studentId) {
                 const photoFormData = new FormData();
                 photoFormData.append('photo', photo);
-
                 try {
                     await api.patch(`/students/students/${studentId}/`, photoFormData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data'
-                        }
+                        headers: { 'Content-Type': 'multipart/form-data' }
                     });
                 } catch (photoError) {
                     console.error('Error uploading photo:', photoError);
-                    // Don't fail the whole process if photo upload fails
                 }
             }
 
-            // 3. Create Enrollment (if section provided)
+            // Create enrollment if section provided
             if (formData.section && studentId) {
-                // Fetch active academic year
-                const ayRes = await api.get('/tenants/years/?is_active=true');
-                const activeYear = ayRes.data[0]; // Assuming at least one active year exists
-
-                if (activeYear) {
-                    await api.post('/students/enrollments/', {
-                        tenant: parseInt(tenantId),
-                        student: studentId,
-                        academic_year: activeYear.id,
-                        section: parseInt(formData.section),
-                        roll_number: formData.roll_number,
-                        enrollment_date: formData.admission_date,
-                        status: 'ACTIVE'
-                    });
-                } else {
-                    console.warn('No active academic year found for enrollment');
+                try {
+                    const ayRes = await api.get('/tenants/years/?is_active=true');
+                    const activeYear = ayRes.data[0];
+                    if (activeYear) {
+                        await api.post('/students/enrollments/', {
+                            tenant: parseInt(tenantId),
+                            student: studentId,
+                            academic_year: activeYear.id,
+                            section: parseInt(formData.section),
+                            roll_number: formData.roll_number,
+                            enrollment_date: formData.admission_date,
+                            status: 'ACTIVE'
+                        });
+                    }
+                } catch (enrollErr) {
+                    console.error('Error creating enrollment:', enrollErr);
                 }
             }
 
-            // Display parent login information if created
             if (studentRes.data.parent_logins) {
-                const logins = studentRes.data.parent_logins;
                 setParentCredentials({
                     studentName: `${formData.first_name} ${formData.last_name}`,
                     admissionNumber: studentRes.data.admission_number,
-                    ...logins
+                    ...studentRes.data.parent_logins
                 });
                 setShowCredentialsModal(true);
-                success(t('students.add_success', { defaultValue: 'Student admitted successfully! 🎉' }));
+                success('Student admitted successfully! 🎉');
             } else {
-                success(t('students.add_success', { defaultValue: 'Student admitted and enrolled successfully! 🎉' }));
+                success('Student admitted and enrolled successfully! 🎉');
                 navigate('/students');
             }
         } catch (err: any) {
             console.error('Error admitting student:', err);
-            // Log server validation errors when present to aid debugging
-            if (err?.response?.data) {
-                try {
-                    console.error('Server response:', JSON.stringify(err.response.data, null, 2));
-                } catch (e) {
-                    console.error('Server response (unstringifiable):', err.response.data);
-                }
-                // Show first validation error if available
-                const respData = err.response.data;
-                let message = t('students.add_error', { defaultValue: 'Failed to admit student. Please check all fields.' });
-                if (typeof respData === 'string') {
-                    message = respData;
-                } else if (respData.detail) {
-                    message = respData.detail;
-                } else if (typeof respData === 'object') {
-                    // Collect field errors into a single message
-                    const parts: string[] = [];
-                    Object.entries(respData).forEach(([k, v]) => {
-                        if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`);
-                        else parts.push(`${k}: ${String(v)}`);
-                    });
-                    if (parts.length) message = parts.join(' | ');
-                }
-
-                error(message);
-            } else {
-                error(t('students.add_error', { defaultValue: 'Failed to admit student. Please check all fields.' }));
+            const respData = err.response?.data;
+            let message = 'Failed to admit student. Please check all fields.';
+            if (typeof respData === 'string') {
+                message = respData;
+            } else if (respData?.detail) {
+                message = respData.detail;
+            } else if (typeof respData === 'object') {
+                const parts: string[] = [];
+                Object.entries(respData).forEach(([k, v]) => {
+                    if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`);
+                    else parts.push(`${k}: ${String(v)}`);
+                });
+                if (parts.length) message = parts.join(' | ');
             }
+            error(message);
         } finally {
             setLoading(false);
         }
@@ -394,169 +358,94 @@ const AddStudent: React.FC = () => {
             <div className="add-student-page">
                 <div className="page-header">
                     <div>
-                        <h1 className="page-title">{t('students.add_title', { defaultValue: 'Student Admission' })}</h1>
+                        <h1 className="page-title">{t('students.add_title', { defaultValue: '📚 Student Admission' })}</h1>
                         <p className="page-subtitle">{t('students.add_subtitle', { defaultValue: 'Enroll a new student into the school' })}</p>
                     </div>
                     <Button variant="outline" onClick={() => navigate('/students')}>
-                        {t('common.cancel')}
+                        ← Back to Students
                     </Button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="form-grid">
-                        {/* Basic Info */}
-                        <Card title={t('students.basic_info', { defaultValue: 'Basic Information' })}>
-                            {/* Photo Upload */}
-                            <div className="photo-upload-section">
-                                <label>{t('students.photo', { defaultValue: 'Student Photo' })}</label>
-                                <div className="photo-upload-container">
-                                    {photoPreview ? (
-                                        <div className="photo-preview">
-                                            <img src={photoPreview} alt="Student" />
-                                            <button type="button" className="remove-photo-btn" onClick={handleRemovePhoto}>
-                                                ✕ {t('common.remove', { defaultValue: 'Remove' })}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="photo-upload-placeholder">
-                                            {/* Hidden file inputs */}
-                                            <input
-                                                type="file"
-                                                id="photo-upload"
-                                                accept="image/*"
-                                                onChange={handlePhotoChange}
-                                                style={{ display: 'none' }}
-                                            />
-                                            <input
-                                                type="file"
-                                                id="photo-camera"
-                                                accept="image/*"
-                                                capture="environment"
-                                                onChange={handlePhotoChange}
-                                                style={{ display: 'none' }}
-                                            />
+                {/* Stepper */}
+                <div className="stepper-container">
+                    <div className="stepper">
+                        {STEPS.map((step, index) => (
+                            <React.Fragment key={step.key}>
+                                <div
+                                    className={`stepper-step ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
+                                    onClick={() => index <= currentStep && setCurrentStep(index)}
+                                >
+                                    <div className={`step-circle ${index === currentStep ? 'active' : index < currentStep ? 'completed' : 'inactive'}`}>
+                                        {index < currentStep ? '✓' : step.icon}
+                                    </div>
+                                    <span className="step-label">{step.label}</span>
+                                </div>
+                                {index < STEPS.length - 1 && (
+                                    <div className={`step-connector ${index < currentStep ? 'completed' : ''}`} />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
 
-                                            {/* Upload buttons */}
-                                            <div style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '1rem',
-                                                alignItems: 'center',
-                                                width: '100%'
-                                            }}>
-                                                <div className="upload-icon">📷</div>
-                                                <div style={{
-                                                    display: 'flex',
-                                                    gap: '0.75rem',
-                                                    flexWrap: 'wrap',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <label
-                                                        htmlFor="photo-upload"
-                                                        style={{
-                                                            padding: '0.5rem 1rem',
-                                                            background: 'var(--color-primary-500)',
-                                                            color: 'white',
-                                                            borderRadius: 'var(--radius-md)',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.875rem',
-                                                            fontWeight: 500,
-                                                            transition: 'background 0.2s'
-                                                        }}
-                                                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-primary-600)'}
-                                                        onMouseOut={(e) => e.currentTarget.style.background = 'var(--color-primary-500)'}
-                                                    >
-                                                        📁 Choose File
-                                                    </label>
-                                                    <label
-                                                        htmlFor="photo-camera"
-                                                        style={{
-                                                            padding: '0.5rem 1rem',
-                                                            background: 'var(--color-success)',
-                                                            color: 'white',
-                                                            borderRadius: 'var(--radius-md)',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.875rem',
-                                                            fontWeight: 500,
-                                                            transition: 'background 0.2s'
-                                                        }}
-                                                        onMouseOver={(e) => e.currentTarget.style.background = '#388E3C'}
-                                                        onMouseOut={(e) => e.currentTarget.style.background = 'var(--color-success)'}
-                                                    >
-                                                        📸 Take Photo
-                                                    </label>
-                                                </div>
-                                                <small style={{ color: 'var(--color-text-tertiary)', fontSize: '0.75rem', textAlign: 'center' }}>
-                                                    {t('students.photo_hint', { defaultValue: 'JPG, PNG (Max 2MB)' })}
-                                                </small>
-                                            </div>
-                                        </div>
+                <form onSubmit={handleSubmit}>
+                    {/* Step 0: Basic Info */}
+                    {currentStep === 0 && (
+                        <div className="form-section">
+                            <div className="section-header">
+                                <div className="section-icon">👤</div>
+                                <div>
+                                    <h2 className="section-title">Basic Information</h2>
+                                    <p className="section-subtitle">Student's personal details</p>
+                                </div>
+                            </div>
+
+                            {/* Photo Upload */}
+                            <div className="photo-upload-wrapper">
+                                <div className="photo-avatar-large">
+                                    {photoPreview ? (
+                                        <img src={photoPreview} alt="Student" />
+                                    ) : (
+                                        <span className="avatar-placeholder">📷</span>
+                                    )}
+                                </div>
+                                <div className="photo-actions">
+                                    <input type="file" id="photo-upload" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
+                                    <label htmlFor="photo-upload" className="photo-btn photo-btn-primary">
+                                        📁 Choose File
+                                    </label>
+                                    <input type="file" id="photo-camera" accept="image/*" capture="environment" onChange={handlePhotoChange} style={{ display: 'none' }} />
+                                    <label htmlFor="photo-camera" className="photo-btn photo-btn-success">
+                                        📸 Camera
+                                    </label>
+                                    {photoPreview && (
+                                        <button type="button" className="photo-btn photo-btn-danger" onClick={handleRemovePhoto}>
+                                            ✕ Remove
+                                        </button>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.admission_number')}</label>
+                            <div className="form-grid-3">
+                                <div className="form-field">
+                                    <label>Admission Number</label>
                                     <input
                                         name="admission_number"
                                         value={formData.admission_number}
                                         onChange={handleChange}
-                                        required
                                         readOnly={autoGenerateAdmission}
-                                        style={{
-                                            backgroundColor: autoGenerateAdmission ? 'var(--color-bg-secondary)' : 'transparent',
-                                            cursor: autoGenerateAdmission ? 'not-allowed' : 'text'
-                                        }}
+                                        required
                                     />
                                     {autoGenerateAdmission && (
-                                        <small style={{ color: 'var(--color-success)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                                            ✓ Auto-generated admission number
-                                        </small>
+                                        <span className="field-success">✓ Auto-generated</span>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label>{t('students.admission_date')}</label>
+                                <div className="form-field">
+                                    <label>Admission Date</label>
                                     <input type="date" name="admission_date" value={formData.admission_date} onChange={handleChange} required />
                                 </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.first_name')} *</label>
-                                    <input name="first_name" value={formData.first_name} onChange={handleChange} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.middle_name', 'Middle Name')}</label>
-                                    <input name="middle_name" value={formData.middle_name} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.last_name', 'Last Name')}</label>
-                                    <input name="last_name" value={formData.last_name} onChange={handleChange} />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.blood_group', 'Blood Group')}</label>
-                                    <select name="blood_group" value={formData.blood_group} onChange={handleChange}>
-                                        <option value="">Select Blood Group</option>
-                                        <option value="A+">A+</option>
-                                        <option value="A-">A-</option>
-                                        <option value="B+">B+</option>
-                                        <option value="B-">B-</option>
-                                        <option value="AB+">AB+</option>
-                                        <option value="AB-">AB-</option>
-                                        <option value="O+">O+</option>
-                                        <option value="O-">O-</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.date_of_birth', 'Date of Birth')}</label>
-                                    <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.gender')}</label>
+                                <div className="form-field">
+                                    <label>Gender</label>
                                     <select name="gender" value={formData.gender} onChange={handleChange}>
                                         <option value="M">Male</option>
                                         <option value="F">Female</option>
@@ -564,280 +453,31 @@ const AddStudent: React.FC = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-row">
-                                    <div className="form-group">
-                                        <label>{t('students.citizenship', 'Citizenship')}</label>
-                                        <input
-                                            name="citizenship"
-                                            list="citizenship-list"
-                                            value={formData.citizenship}
-                                            onChange={(e) => {
-                                                handleChange(e as any);
-                                                // clear other field when selecting a known option
-                                                if ((e.target as HTMLInputElement).value !== 'Other') setCitizenshipOther('');
-                                            }}
-                                            placeholder={t('students.select_citizenship', { defaultValue: 'Select Citizenship' })}
-                                        />
-                                        <datalist id="citizenship-list">
-                                            {citizenshipOptions.map(opt => (
-                                                <option key={opt} value={opt} />
-                                            ))}
-                                        </datalist>
 
-                                        {formData.citizenship === 'Other' && (
-                                            <input
-                                                name="citizenship_other"
-                                                placeholder={t('students.enter_country', { defaultValue: 'Enter country name' })}
-                                                value={citizenshipOther}
-                                                onChange={handleCitizenshipOtherChange}
-                                                style={{ marginTop: '0.5rem' }}
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>{t('students.religion', 'Religion')}</label>
-                                        <select name="religion" value={formData.religion} onChange={handleChange}>
-                                            <option value="">{t('students.select_religion', { defaultValue: 'Select Religion' })}</option>
-                                            {religionOptions.map(opt => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.caste', 'Caste')}</label>
-                                    <input name="caste" value={formData.caste} onChange={handleChange} />
+                            <div className="form-grid-3">
+                                <div className="form-field">
+                                    <label>First Name <span className="required">*</span></label>
+                                    <input name="first_name" value={formData.first_name} onChange={handleChange} required />
                                 </div>
-                                <div className="form-group">
-                                    {/* Empty for alignment */}
+                                <div className="form-field">
+                                    <label>Middle Name</label>
+                                    <input name="middle_name" value={formData.middle_name} onChange={handleChange} />
                                 </div>
-                            </div>
-                        </Card>
-
-                        {/* Contact & Family */}
-                        <Card title={t('students.family_info', { defaultValue: 'Contact & Family' })}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.email', 'Email')}</label>
-                                    <input type="email" name="email" value={formData.email} onChange={handleChange} />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.phone', 'Phone')}</label>
-                                    <input name="phone" value={formData.phone} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.father_name', 'Father Name')}</label>
-                                    <input name="father_name" value={formData.father_name} onChange={handleChange} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.father_phone', 'Father Phone')}</label>
-                                    <input
-                                        name="father_phone"
-                                        value={formData.father_phone}
-                                        onChange={handleChange}
-                                        required
-                                        readOnly={false}
-                                        disabled={false}
-                                        style={{ pointerEvents: 'auto', cursor: 'text' }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.father_profession', 'Father Profession')}</label>
-                                    <input name="father_profession" value={formData.father_profession} onChange={handleChange} placeholder="e.g., Engineer, Doctor" />
-                                </div>
-                                <div className="form-group">
-                                    {/* Empty for alignment */}
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.mother_name', 'Mother Name')} *</label>
-                                    <input name="mother_name" value={formData.mother_name} onChange={handleChange} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.mother_phone', 'Mother Phone')} *</label>
-                                    <input
-                                        name="mother_phone"
-                                        value={formData.mother_phone}
-                                        onChange={handleChange}
-                                        required
-                                        readOnly={false}
-                                        disabled={false}
-                                        style={{ pointerEvents: 'auto', cursor: 'text' }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.mother_profession', 'Mother Profession')}</label>
-                                    <input name="mother_profession" value={formData.mother_profession} onChange={handleChange} placeholder="e.g., Teacher, Homemaker" />
-                                </div>
-                                <div className="form-group">
-                                    {/* Empty for alignment */}
+                                <div className="form-field">
+                                    <label>Last Name</label>
+                                    <input name="last_name" value={formData.last_name} onChange={handleChange} />
                                 </div>
                             </div>
 
-                            {/* Automatic Parent Detection */}
-                            {showParentSuggestions && existingParents.length > 0 && (
-                                <div style={{
-                                    padding: '1rem',
-                                    backgroundColor: '#fff3cd',
-                                    borderRadius: '8px',
-                                    marginTop: '1rem',
-                                    marginBottom: '1rem',
-                                    border: '2px solid #ffc107',
-                                    animation: 'fadeIn 0.3s ease-in'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        marginBottom: '0.75rem',
-                                        color: '#856404',
-                                        fontWeight: 600,
-                                        fontSize: '0.95rem'
-                                    }}>
-                                        <span style={{ fontSize: '1.25rem' }}>🔗</span>
-                                        <span>{t('students.existing_family_detected', { defaultValue: 'Existing family member(s) detected!' })}</span>
-                                    </div>
-                                    <p style={{ fontSize: '0.875rem', color: '#856404', marginBottom: '0.75rem' }}>
-                                        {t('students.family_suggestion_text', {
-                                            defaultValue: 'We found students with matching parent contact information. Click on a student below to automatically fill in the parent details and link them as siblings:'
-                                        })}
-                                    </p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {existingParents.map((sibling) => (
-                                            <div
-                                                key={sibling.id}
-                                                onClick={() => applyParentInfo(sibling)}
-                                                style={{
-                                                    padding: '0.75rem',
-                                                    backgroundColor: 'white',
-                                                    border: '1px solid #dee2e6',
-                                                    borderRadius: '6px',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.backgroundColor = '#f8f9fa';
-                                                    e.currentTarget.style.borderColor = '#007bff';
-                                                    e.currentTarget.style.transform = 'translateX(4px)';
-                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.backgroundColor = 'white';
-                                                    e.currentTarget.style.borderColor = '#dee2e6';
-                                                    e.currentTarget.style.transform = 'translateX(0)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                }}
-                                            >
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: '#333' }}>
-                                                    👤 {sibling.first_name} {sibling.last_name}
-                                                </div>
-                                                <div style={{ fontSize: '0.8rem', color: '#666', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                                    <span>📋 {sibling.admission_number}</span>
-                                                    {sibling.current_class && <span>🎓 {sibling.current_class}</span>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowParentSuggestions(false)}
-                                        style={{
-                                            marginTop: '0.75rem',
-                                            padding: '0.4rem 0.75rem',
-                                            fontSize: '0.8rem',
-                                            color: '#856404',
-                                            background: 'transparent',
-                                            border: '1px solid #856404',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        ✕ {t('common.dismiss', { defaultValue: 'Dismiss' })}
-                                    </button>
+                            <div className="form-grid-3">
+                                <div className="form-field">
+                                    <label>Date of Birth <span className="required">*</span></label>
+                                    <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} required />
                                 </div>
-                            )}
-
-                            {/* Show loading state while checking */}
-                            {searchingParents && (formData.father_phone?.length >= 10 || formData.mother_phone?.length >= 10) && (
-                                <div style={{
-                                    padding: '0.75rem',
-                                    backgroundColor: '#e3f2fd',
-                                    borderRadius: '6px',
-                                    marginTop: '1rem',
-                                    marginBottom: '1rem',
-                                    border: '1px solid #2196f3',
-                                    fontSize: '0.875rem',
-                                    color: '#1565c0',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}>
-                                    <span>🔍</span>
-                                    <span>{t('students.checking_family', { defaultValue: 'Checking for existing family members...' })}</span>
-                                </div>
-                            )}
-
-                            {/* Show selected parent confirmation */}
-                            {selectedParent && (
-                                <div style={{
-                                    padding: '0.75rem',
-                                    backgroundColor: '#d4edda',
-                                    borderRadius: '6px',
-                                    marginTop: '1rem',
-                                    marginBottom: '1rem',
-                                    border: '1px solid #28a745',
-                                    fontSize: '0.875rem',
-                                    color: '#155724',
-                                    fontWeight: 600
-                                }}>
-                                    ✅ {t('students.linked_to_sibling', { defaultValue: 'Linked to sibling:' })} {selectedParent.first_name} {selectedParent.last_name}
-                                </div>
-                            )}
-                            <div className="form-group">
-                                <label>{t('students.address')}</label>
-                                <textarea name="address" value={formData.address} onChange={handleChange} rows={3} required />
-                            </div>
-                        </Card>
-
-                        {/* Government IDs */}
-                        <Card title={t('students.government_ids', { defaultValue: 'Government IDs & Identification' })}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.pen_number', 'PEN Number')}</label>
-                                    <input name="pen_number" value={formData.pen_number} onChange={handleChange} placeholder="Permanent Education Number" />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.aadhar_number', 'Aadhar Number')}</label>
-                                    <input
-                                        name="aadhar_number"
-                                        value={formData.aadhar_number}
-                                        onChange={handleChange}
-                                        placeholder="12-digit Aadhar number"
-                                        maxLength={12}
-                                        pattern="[0-9]{12}"
-                                    />
-                                    <small style={{ color: 'var(--color-text-tertiary)', fontSize: '0.75rem' }}>
-                                        Enter 12-digit Aadhar number
-                                    </small>
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.aapar_number', 'Aapar Number')}</label>
-                                    <input name="aapar_number" value={formData.aapar_number} onChange={handleChange} placeholder="Other ID number" />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.blood_group', 'Blood Group')}</label>
+                                <div className="form-field">
+                                    <label>Blood Group</label>
                                     <select name="blood_group" value={formData.blood_group} onChange={handleChange}>
-                                        <option value="">Select Blood Group</option>
+                                        <option value="">Select</option>
                                         <option value="A+">A+</option>
                                         <option value="A-">A-</option>
                                         <option value="B+">B+</option>
@@ -848,38 +488,177 @@ const AddStudent: React.FC = () => {
                                         <option value="O-">O-</option>
                                     </select>
                                 </div>
+                                <div className="form-field">
+                                    <label>Religion</label>
+                                    <select name="religion" value={formData.religion} onChange={handleChange}>
+                                        <option value="">Select Religion</option>
+                                        {religionOptions.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                        </Card>
 
-                        {/* Previous School Details */}
-                        <Card title={t('students.previous_school', { defaultValue: 'Previous School Details' })}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.previous_school_name', 'Previous School Name')}</label>
-                                    <input name="previous_school_name" value={formData.previous_school_name} onChange={handleChange} placeholder="Name of previous school" />
+                            <div className="form-grid-3">
+                                <div className="form-field">
+                                    <label>Citizenship</label>
+                                    <input
+                                        name="citizenship"
+                                        list="citizenship-list"
+                                        value={formData.citizenship}
+                                        onChange={handleChange}
+                                        placeholder="Select or type..."
+                                    />
+                                    <datalist id="citizenship-list">
+                                        {citizenshipOptions.map(opt => (
+                                            <option key={opt} value={opt} />
+                                        ))}
+                                    </datalist>
                                 </div>
-                                <div className="form-group">
-                                    <label>{t('students.previous_school_class', 'Last Class Attended')}</label>
-                                    <input name="previous_school_class" value={formData.previous_school_class} onChange={handleChange} placeholder="e.g., Class 9, Grade 10" />
+                                <div className="form-field">
+                                    <label>Caste</label>
+                                    <input name="caste" value={formData.caste} onChange={handleChange} />
+                                </div>
+                                <div className="form-field">
+                                    <label>Email</label>
+                                    <input type="email" name="email" value={formData.email} onChange={handleChange} />
                                 </div>
                             </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.previous_school_address', 'Previous School Address')}</label>
-                                    <textarea name="previous_school_address" value={formData.previous_school_address} onChange={handleChange} rows={2} placeholder="Address of previous school" />
-                                </div>
-                                <div className="form-group">
-                                    <label>{t('students.transfer_certificate_number', 'Transfer Certificate Number')}</label>
-                                    <input name="transfer_certificate_number" value={formData.transfer_certificate_number} onChange={handleChange} placeholder="TC Number" />
-                                </div>
-                            </div>
-                        </Card>
+                        </div>
+                    )}
 
-                        {/* Enrollment */}
-                        <Card title={t('students.enrollment', { defaultValue: 'Enrollment Details' })}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>{t('students.class_section', { defaultValue: 'Class & Section' })}</label>
+                    {/* Step 1: Family Info */}
+                    {currentStep === 1 && (
+                        <div className="form-section">
+                            <div className="section-header">
+                                <div className="section-icon">👨‍👩‍👧</div>
+                                <div>
+                                    <h2 className="section-title">Family Information</h2>
+                                    <p className="section-subtitle">Parent/Guardian contact details</p>
+                                </div>
+                            </div>
+
+                            {/* Sibling Detection Alert */}
+                            {showParentSuggestions && existingParents.length > 0 && (
+                                <div className="alert-card alert-card-warning">
+                                    <span className="alert-icon">🔗</span>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Existing family member(s) detected!</div>
+                                        <div className="alert-text">Click on a student to auto-fill parent details and link them as siblings.</div>
+                                        <div className="sibling-suggestions">
+                                            {existingParents.map((sibling) => (
+                                                <div key={sibling.id} className="sibling-card" onClick={() => applyParentInfo(sibling)}>
+                                                    <div className="sibling-info">
+                                                        <h4>👤 {sibling.first_name} {sibling.last_name}</h4>
+                                                        <div className="sibling-meta">
+                                                            <span>📋 {sibling.admission_number}</span>
+                                                            {sibling.current_class && <span>🎓 {sibling.current_class}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <span className="sibling-action">→</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedParent && (
+                                <div className="alert-card alert-card-success">
+                                    <span className="alert-icon">✅</span>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Linked to sibling: {selectedParent.first_name} {selectedParent.last_name}</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Father's Name</label>
+                                    <input name="father_name" value={formData.father_name} onChange={handleChange} placeholder="Full name of father" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Father's Phone</label>
+                                    <input name="father_phone" value={formData.father_phone} onChange={handleChange} placeholder="10-digit mobile" />
+                                </div>
+                            </div>
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Father's Profession</label>
+                                    <input name="father_profession" value={formData.father_profession} onChange={handleChange} placeholder="e.g., Engineer, Doctor" />
+                                </div>
+                                <div className="form-field" />
+                            </div>
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Mother's Name</label>
+                                    <input name="mother_name" value={formData.mother_name} onChange={handleChange} placeholder="Full name of mother" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Mother's Phone</label>
+                                    <input name="mother_phone" value={formData.mother_phone} onChange={handleChange} placeholder="10-digit mobile" />
+                                </div>
+                            </div>
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Mother's Profession</label>
+                                    <input name="mother_profession" value={formData.mother_profession} onChange={handleChange} placeholder="e.g., Teacher, Homemaker" />
+                                </div>
+                                <div className="form-field" />
+                            </div>
+
+                            <div className="form-field full-width">
+                                <label>Address <span className="required">*</span></label>
+                                <textarea name="address" value={formData.address} onChange={handleChange} rows={3} />
+                            </div>
+
+                            {/* Parent Portal Preview */}
+                            {(formData.father_phone || formData.mother_phone) && (
+                                <div className="parent-preview-card">
+                                    <div className="parent-preview-title">🔐 Parent Portal Access</div>
+                                    <p style={{ fontSize: '0.85rem', color: '#065f46', marginBottom: '0.75rem' }}>
+                                        Parent login accounts will be automatically created. Phone number becomes the username.
+                                    </p>
+                                    {formData.father_phone && (
+                                        <div style={{ marginBottom: '0.5rem' }}>
+                                            <strong>👨 Father's Account:</strong>
+                                            <div className="credential-row">
+                                                <span className="credential-label">Username:</span>
+                                                <span className="credential-value">{formData.father_phone}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {formData.mother_phone && formData.mother_phone !== formData.father_phone && (
+                                        <div>
+                                            <strong>👩 Mother's Account:</strong>
+                                            <div className="credential-row">
+                                                <span className="credential-label">Username:</span>
+                                                <span className="credential-value">{formData.mother_phone}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Step 2: Academic */}
+                    {currentStep === 2 && (
+                        <div className="form-section">
+                            <div className="section-header">
+                                <div className="section-icon">🎓</div>
+                                <div>
+                                    <h2 className="section-title">Academic Details</h2>
+                                    <p className="section-subtitle">Class enrollment and previous school information</p>
+                                </div>
+                            </div>
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Class & Section</label>
                                     <select name="section" value={formData.section} onChange={handleChange}>
                                         <option value="">Select Section</option>
                                         {sections.map(s => (
@@ -887,382 +666,221 @@ const AddStudent: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="form-group">
-                                    <label>{t('students.roll_no', 'Roll Number')}</label>
+                                <div className="form-field">
+                                    <label>Roll Number</label>
                                     <input name="roll_number" value={formData.roll_number} onChange={handleChange} />
                                 </div>
                             </div>
-                        </Card>
 
-                        {/* Parent Portal Access Preview */}
-                        {(formData.father_phone || formData.mother_phone) && (
-                            <Card title={t('students.parent_portal_access', { defaultValue: '🔐 Parent Portal Access' })}>
-                                <div style={{
-                                    backgroundColor: '#e8f5e9',
-                                    borderRadius: '8px',
-                                    padding: '1rem',
-                                    marginBottom: '1rem',
-                                    border: '1px solid #4caf50'
-                                }}>
-                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#2e7d32' }}>
-                                        {t('students.parent_portal_info', {
-                                            defaultValue: 'Parent login accounts will be automatically created after admission. The phone number becomes the username, and a temporary password will be generated.'
-                                        })}
-                                    </p>
+                            <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1rem', color: 'var(--color-text-secondary)' }}>
+                                📄 Previous School Details
+                            </h3>
+
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Previous School Name</label>
+                                    <input name="previous_school_name" value={formData.previous_school_name} onChange={handleChange} placeholder="Name of previous school" />
                                 </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {formData.father_phone && (
-                                        <div style={{
-                                            padding: '1rem',
-                                            backgroundColor: '#f5f5f5',
-                                            borderRadius: '8px',
-                                            border: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                marginBottom: '0.5rem',
-                                                fontWeight: 600,
-                                                color: '#333'
-                                            }}>
-                                                <span>👨</span>
-                                                <span>{t('students.father_account', { defaultValue: "Father's Account" })}</span>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '0.25rem', fontSize: '0.9rem' }}>
-                                                <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
-                                                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1976d2' }}>
-                                                    {formData.father_phone}
-                                                </span>
-                                                <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
-                                                <span style={{ fontFamily: 'monospace', color: '#ff9800' }}>
-                                                    {t('students.auto_generated', { defaultValue: '(Auto-generated on submit)' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {formData.mother_phone && formData.mother_phone !== formData.father_phone && (
-                                        <div style={{
-                                            padding: '1rem',
-                                            backgroundColor: '#f5f5f5',
-                                            borderRadius: '8px',
-                                            border: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                marginBottom: '0.5rem',
-                                                fontWeight: 600,
-                                                color: '#333'
-                                            }}>
-                                                <span>👩</span>
-                                                <span>{t('students.mother_account', { defaultValue: "Mother's Account" })}</span>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '0.25rem', fontSize: '0.9rem' }}>
-                                                <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
-                                                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1976d2' }}>
-                                                    {formData.mother_phone}
-                                                </span>
-                                                <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
-                                                <span style={{ fontFamily: 'monospace', color: '#ff9800' }}>
-                                                    {t('students.auto_generated', { defaultValue: '(Auto-generated on submit)' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {formData.mother_phone === formData.father_phone && formData.father_phone && (
-                                        <div style={{
-                                            padding: '0.75rem',
-                                            backgroundColor: '#fff3cd',
-                                            borderRadius: '6px',
-                                            border: '1px solid #ffc107',
-                                            fontSize: '0.85rem',
-                                            color: '#856404'
-                                        }}>
-                                            ℹ️ {t('students.same_phone_notice', {
-                                                defaultValue: 'Father and Mother have the same phone number. Only one account will be created.'
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {selectedParent && (
-                                        <div style={{
-                                            padding: '0.75rem',
-                                            backgroundColor: '#e3f2fd',
-                                            borderRadius: '6px',
-                                            border: '1px solid #2196f3',
-                                            fontSize: '0.85rem',
-                                            color: '#1565c0'
-                                        }}>
-                                            🔗 {t('students.existing_account_linked', {
-                                                defaultValue: 'Existing parent account will be linked from sibling records. No new password will be generated.'
-                                            })}
-                                        </div>
-                                    )}
+                                <div className="form-field">
+                                    <label>Last Class Attended</label>
+                                    <input name="previous_school_class" value={formData.previous_school_class} onChange={handleChange} placeholder="e.g., Class 9" />
                                 </div>
-                            </Card>
-                        )}
-                    </div>
+                            </div>
 
-                    <div className="form-actions">
-                        <Button type="submit" variant="primary" loading={loading} size="large">
-                            {t('students.submit_admission', { defaultValue: 'Complete Admission' })}
-                        </Button>
+                            <div className="form-grid-2">
+                                <div className="form-field">
+                                    <label>Previous School Address</label>
+                                    <textarea name="previous_school_address" value={formData.previous_school_address} onChange={handleChange} rows={2} />
+                                </div>
+                                <div className="form-field">
+                                    <label>Transfer Certificate Number</label>
+                                    <input name="transfer_certificate_number" value={formData.transfer_certificate_number} onChange={handleChange} placeholder="TC Number" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Documents */}
+                    {currentStep === 3 && (
+                        <div className="form-section">
+                            <div className="section-header">
+                                <div className="section-icon">📄</div>
+                                <div>
+                                    <h2 className="section-title">Government IDs & Documents</h2>
+                                    <p className="section-subtitle">Identity verification documents</p>
+                                </div>
+                            </div>
+
+                            <div className="form-grid-3">
+                                <div className="form-field">
+                                    <label>PEN Number</label>
+                                    <input name="pen_number" value={formData.pen_number} onChange={handleChange} placeholder="Permanent Education Number" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Aadhar Number</label>
+                                    <input
+                                        name="aadhar_number"
+                                        value={formData.aadhar_number}
+                                        onChange={handleChange}
+                                        placeholder="12-digit Aadhar"
+                                        maxLength={12}
+                                    />
+                                    <span className="field-hint">Enter 12-digit Aadhar number</span>
+                                </div>
+                                <div className="form-field">
+                                    <label>AAPAR / Other ID</label>
+                                    <input name="aapar_number" value={formData.aapar_number} onChange={handleChange} placeholder="Other ID number" />
+                                </div>
+                            </div>
+
+                            {/* Review Summary */}
+                            <h3 style={{ marginTop: '2rem', marginBottom: '1rem', fontSize: '1rem', color: 'var(--color-text-secondary)' }}>
+                                📋 Review Summary
+                            </h3>
+                            <div className="review-grid">
+                                <div className="review-section">
+                                    <h4>👤 Student Info</h4>
+                                    <div className="review-item">
+                                        <span className="review-label">Name</span>
+                                        <span className="review-value">{formData.first_name} {formData.middle_name} {formData.last_name}</span>
+                                    </div>
+                                    <div className="review-item">
+                                        <span className="review-label">DOB</span>
+                                        <span className="review-value">{formData.date_of_birth || '-'}</span>
+                                    </div>
+                                    <div className="review-item">
+                                        <span className="review-label">Gender</span>
+                                        <span className="review-value">{formData.gender === 'M' ? 'Male' : formData.gender === 'F' ? 'Female' : 'Other'}</span>
+                                    </div>
+                                </div>
+                                <div className="review-section">
+                                    <h4>👨‍👩‍👧 Family</h4>
+                                    <div className="review-item">
+                                        <span className="review-label">Father</span>
+                                        <span className="review-value">{formData.father_name || '-'}</span>
+                                    </div>
+                                    <div className="review-item">
+                                        <span className="review-label">Mother</span>
+                                        <span className="review-value">{formData.mother_name || '-'}</span>
+                                    </div>
+                                </div>
+                                <div className="review-section">
+                                    <h4>🎓 Academic</h4>
+                                    <div className="review-item">
+                                        <span className="review-label">Admission #</span>
+                                        <span className="review-value">{formData.admission_number || '-'}</span>
+                                    </div>
+                                    <div className="review-item">
+                                        <span className="review-label">Section</span>
+                                        <span className="review-value">{sections.find(s => s.id.toString() === formData.section)?.name || '-'}</span>
+                                    </div>
+                                </div>
+                                <div className="review-section">
+                                    <h4>📄 Documents</h4>
+                                    <div className="review-item">
+                                        <span className="review-label">Aadhar</span>
+                                        <span className="review-value">{formData.aadhar_number || '-'}</span>
+                                    </div>
+                                    <div className="review-item">
+                                        <span className="review-label">PEN</span>
+                                        <span className="review-value">{formData.pen_number || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Navigation */}
+                    <div className="form-navigation">
+                        <div>
+                            {currentStep > 0 && (
+                                <button type="button" className="nav-btn nav-btn-secondary" onClick={prevStep}>
+                                    ← Previous
+                                </button>
+                            )}
+                        </div>
+                        <div>
+                            {currentStep < STEPS.length - 1 ? (
+                                <button type="button" className="nav-btn nav-btn-primary" onClick={nextStep}>
+                                    Next →
+                                </button>
+                            ) : (
+                                <button type="submit" className="nav-btn nav-btn-success" disabled={loading}>
+                                    {loading ? '⏳ Submitting...' : '✓ Complete Admission'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </form>
             </div>
 
-            {/* Parent Credentials Modal */}
+            {/* Credentials Modal */}
             {showCredentialsModal && parentCredentials && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 9999,
-                    padding: '1rem'
-                }}>
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: '16px',
-                        padding: '2rem',
-                        maxWidth: '500px',
-                        width: '100%',
-                        boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
-                        animation: 'fadeIn 0.3s ease-out'
-                    }}>
-                        <div style={{
-                            textAlign: 'center',
-                            marginBottom: '1.5rem'
-                        }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✅</div>
-                            <h2 style={{
-                                fontSize: '1.5rem',
-                                fontWeight: 700,
-                                color: '#28a745',
-                                marginBottom: '0.5rem'
-                            }}>
-                                {t('students.admission_success', { defaultValue: 'Admission Successful!' })}
-                            </h2>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                <div className="modal-overlay" onClick={() => { setShowCredentialsModal(false); navigate('/students'); }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <div className="modal-header">
+                            <h2>✅ Admission Successful!</h2>
+                            <button className="modal-close" onClick={() => { setShowCredentialsModal(false); navigate('/students'); }}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
                                 {parentCredentials.studentName} ({parentCredentials.admissionNumber})
                             </p>
-                        </div>
 
-                        {parentCredentials.existing_accounts_linked ? (
-                            <div style={{
-                                padding: '1rem',
-                                backgroundColor: '#e3f2fd',
-                                borderRadius: '8px',
-                                marginBottom: '1rem',
-                                border: '1px solid #2196f3'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1565c0', fontWeight: 600 }}>
-                                    <span>🔗</span>
-                                    <span>{parentCredentials.message}</span>
+                            {parentCredentials.father?.created && (
+                                <div style={{ padding: '1rem', background: 'var(--color-bg-secondary)', borderRadius: '8px', marginBottom: '0.75rem' }}>
+                                    <strong>👨 Father's Login</strong>
+                                    <div className="credential-row" style={{ marginTop: '0.5rem' }}>
+                                        <span>Username:</span>
+                                        <span style={{ fontFamily: 'monospace', color: '#1976d2' }}>{parentCredentials.father.username}</span>
+                                    </div>
+                                    <div className="credential-row">
+                                        <span>Password:</span>
+                                        <span style={{ fontFamily: 'monospace', color: '#dc2626' }}>{parentCredentials.father.password}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {parentCredentials.mother?.created && (
+                                <div style={{ padding: '1rem', background: 'var(--color-bg-secondary)', borderRadius: '8px', marginBottom: '0.75rem' }}>
+                                    <strong>👩 Mother's Login</strong>
+                                    <div className="credential-row" style={{ marginTop: '0.5rem' }}>
+                                        <span>Username:</span>
+                                        <span style={{ fontFamily: 'monospace', color: '#1976d2' }}>{parentCredentials.mother.username}</span>
+                                    </div>
+                                    <div className="credential-row">
+                                        <span>Password:</span>
+                                        <span style={{ fontFamily: 'monospace', color: '#dc2626' }}>{parentCredentials.mother.password}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="alert-card alert-card-warning" style={{ marginTop: '1rem' }}>
+                                <span className="alert-icon">⚠️</span>
+                                <div className="alert-content">
+                                    <div className="alert-text">Please save these credentials. Passwords cannot be recovered once this dialog is closed.</div>
                                 </div>
                             </div>
-                        ) : (
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <h3 style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 600,
-                                    marginBottom: '1rem',
-                                    color: '#333',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}>
-                                    <span>🔐</span>
-                                    {t('students.parent_login_credentials', { defaultValue: 'Parent Login Credentials' })}
-                                </h3>
-
-                                {parentCredentials.father?.created && (
-                                    <div style={{
-                                        padding: '1rem',
-                                        backgroundColor: '#f8f9fa',
-                                        borderRadius: '8px',
-                                        marginBottom: '0.75rem',
-                                        border: '1px solid #dee2e6'
-                                    }}>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#333' }}>
-                                            👨 {t('students.father_login', { defaultValue: "Father's Login" })}
-                                        </div>
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '100px 1fr',
-                                            gap: '0.5rem',
-                                            fontSize: '0.9rem'
-                                        }}>
-                                            <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
-                                            <span style={{
-                                                fontFamily: 'monospace',
-                                                fontWeight: 600,
-                                                color: '#1976d2',
-                                                cursor: 'pointer'
-                                            }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(parentCredentials.father.username);
-                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
-                                                }}
-                                                title="Click to copy"
-                                            >
-                                                {parentCredentials.father.username} 📋
-                                            </span>
-                                            <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
-                                            <span style={{
-                                                fontFamily: 'monospace',
-                                                fontWeight: 600,
-                                                color: '#d32f2f',
-                                                cursor: 'pointer'
-                                            }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(parentCredentials.father.password);
-                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
-                                                }}
-                                                title="Click to copy"
-                                            >
-                                                {parentCredentials.father.password} 📋
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                                {parentCredentials.father && !parentCredentials.father.created && parentCredentials.father.message && (
-                                    <div style={{
-                                        padding: '0.75rem',
-                                        backgroundColor: '#e8f5e9',
-                                        borderRadius: '8px',
-                                        marginBottom: '0.75rem',
-                                        border: '1px solid #4caf50',
-                                        fontSize: '0.9rem',
-                                        color: '#2e7d32'
-                                    }}>
-                                        👨 {parentCredentials.father.message}
-                                    </div>
-                                )}
-
-                                {parentCredentials.mother?.created && (
-                                    <div style={{
-                                        padding: '1rem',
-                                        backgroundColor: '#f8f9fa',
-                                        borderRadius: '8px',
-                                        marginBottom: '0.75rem',
-                                        border: '1px solid #dee2e6'
-                                    }}>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#333' }}>
-                                            👩 {t('students.mother_login', { defaultValue: "Mother's Login" })}
-                                        </div>
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '100px 1fr',
-                                            gap: '0.5rem',
-                                            fontSize: '0.9rem'
-                                        }}>
-                                            <span style={{ color: '#666' }}>{t('common.username', { defaultValue: 'Username' })}:</span>
-                                            <span style={{
-                                                fontFamily: 'monospace',
-                                                fontWeight: 600,
-                                                color: '#1976d2',
-                                                cursor: 'pointer'
-                                            }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(parentCredentials.mother.username);
-                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
-                                                }}
-                                                title="Click to copy"
-                                            >
-                                                {parentCredentials.mother.username} 📋
-                                            </span>
-                                            <span style={{ color: '#666' }}>{t('common.password', { defaultValue: 'Password' })}:</span>
-                                            <span style={{
-                                                fontFamily: 'monospace',
-                                                fontWeight: 600,
-                                                color: '#d32f2f',
-                                                cursor: 'pointer'
-                                            }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(parentCredentials.mother.password);
-                                                    success(t('common.copied', { defaultValue: 'Copied!' }));
-                                                }}
-                                                title="Click to copy"
-                                            >
-                                                {parentCredentials.mother.password} 📋
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                                {parentCredentials.mother && !parentCredentials.mother.created && parentCredentials.mother.message && (
-                                    <div style={{
-                                        padding: '0.75rem',
-                                        backgroundColor: '#e8f5e9',
-                                        borderRadius: '8px',
-                                        marginBottom: '0.75rem',
-                                        border: '1px solid #4caf50',
-                                        fontSize: '0.9rem',
-                                        color: '#2e7d32'
-                                    }}>
-                                        👩 {parentCredentials.mother.message}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#fff3cd',
-                            borderRadius: '8px',
-                            marginBottom: '1.5rem',
-                            border: '1px solid #ffc107',
-                            fontSize: '0.85rem',
-                            color: '#856404',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '0.5rem'
-                        }}>
-                            <span>⚠️</span>
-                            <span>{t('students.save_credentials_warning', { defaultValue: 'Please save these credentials and share with parents. Passwords cannot be recovered once this dialog is closed.' })}</span>
                         </div>
-
-                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                        <div className="modal-footer">
                             <Button
                                 variant="outline"
                                 onClick={() => {
-                                    // Copy all credentials to clipboard
                                     let text = `Parent Login Credentials for ${parentCredentials.studentName}\n`;
-                                    text += `Admission Number: ${parentCredentials.admissionNumber}\n\n`;
                                     if (parentCredentials.father?.created) {
-                                        text += `Father's Login:\n`;
-                                        text += `  Username: ${parentCredentials.father.username}\n`;
-                                        text += `  Password: ${parentCredentials.father.password}\n\n`;
+                                        text += `Father - Username: ${parentCredentials.father.username}, Password: ${parentCredentials.father.password}\n`;
                                     }
                                     if (parentCredentials.mother?.created) {
-                                        text += `Mother's Login:\n`;
-                                        text += `  Username: ${parentCredentials.mother.username}\n`;
-                                        text += `  Password: ${parentCredentials.mother.password}\n`;
+                                        text += `Mother - Username: ${parentCredentials.mother.username}, Password: ${parentCredentials.mother.password}\n`;
                                     }
                                     navigator.clipboard.writeText(text);
-                                    success(t('students.credentials_copied', { defaultValue: 'All credentials copied to clipboard!' }));
+                                    success('Credentials copied!');
                                 }}
                             >
-                                📋 {t('common.copy_all', { defaultValue: 'Copy All' })}
+                                📋 Copy All
                             </Button>
-                            <Button
-                                variant="primary"
-                                onClick={() => {
-                                    setShowCredentialsModal(false);
-                                    navigate('/students');
-                                }}
-                            >
-                                ✓ {t('common.done', { defaultValue: 'Done' })}
+                            <Button variant="primary" onClick={() => { setShowCredentialsModal(false); navigate('/students'); }}>
+                                ✓ Done
                             </Button>
                         </div>
                     </div>
