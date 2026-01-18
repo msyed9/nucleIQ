@@ -124,6 +124,8 @@ jobs:
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
           port: ${{ secrets.ORACLE_PORT }}
+          command_timeout: 15m
+          timeout: 20m
           script: |
             # Ensure directories exist and are owned by the deploy user
             sudo mkdir -p /home/deploy/apps/nucleIQ/repo/backend
@@ -156,6 +158,8 @@ jobs:
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
           port: ${{ secrets.ORACLE_PORT }}
+          command_timeout: 30m
+          timeout: 40m
           script: |
             set -e
             cd /home/deploy/apps/nucleIQ/repo/backend
