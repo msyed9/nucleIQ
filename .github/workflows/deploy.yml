@@ -166,3 +166,4 @@ jobs:
 # - Node.js and npm installed
 # - Gunicorn and Nginx configured and running
 # - deploy user has sudo access without password for systemctl commands
+# - test
