@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "NucleiQ",
+    "slug": "nucleiq-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A5F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nucleiq.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "NucleiQ needs camera access for QR scanning and photo capture",
+        "NSPhotoLibraryUsageDescription": "NucleiQ needs photo library access to upload images"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E3A5F"
+      },
+      "package": "com.nucleiq.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow NucleiQ to access your camera for QR scanning and photos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1E3A5F"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6548ae64-4861-4bac-a545-dbb236e63102"
+      }
+    },
+    "owner": "msyed9"
+  }
+}
