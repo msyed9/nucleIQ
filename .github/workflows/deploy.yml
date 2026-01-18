@@ -151,15 +151,15 @@ jobs:
             ./frontend/dist/ \
             ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }}:/home/deploy/apps/nucleIQ/repo/frontend/dist/
 
-      - name: 🔄 Finalize on Server
+      - name: 📦 Update Dependencies on Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
           port: ${{ secrets.ORACLE_PORT }}
-          command_timeout: 30m
-          timeout: 40m
+          command_timeout: 60m
+          timeout: 70m
           script: |
             set -e
             cd /home/deploy/apps/nucleIQ/repo/backend
@@ -170,19 +170,39 @@ jobs:
               python3 -m venv venv
             fi
 
-            # Update backend dependencies only if needed
+            # Update backend dependencies
             source venv/bin/activate
+            pip install --upgrade pip --quiet
             if [ -f "requirements/prod.txt" ]; then
+              echo "📥 Installing production requirements (this may take a while)..."
               pip install -r requirements/prod.txt --quiet
             elif [ -f "requirements.txt" ]; then
               pip install -r requirements.txt --quiet
             fi
+
+      - name: 🚀 Apply Changes & Restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_PORT }}
+          command_timeout: 10m
+          timeout: 15m
+          script: |
+            set -e
+            cd /home/deploy/apps/nucleIQ/repo/backend
+            source venv/bin/activate
             
             # Apply database changes
+            echo "🔄 Running migrations..."
             python manage.py migrate --noinput
+            
+            echo "📁 Collecting static files..."
             python manage.py collectstatic --noinput
             
             # Restart services
+            echo "🔄 Restarting Gunicorn and Nginx..."
             sudo chown -R deploy:www-data /home/deploy/apps/nucleIQ/repo/frontend/dist
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
