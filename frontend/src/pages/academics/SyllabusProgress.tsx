@@ -102,7 +102,7 @@ const SyllabusProgress: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
 
-    const { data: syllabi = getMockSyllabi(), isLoading } = useQuery({
+    const { data: syllabi = getMockSyllabi(), isLoading } = useQuery<Syllabus[]>({
         queryKey: ['syllabus'],
         queryFn: async () => {
             try {

@@ -49,7 +49,7 @@ const Homework: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedHomework, setSelectedHomework] = useState<Homework | null>(null);
 
-    const { data: homeworkList = getMockHomework(), isLoading } = useQuery({
+    const { data: homeworkList = getMockHomework(), isLoading } = useQuery<Homework[]>({
         queryKey: ['homework'],
         queryFn: async () => {
             try {

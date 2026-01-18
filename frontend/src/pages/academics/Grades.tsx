@@ -98,7 +98,7 @@ const Grades: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [filterType, setFilterType] = useState<string>('all');
 
-    const { data: results = getMockResults(), isLoading } = useQuery({
+    const { data: results = getMockResults(), isLoading } = useQuery<ExamResult[]>({
         queryKey: ['grades'],
         queryFn: async () => {
             try {

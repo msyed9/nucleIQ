@@ -297,7 +297,7 @@ const AlumniEvents: React.FC = () => {
                                     variant="contained"
                                     size="small"
                                     fullWidth
-                                    disabled={isFull}
+                                    disabled={!!isFull}
                                     onClick={() => {
                                         setSelectedEvent(event);
                                         setRsvpDialogOpen(true);

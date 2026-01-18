@@ -57,13 +57,14 @@ const SubjectsList: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
 
     // Fetch subjects
-    const { data: subjects = getMockSubjects(), isLoading } = useQuery({
+    const { data: subjects = getMockSubjects(), isLoading } = useQuery<Subject[], Error>({
         queryKey: ['subjects'],
         queryFn: async () => {
             try {
                 const response = await api.get('/tenants/subjects/');
                 return response.data.results || response.data || getMockSubjects();
-            } catch {
+            } catch (error) {
+                console.error("Failed to fetch subjects:", error);
                 return getMockSubjects();
             }
         },
@@ -79,7 +80,7 @@ const SubjectsList: React.FC = () => {
         return matchesSearch && matchesGrade;
     });
 
-    const gradeOptions = [...new Set(subjects.map((s: Subject) => s.grade_level_name))];
+    const gradeOptions = [...new Set(subjects.map((s: Subject) => s.grade_level_name))] as string[];
 
     const openSubjectDetail = (subject: Subject) => {
         setSelectedSubject(subject);
@@ -124,7 +125,7 @@ const SubjectsList: React.FC = () => {
                     className="grade-filter"
                 >
                     <option value="all">All Grades</option>
-                    {gradeOptions.map((grade) => (
+                    {gradeOptions.map((grade: string) => (
                         <option key={grade} value={grade}>{grade}</option>
                     ))}
                 </select>
