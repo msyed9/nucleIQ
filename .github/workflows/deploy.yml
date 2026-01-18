@@ -120,7 +120,7 @@ jobs:
       - name: 🚀 Sync Files to Server
         run: |
           # Sync backend code (excluding unnecessary files)
-          rsync -avz -e "ssh -p ${{ secrets.ORACLE_PORT }}" --delete \
+          rsync -avz -e "ssh -p ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no" --delete \
             --exclude '.git' \
             --exclude 'venv' \
             --exclude '__pycache__' \
@@ -131,7 +131,7 @@ jobs:
             ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }}:/home/deploy/apps/nucleIQ/repo/backend/
 
           # Sync pre-built frontend (No more building on server!)
-          rsync -avz -e "ssh -p ${{ secrets.ORACLE_PORT }}" --delete \
+          rsync -avz -e "ssh -p ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no" --delete \
             ./frontend/dist/ \
             ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }}:/home/deploy/apps/nucleIQ/repo/frontend/dist/
 
