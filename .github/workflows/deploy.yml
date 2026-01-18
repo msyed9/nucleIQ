@@ -117,7 +117,21 @@ jobs:
           known_hosts: unnecessary
           if_key_exists: replace
 
-      - name: 🚀 Sync Files to Server
+      - name: �️ Prepare Server Permissions
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_PORT }}
+          script: |
+            # Ensure directories exist and are owned by the deploy user
+            sudo mkdir -p /home/deploy/apps/nucleIQ/repo/backend
+            sudo mkdir -p /home/deploy/apps/nucleIQ/repo/frontend/dist
+            sudo chown -R ${{ secrets.ORACLE_USER }}:${{ secrets.ORACLE_USER }} /home/deploy/apps/nucleIQ/repo/
+            sudo chmod -R 755 /home/deploy/apps/nucleIQ/repo/
+
+      - name: �🚀 Sync Files to Server
         run: |
           # Sync backend code (excluding unnecessary files)
           rsync -avz -e "ssh -p ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no" --delete \
