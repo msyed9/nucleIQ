@@ -1,4 +1,4 @@
-# NucleIQ Production Deployment - Quick Start Guide
+# NucleiQ Production Deployment - Quick Start Guide
 ## Deploy to Azure Container Apps in 4 Steps
 
 ---

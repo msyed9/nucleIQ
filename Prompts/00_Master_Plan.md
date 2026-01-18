@@ -1,6 +1,6 @@
-# 🚀 NucleIQ SaaS - Master Execution Plan
+# 🚀 NucleiQ SaaS - Master Execution Plan
 
-This document outlines the sequential execution order for building the NucleIQ School Management SaaS. 
+This document outlines the sequential execution order for building the NucleiQ School Management SaaS. 
 **ALL PROMPTS MUST BE EXECUTED IN THIS ORDER.**
 
 ## 🛑 Critical Architecture Note: Academic Year

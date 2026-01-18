@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Table Skeleton
+ * NucleiQ Design System - Table Skeleton
  * Loading placeholder for data tables
  */
 

@@ -54,6 +54,8 @@
         "crm": "CRM",
         "alumni": "Alumni",
         "cms": "CMS / Website",
+        "website_builder": "Website Builder",
+        "templates": "Templates",
         "placement": "Placement",
         "trackers": "Trackers",
         "salah": "Salah Tracker",
@@ -68,6 +70,8 @@
         "users": "Users",
         "user_list": "User List",
         "user_management": "User Management",
+        "my_attendance_qr": "My Attendance QR",
+        "staff_qr_scanner": "Staff QR Scanner",
         "settings": "Settings",
         "general_settings": "General Settings",
         "academic_setup": "Academic Setup"

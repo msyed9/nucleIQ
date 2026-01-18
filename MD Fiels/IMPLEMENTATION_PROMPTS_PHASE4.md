@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 4: Inventory Management
+#  NucleiQ Implementation Prompts - Phase 4: Inventory Management
 
 **Purpose:** Build complete inventory module (currently has backend but NO frontend)
 
@@ -529,7 +529,7 @@
 
    **A. Stock Summary Report:**
    - All items with current stock
-   - Valuation (quantity × unit price)
+   - Valuation (quantity ï¿½ unit price)
    - Total inventory value
    - By category breakdown
    

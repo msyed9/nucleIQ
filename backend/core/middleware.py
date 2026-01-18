@@ -1,5 +1,5 @@
 """
-Tenant Middleware for NucleIQ
+Tenant Middleware for NucleiQ
 Handles tenant detection, RLS context setting, and branding injection.
 """
 

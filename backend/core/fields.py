@@ -1,5 +1,5 @@
 """
-Custom model fields for NucleIQ
+Custom model fields for NucleiQ
 """
 
 from django.db import models

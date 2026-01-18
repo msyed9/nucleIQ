@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Toast Container
+ * NucleiQ Design System - Toast Container
  * Manages multiple toast notifications with positioning
  */
 

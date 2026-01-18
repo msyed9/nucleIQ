@@ -2,7 +2,7 @@
 
 ## ✅ CMS Backend Created Successfully!
 
-I've built a complete CMS (Content Management System) backend for the NucleIQ platform.
+I've built a complete CMS (Content Management System) backend for the NucleiQ platform.
 
 ### 📦 What Was Created:
 

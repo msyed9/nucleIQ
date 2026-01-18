@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Main Export
+ * NucleiQ Design System - Main Export
  * Import everything from here: import { Button, colors } from '@/design-system'
  */
 

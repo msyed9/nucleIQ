@@ -1,6 +1,6 @@
 # PowerShell Container Deployment Script
 # =============================================================================
-# NucleIQ Container Apps Deployment Script (PowerShell)
+# NucleiQ Container Apps Deployment Script (PowerShell)
 # Deploys all container applications to Azure
 # 
 # Prerequisites:
@@ -27,7 +27,7 @@ function Write-Success { param($Message) Write-Host "[SUCCESS] $Message" -Foregr
 function Write-Warning { param($Message) Write-Host "[WARNING] $Message" -ForegroundColor Yellow }
 
 Write-Host "`n=============================================="
-Write-Host "NucleIQ Container Deployment"
+Write-Host "NucleiQ Container Deployment"
 Write-Host "==============================================`n"
 
 # =============================================================================

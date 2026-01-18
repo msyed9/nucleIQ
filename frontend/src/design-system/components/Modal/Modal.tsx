@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Modal Component
+ * NucleiQ Design System - Modal Component
  * Accessible dialog/modal with overlay
  */
 

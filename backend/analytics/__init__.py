@@ -1,5 +1,5 @@
 """
-Analytics app for NucleIQ
+Analytics app for NucleiQ
 Platform Intelligence Dashboard for Super Admin
 """
 

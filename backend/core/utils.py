@@ -1,5 +1,5 @@
 """
-Core utilities for NucleIQ
+Core utilities for NucleiQ
 Includes encryption utilities and custom validators
 """
 

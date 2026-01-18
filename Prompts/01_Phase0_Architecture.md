@@ -30,7 +30,7 @@
 ```markdown
 # 🚀 CORE ARCHITECTURE INSTRUCTION
 
-You are tasked with building the foundational architecture for "NucleIQ", a multi-tenant School Management SaaS.
+You are tasked with building the foundational architecture for "NucleiQ", a multi-tenant School Management SaaS.
 
 ## 🛠️ Technical Specifications
 - **Backend**: Django 5.0+, Django REST Framework (DRF).

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { applyIconTheme } from '../config/iconThemes';
-import { setCurrentIconSet } from '../config/iconSets';
+import { setCurrentIconSet, IconSetType } from '../config/iconSets';
 
 interface TenantBranding {
     id: number;
@@ -53,7 +53,7 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
             const defaultBranding: TenantBranding = {
                 id: 0,
                 tenant: 0,
-                tenant_name: 'NucleIQ',
+                tenant_name: 'NucleiQ',
                 logo_url: '',
                 favicon_url: '',
                 login_background_url: '',
@@ -105,7 +105,7 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
 
         // Update page title with tenant name
         if (brandingData.tenant_name) {
-            document.title = `${brandingData.tenant_name} - NucleIQ`;
+            document.title = `${brandingData.tenant_name} - NucleiQ`;
         }
 
         // Apply icon theme
@@ -114,7 +114,7 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
         }
 
         if (brandingData.icon_set) {
-            setCurrentIconSet(brandingData.icon_set);
+            setCurrentIconSet(brandingData.icon_set as IconSetType);
         }
     };
 

@@ -1,3 +1,3 @@
 """
-Users app for NucleIQ - Authentication and RBAC
+Users app for NucleiQ - Authentication and RBAC
 """

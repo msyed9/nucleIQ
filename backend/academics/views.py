@@ -323,3 +323,156 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(submissions, many=True)
         return Response(serializer.data)
+
+
+# New ViewSets for Homework and Syllabus
+from .models import Homework, HomeworkCompletion, Syllabus, Chapter, SyllabusProgress
+from .serializers import (
+    HomeworkSerializer, HomeworkCompletionSerializer,
+    SyllabusSerializer, ChapterSerializer, SyllabusProgressSerializer
+)
+
+
+class HomeworkViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing homework."""
+    
+    serializer_class = HomeworkSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['academic_year', 'subject', 'section', 'teacher', 'priority']
+    search_fields = ['title', 'description']
+    ordering_fields = ['assigned_date', 'due_date']
+    ordering = ['-assigned_date']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        return Homework.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).select_related('academic_year', 'subject', 'section', 'teacher')
+    
+    @action(detail=True, methods=['get'])
+    def completions(self, request, pk=None):
+        """Get completions for a homework."""
+        homework = self.get_object()
+        completions = homework.completions.filter(is_deleted=False)
+        serializer = HomeworkCompletionSerializer(completions, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get pending homework for current date."""
+        today = timezone.now().date()
+        homework = self.get_queryset().filter(due_date__gte=today)
+        serializer = self.get_serializer(homework, many=True)
+        return Response(serializer.data)
+
+
+class HomeworkCompletionViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing homework completions."""
+    
+    serializer_class = HomeworkCompletionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['homework', 'student', 'is_completed']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        return HomeworkCompletion.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).select_related('homework', 'student')
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Mark homework as complete."""
+        completion = self.get_object()
+        completion.mark_complete()
+        serializer = self.get_serializer(completion)
+        return Response(serializer.data)
+
+
+class SyllabusViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing syllabi."""
+    
+    serializer_class = SyllabusSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['subject', 'grade_level', 'academic_year']
+    search_fields = ['name', 'description']
+    ordering = ['subject__name', 'grade_level__order']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        return Syllabus.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).select_related('subject', 'grade_level', 'academic_year').prefetch_related('chapters')
+    
+    @action(detail=True, methods=['get'])
+    def progress(self, request, pk=None):
+        """Get progress for a syllabus across sections."""
+        syllabus = self.get_object()
+        progress = syllabus.progress_records.filter(is_deleted=False)
+        
+        section_id = request.query_params.get('section')
+        if section_id:
+            progress = progress.filter(section_id=section_id)
+        
+        serializer = SyllabusProgressSerializer(progress, many=True)
+        return Response(serializer.data)
+
+
+class ChapterViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing chapters."""
+    
+    serializer_class = ChapterSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['syllabus', 'is_completed']
+    search_fields = ['name', 'description']
+    ordering = ['syllabus', 'order']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        return Chapter.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).select_related('syllabus', 'completed_by')
+    
+    @action(detail=True, methods=['post'])
+    def mark_complete(self, request, pk=None):
+        """Mark chapter as complete."""
+        chapter = self.get_object()
+        # Get teacher from request if available
+        teacher = None
+        chapter.mark_complete(teacher)
+        serializer = self.get_serializer(chapter)
+        return Response(serializer.data)
+
+
+class SyllabusProgressViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing syllabus progress."""
+    
+    serializer_class = SyllabusProgressSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['syllabus', 'section', 'chapter', 'is_completed']
+    
+    def get_queryset(self):
+        tenant = get_current_tenant()
+        return SyllabusProgress.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).select_related('syllabus', 'section', 'chapter', 'teacher')
+    
+    @action(detail=True, methods=['post'])
+    def mark_complete(self, request, pk=None):
+        """Mark progress as complete."""
+        progress = self.get_object()
+        progress.is_completed = True
+        progress.completed_date = timezone.now().date()
+        progress.save()
+        serializer = self.get_serializer(progress)
+        return Response(serializer.data)
+

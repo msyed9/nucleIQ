@@ -20,6 +20,8 @@ from .views import (
     AppraisalCycleViewSet,
     StaffAppraisalViewSet,
     StaffGoalViewSet,
+    generate_qr_token,
+    verify_qr_token,
 )
 
 router = DefaultRouter()
@@ -40,5 +42,10 @@ router.register(r'appraisals', StaffAppraisalViewSet, basename='staff-appraisal'
 router.register(r'goals', StaffGoalViewSet, basename='staff-goal')
 
 urlpatterns = [
+    # QR-Based Staff Attendance endpoints
+    path('attendance/generate-qr-token/', generate_qr_token, name='staff-generate-qr-token'),
+    path('attendance/verify-qr/', verify_qr_token, name='staff-verify-qr'),
+    # Router URLs (includes all viewset routes)
     path('', include(router.urls)),
 ]
+

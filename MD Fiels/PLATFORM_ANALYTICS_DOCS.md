@@ -176,6 +176,6 @@ The dashboard includes:
 - 5 **Interactive Charts** in a responsive grid
 - 3 **Data Tables** with recent activity
 - **Gradient backgrounds** and **smooth animations**
-- **Professional color scheme** matching NucleIQ branding
+- **Professional color scheme** matching NucleiQ branding
 
 **The dashboard is production-ready and visually stunning!** 🎨

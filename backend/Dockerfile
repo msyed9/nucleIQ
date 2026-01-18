@@ -78,11 +78,11 @@ ARG BUILD_DATE
 ARG GIT_SHA
 
 # Labels for container metadata
-LABEL org.opencontainers.image.title="NucleIQ Backend" \
-    org.opencontainers.image.description="Django REST API for NucleIQ Multi-Tenant SaaS" \
+LABEL org.opencontainers.image.title="NucleiQ Backend" \
+    org.opencontainers.image.description="Django REST API for NucleiQ Multi-Tenant SaaS" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${GIT_SHA}" \
-    org.opencontainers.image.vendor="NucleIQ" \
+    org.opencontainers.image.vendor="NucleiQ" \
     org.opencontainers.image.source="https://github.com/nucleiq/nucleiq"
 
 # Expose port

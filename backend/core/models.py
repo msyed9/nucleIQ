@@ -1,5 +1,5 @@
 """
-Core Models for NucleIQ
+Core Models for NucleiQ
 Provides base models with audit trail, soft delete, and tenant isolation.
 """
 

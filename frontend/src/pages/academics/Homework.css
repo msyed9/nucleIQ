@@ -1,0 +1,491 @@
+.homework-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.homework-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.header-content h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1F2937;
+    margin: 0 0 4px 0;
+}
+
+.header-subtitle {
+    color: #6B7280;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Stats Cards */
+.homework-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    font-size: 28px;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.stat-total {
+    border-left: 4px solid #6366F1;
+}
+
+.stat-pending {
+    border-left: 4px solid #F59E0B;
+}
+
+.stat-completed {
+    border-left: 4px solid #10B981;
+}
+
+.stat-overdue {
+    border-left: 4px solid #EF4444;
+}
+
+/* Filters */
+.homework-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    background: #F3F4F6;
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.filter-tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-tab:hover {
+    color: #374151;
+}
+
+.filter-tab.active {
+    background: white;
+    color: #6366F1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.homework-filters .search-box {
+    width: 300px;
+}
+
+.homework-filters .search-box input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.homework-filters .search-box input:focus {
+    outline: none;
+    border-color: #6366F1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Homework List */
+.homework-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.homework-card {
+    display: flex;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.homework-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.homework-card.completed {
+    opacity: 0.7;
+}
+
+.priority-strip {
+    width: 5px;
+    flex-shrink: 0;
+}
+
+.homework-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.homework-main {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.homework-info {
+    flex: 1;
+}
+
+.homework-info h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+    margin: 0 0 6px 0;
+}
+
+.homework-info h3.strikethrough {
+    text-decoration: line-through;
+    color: #9CA3AF;
+}
+
+.homework-desc {
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.homework-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.subject-tag {
+    background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+    color: #4F46E5;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.subject-tag.large {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.section-tag {
+    background: #F3F4F6;
+    color: #374151;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.teacher {
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+.homework-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.due-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.priority-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Modal */
+.homework-modal {
+    max-width: 500px;
+}
+
+.hw-detail-subject {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.hw-description {
+    font-size: 15px;
+    color: #4B5563;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #F9FAFB;
+    border-radius: 12px;
+}
+
+.hw-dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.date-item,
+.hw-teacher {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.date-item label,
+.hw-teacher label {
+    font-size: 12px;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.date-item span,
+.hw-teacher span {
+    font-size: 15px;
+    color: #1F2937;
+    font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 16px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-state p {
+    color: #6B7280;
+    font-size: 16px;
+}
+
+/* Loading */
+.homework-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: #6B7280;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #F3F4F6;
+    border-top-color: #6366F1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary .icon {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.btn-secondary {
+    background: #F3F4F6;
+    color: #374151;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #E5E7EB;
+}
+
+/* Modal Base */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #9CA3AF;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #6B7280;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #E5E7EB;
+}
+
+@media (max-width: 768px) {
+    .homework-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .homework-filters {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .homework-filters .search-box {
+        width: 100%;
+    }
+
+    .homework-content {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .homework-right {
+        flex-direction: row;
+        justify-content: flex-start;
+    }
+}

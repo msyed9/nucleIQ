@@ -1,8 +1,8 @@
-#  NucleIQ Implementation Prompts - Complete Index
+#  NucleiQ Implementation Prompts - Complete Index
 
 **Total Phases:** 12  
 **Total Prompts:** 80+  
-**Coverage:** All identified gaps in NucleIQ codebase
+**Coverage:** All identified gaps in NucleiQ codebase
 
 ---
 

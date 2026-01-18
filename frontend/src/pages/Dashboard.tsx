@@ -1,5 +1,5 @@
 /**
- * Dashboard Page - Redesigned with NucleIQ Design System
+ * Dashboard Page - Redesigned with NucleiQ Design System
  * Main dashboard with analytics and customizable widgets
  */
 

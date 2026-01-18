@@ -1,5 +1,5 @@
 """
-Search Service for NucleIQ
+Search Service for NucleiQ
 PostgreSQL Full Text Search implementation with tenant and permission filtering
 """
 

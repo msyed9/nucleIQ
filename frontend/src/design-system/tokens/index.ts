@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Token Exports
+ * NucleiQ Design System - Token Exports
  * Central export file for all design tokens
  */
 

@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Card Skeleton
+ * NucleiQ Design System - Card Skeleton
  * Loading placeholder for card components
  */
 

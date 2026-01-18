@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 11: Search & Dashboard
+#  NucleiQ Implementation Prompts - Phase 11: Search & Dashboard
 
 **Purpose:** Implement global search and dashboard enhancements
 

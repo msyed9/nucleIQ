@@ -68,6 +68,8 @@ import BankReconciliation from './pages/finance/BankReconciliation';
 
 // Phase 5 Imports
 import AlumniPortal from './pages/alumni/AlumniPortal';
+import AlumniDirectory from './pages/alumni/AlumniDirectory';
+import AlumniEvents from './pages/alumni/AlumniEvents';
 import LiveClassJoin from './pages/lms/LiveClassJoin';
 import Headquarters from './pages/group/Headquarters';
 
@@ -98,6 +100,10 @@ import RouteOptimization from './pages/transport/RouteOptimization';
 import RoomAllocation from './pages/hostel/RoomAllocation';
 import AssignmentSubmission from './pages/academics/AssignmentSubmission';
 import AssignmentGrading from './pages/academics/AssignmentGrading';
+import SubjectsList from './pages/academics/SubjectsList';
+import Homework from './pages/academics/Homework';
+import SyllabusProgress from './pages/academics/SyllabusProgress';
+import Grades from './pages/academics/Grades';
 import LeaveApproval from './pages/hr/LeaveApproval';
 import SalaryStructure from './pages/payroll/SalaryStructure';
 import LibraryMembers from './pages/library/LibraryMembers';
@@ -327,6 +333,10 @@ function App() {
                                                     <Route path="/timetable/class" element={<Layout><ClassView /></Layout>} />
 
                                                     {/* Academics & LMS */}
+                                                    <Route path="/subjects" element={<Layout><SubjectsList /></Layout>} />
+                                                    <Route path="/homework" element={<Layout><Homework /></Layout>} />
+                                                    <Route path="/syllabus" element={<Layout><SyllabusProgress /></Layout>} />
+                                                    <Route path="/grades" element={<Layout><Grades /></Layout>} />
                                                     <Route path="/assignments" element={<Layout><AssignmentList /></Layout>} />
                                                     <Route path="/assignments/submit" element={<Layout><AssignmentSubmission /></Layout>} />
                                                     <Route path="/assignments/grade" element={<Layout><AssignmentGrading /></Layout>} />
@@ -393,9 +403,9 @@ function App() {
                                                     <Route path="/crm/conversion" element={<Layout><LeadConversion /></Layout>} />
                                                     <Route path="/crm/followups" element={<Layout><FollowupScheduler /></Layout>} />
                                                     <Route path="/alumni" element={<Layout><AlumniPortal /></Layout>} />
-                                                    <Route path="/alumni/directory" element={<Layout><AlumniPortal /></Layout>} /> {/* Sidebar Alias */}
+                                                    <Route path="/alumni/directory" element={<Layout><AlumniDirectory /></Layout>} />
                                                     <Route path="/alumni/jobs" element={<Layout><JobBoard /></Layout>} />
-                                                    <Route path="/alumni/events" element={<Layout><EventRegistration /></Layout>} />
+                                                    <Route path="/alumni/events" element={<Layout><AlumniEvents /></Layout>} />
                                                     <Route path="/alumni/donations" element={<Layout><DonationPortal /></Layout>} />
                                                     <Route path="/cms/builder" element={<Layout><WebsiteBuilder /></Layout>} />
                                                     <Route path="/cms/website-builder" element={<Layout><WebsiteBuilder /></Layout>} />

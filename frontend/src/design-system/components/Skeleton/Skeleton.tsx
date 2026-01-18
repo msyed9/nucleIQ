@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Skeleton Component
+ * NucleiQ Design System - Skeleton Component
  * Loading placeholder with shimmer animation
  */
 

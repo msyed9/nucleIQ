@@ -1,5 +1,5 @@
 """
-Search app for NucleIQ
+Search app for NucleiQ
 Provides global search with PostgreSQL Full Text Search
 """
 

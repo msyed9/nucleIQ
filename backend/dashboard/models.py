@@ -1,5 +1,5 @@
 """
-Dashboard Models for NucleIQ
+Dashboard Models for NucleiQ
 Widget registry and dashboard layout management
 """
 

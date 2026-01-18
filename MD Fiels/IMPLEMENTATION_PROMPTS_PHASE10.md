@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 10: Settings & Customization
+#  NucleiQ Implementation Prompts - Phase 10: Settings & Customization
 
 **Purpose:** Implement actual save functionality and customization features
 

@@ -717,3 +717,213 @@ class SchoolEvent(TenantAwareModel):
         if not self.end_date:
             self.end_date = self.start_date
         super().save(*args, **kwargs)
+
+
+class DeviceToken(TenantAwareModel):
+    """
+    Store FCM/APNs device tokens for push notifications.
+    Each user can have multiple devices registered.
+    """
+    
+    PLATFORM_CHOICES = [
+        ('ANDROID', 'Android'),
+        ('IOS', 'iOS'),
+        ('WEB', 'Web'),
+    ]
+    
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='device_tokens',
+        help_text=_('User who owns this device')
+    )
+    
+    token = models.TextField(
+        help_text=_('FCM or APNs device token')
+    )
+    
+    platform = models.CharField(
+        max_length=20,
+        choices=PLATFORM_CHOICES,
+        help_text=_('Device platform')
+    )
+    
+    device_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('Device name/model')
+    )
+    
+    device_id = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('Unique device identifier')
+    )
+    
+    app_version = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text=_('App version on this device')
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text=_('Whether this token is active')
+    )
+    
+    last_used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Last time a notification was sent to this device')
+    )
+    
+    # Topic subscriptions
+    subscribed_topics = models.JSONField(
+        default=list,
+        help_text=_('List of FCM topics this device is subscribed to')
+    )
+    
+    class Meta:
+        db_table = 'device_tokens'
+        verbose_name = _('Device Token')
+        verbose_name_plural = _('Device Tokens')
+        ordering = ['-created_at']
+        unique_together = [['user', 'token']]
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['platform']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.platform} - {self.device_name or 'Unknown'}"
+
+
+class PushNotification(TenantAwareModel):
+    """
+    Log of push notifications sent.
+    """
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('DELIVERED', 'Delivered'),
+        ('FAILED', 'Failed'),
+    ]
+    
+    NOTIFICATION_TYPE_CHOICES = [
+        ('ANNOUNCEMENT', 'Announcement'),
+        ('ATTENDANCE', 'Attendance Alert'),
+        ('FEE_REMINDER', 'Fee Reminder'),
+        ('EXAM_RESULT', 'Exam Result'),
+        ('HOMEWORK', 'Homework'),
+        ('EVENT', 'Event'),
+        ('LEAVE', 'Leave Status'),
+        ('GENERAL', 'General'),
+    ]
+    
+    # Target user
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='push_notifications',
+        null=True,
+        blank=True,
+        help_text=_('Target user (null for topic notifications)')
+    )
+    
+    device_token = models.ForeignKey(
+        DeviceToken,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notifications',
+        help_text=_('Device token used')
+    )
+    
+    # Content
+    title = models.CharField(
+        max_length=200,
+        help_text=_('Notification title')
+    )
+    
+    body = models.TextField(
+        help_text=_('Notification body')
+    )
+    
+    image_url = models.URLField(
+        blank=True,
+        help_text=_('Notification image URL')
+    )
+    
+    # Data payload
+    data_payload = models.JSONField(
+        default=dict,
+        help_text=_('Additional data sent with notification')
+    )
+    
+    notification_type = models.CharField(
+        max_length=50,
+        choices=NOTIFICATION_TYPE_CHOICES,
+        default='GENERAL',
+        help_text=_('Type of notification')
+    )
+    
+    # Topic (if topic-based)
+    topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('FCM topic (for topic-based notifications)')
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PENDING',
+        help_text=_('Notification status')
+    )
+    
+    fcm_message_id = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_('FCM message ID')
+    )
+    
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When notification was sent')
+    )
+    
+    error_message = models.TextField(
+        blank=True,
+        help_text=_('Error message if failed')
+    )
+    
+    # Related objects
+    related_object_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_('Type of related object (e.g., "student", "fee_invoice")')
+    )
+    
+    related_object_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_('ID of related object')
+    )
+    
+    class Meta:
+        db_table = 'push_notifications'
+        verbose_name = _('Push Notification')
+        verbose_name_plural = _('Push Notifications')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['notification_type']),
+            models.Index(fields=['sent_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.status}"
+

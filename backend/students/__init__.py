@@ -1,5 +1,5 @@
 """
-Students app for NucleIQ
+Students app for NucleiQ
 Student 360° Golden Record System
 """
 

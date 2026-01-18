@@ -1,7 +1,7 @@
 # Permissions Matrix Feature - Implementation Guide
 
 ## Overview
-This document provides a complete guide to the Role-Based Access Control (RBAC) permissions matrix feature implemented for the NucleIQ School ERP system.
+This document provides a complete guide to the Role-Based Access Control (RBAC) permissions matrix feature implemented for the NucleiQ School ERP system.
 
 ## Features Implemented
 
@@ -330,4 +330,4 @@ For issues or questions:
 
 **Version**: 1.0  
 **Last Updated**: January 4, 2026  
-**Author**: NucleIQ Development Team
+**Author**: NucleiQ Development Team

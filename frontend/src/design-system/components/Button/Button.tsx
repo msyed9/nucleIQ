@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Button Component
+ * NucleiQ Design System - Button Component
  * Accessible, responsive button with multiple variants
  */
 

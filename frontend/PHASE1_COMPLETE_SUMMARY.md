@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Phase 1 has been successfully implemented, providing the foundation for a modern, professional user experience across the NucleIQ ERP system.
+Phase 1 has been successfully implemented, providing the foundation for a modern, professional user experience across the NucleiQ ERP system.
 
 ### What We Built
 

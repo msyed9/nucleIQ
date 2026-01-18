@@ -47,10 +47,12 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.staff',
         label: 'Staff',
         children: [
+            { path: '/staff/my-qr', iconKey: 'qrCode', labelKey: 'nav.my_attendance_qr', label: 'My Attendance QR' },
             { path: '/staff', iconKey: 'list', labelKey: 'nav.staff_list', label: 'Staff List' },
             { path: '/staff/add', iconKey: 'userPlus', labelKey: 'nav.add_staff', label: 'Add Staff' },
             { path: '/staff/documents', iconKey: 'folderOpen', labelKey: 'nav.staff_documents', label: 'Documents' },
             { path: '/staff/attendance', iconKey: 'clipboardCheck', labelKey: 'nav.staff_attendance', label: 'Attendance' },
+            { path: '/staff/qr-scanner', iconKey: 'qrCode', labelKey: 'nav.staff_qr_scanner', label: 'QR Scanner' },
             { path: '/staff/leave', iconKey: 'leaf', labelKey: 'nav.leave_management', label: 'Leave Management' },
             { path: '/staff/health', iconKey: 'award', labelKey: 'nav.health_records', label: 'Health Records' },
             { path: '/staff/training', iconKey: 'bookOpen', labelKey: 'nav.training', label: 'Training' },
@@ -63,9 +65,13 @@ const menuItems: MenuItem[] = [
         label: 'Academics',
         children: [
             { path: '/timetable/builder', iconKey: 'calendarDays', labelKey: 'nav.timetable', label: 'Timetable' },
-            { path: '/assignments', iconKey: 'penTool', labelKey: 'nav.assignments', label: 'Assignments' },
+            { path: '/subjects', iconKey: 'bookOpen', labelKey: 'nav.subjects', label: 'Subjects' },
+            { path: '/syllabus', iconKey: 'list', labelKey: 'nav.syllabus', label: 'Syllabus Progress' },
+            { path: '/homework', iconKey: 'penTool', labelKey: 'nav.homework', label: 'Homework' },
+            { path: '/assignments', iconKey: 'clipboardCheck', labelKey: 'nav.assignments', label: 'Assignments' },
             { path: '/assignments/submit', iconKey: 'fileCheck', labelKey: 'nav.submit_assignment', label: 'Submit Assignment' },
             { path: '/assignments/grade', iconKey: 'clipboardCheck', labelKey: 'nav.grade_assignment', label: 'Grade Assignments' },
+            { path: '/grades', iconKey: 'award', labelKey: 'nav.grades', label: 'Grades & Report Card' },
             { path: '/exams', iconKey: 'fileText', labelKey: 'nav.exams', label: 'Exams' },
             { path: '/exams/question-bank', iconKey: 'bookOpen', labelKey: 'nav.question_bank', label: 'Question Bank' },
             { path: '/exams/learning-outcomes', iconKey: 'award', labelKey: 'nav.learning_outcomes', label: 'Learning Outcomes' },
@@ -107,6 +113,12 @@ const menuItems: MenuItem[] = [
             { path: '/trackers/salah', iconKey: 'sunrise', labelKey: 'nav.salah_tracker', label: 'Salah Tracker' },
             { path: '/trackers/habits', iconKey: 'activity', labelKey: 'nav.habit_tracker', label: 'Habit Tracker' },
         ]
+    },
+    {
+        path: '/cms/website-builder',
+        iconKey: 'globe',
+        labelKey: 'nav.website_builder',
+        label: 'Website Builder'
     },
     {
         iconKey: 'creditCard',
@@ -213,15 +225,7 @@ const menuItems: MenuItem[] = [
             { path: '/notifications/sms', iconKey: 'messageSquare', labelKey: 'nav.sms_messaging', label: 'SMS Messaging' },
         ]
     },
-    {
-        iconKey: 'globe',
-        labelKey: 'nav.website',
-        label: 'Website',
-        children: [
-            { path: '/cms/website-builder', iconKey: 'globe', labelKey: 'nav.website_builder', label: 'Website Builder' },
-            { path: '/cms/templates', iconKey: 'layoutTemplate', labelKey: 'nav.templates', label: 'Templates' },
-        ]
-    },
+
     {
         iconKey: 'barChart',
         labelKey: 'nav.analytics',
@@ -311,7 +315,7 @@ const Sidebar: React.FC = () => {
                     ) : (
                         <LogoIcon size={32} className="sidebar-logo-icon" />
                     )}
-                    <span>{branding?.tenant_name || 'NucleIQ'}</span>
+                    <span>{branding?.tenant_name || 'NucleiQ'}</span>
                 </h1>
             </div>
 

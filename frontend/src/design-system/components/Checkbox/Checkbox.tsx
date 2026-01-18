@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Checkbox Component
+ * NucleiQ Design System - Checkbox Component
  * Accessible checkbox with label and validation
  */
 

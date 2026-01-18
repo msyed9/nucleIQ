@@ -74,7 +74,7 @@
 
 **Action:** Renamed `LoginPage.tsx` to `LoginPage.deprecated.tsx`
 
-**Reason:** `Login.tsx` is the active, redesigned login page using the NucleIQ design system. `LoginPage.tsx` was an older version.
+**Reason:** `Login.tsx` is the active, redesigned login page using the NucleiQ design system. `LoginPage.tsx` was an older version.
 
 ### 3. Utility Functions Centralized ✅
 

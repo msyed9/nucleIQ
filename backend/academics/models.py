@@ -383,3 +383,373 @@ class Submission(TenantAwareModel):
             return 'D'
         else:
             return 'F'
+
+
+class Homework(TenantAwareModel):
+    """
+    Daily homework model for simple tasks.
+    Lighter than assignments, for quick daily tasks.
+    """
+    
+    PRIORITY_CHOICES = [
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+    ]
+    
+    title = models.CharField(
+        max_length=300,
+        help_text=_('Homework title')
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text=_('Homework description')
+    )
+    
+    # Academic Context
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.CASCADE,
+        related_name='homework',
+        help_text=_('Academic year')
+    )
+    
+    subject = models.ForeignKey(
+        'tenants.Subject',
+        on_delete=models.CASCADE,
+        related_name='homework',
+        help_text=_('Subject')
+    )
+    
+    section = models.ForeignKey(
+        'tenants.Section',
+        on_delete=models.CASCADE,
+        related_name='homework',
+        help_text=_('Section/Class')
+    )
+    
+    teacher = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='assigned_homework',
+        help_text=_('Teacher who assigned this')
+    )
+    
+    # Dates
+    assigned_date = models.DateField(
+        default=timezone.now,
+        help_text=_('Date when assigned')
+    )
+    
+    due_date = models.DateField(
+        help_text=_('Due date')
+    )
+    
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='MEDIUM',
+        help_text=_('Priority level')
+    )
+    
+    attachment = models.FileField(
+        upload_to='homework/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text=_('Attachment file')
+    )
+    
+    class Meta:
+        db_table = 'homework'
+        verbose_name = _('Homework')
+        verbose_name_plural = _('Homework')
+        ordering = ['-assigned_date', '-due_date']
+        indexes = [
+            models.Index(fields=['tenant', 'section', 'due_date']),
+            models.Index(fields=['tenant', 'subject', 'assigned_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.section} ({self.due_date})"
+    
+    def is_overdue(self):
+        """Check if homework is past due date."""
+        return timezone.now().date() > self.due_date
+
+
+class HomeworkCompletion(TenantAwareModel):
+    """Track student homework completion."""
+    
+    homework = models.ForeignKey(
+        Homework,
+        on_delete=models.CASCADE,
+        related_name='completions',
+        help_text=_('The homework')
+    )
+    
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='homework_completions',
+        help_text=_('Student')
+    )
+    
+    is_completed = models.BooleanField(
+        default=False,
+        help_text=_('Whether completed')
+    )
+    
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Completion timestamp')
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text=_('Student notes')
+    )
+    
+    class Meta:
+        db_table = 'homework_completions'
+        verbose_name = _('Homework Completion')
+        verbose_name_plural = _('Homework Completions')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['homework', 'student'],
+                name='unique_homework_completion_per_student'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'student', 'is_completed']),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.is_completed else "✗"
+        return f"{self.student} - {self.homework.title} [{status}]"
+    
+    def mark_complete(self):
+        """Mark homework as completed."""
+        self.is_completed = True
+        self.completed_at = timezone.now()
+        self.save()
+
+
+class Syllabus(TenantAwareModel):
+    """
+    Subject syllabus structure.
+    Defines chapters and topics for a subject in a grade level.
+    """
+    
+    subject = models.ForeignKey(
+        'tenants.Subject',
+        on_delete=models.CASCADE,
+        related_name='syllabi',
+        help_text=_('Subject')
+    )
+    
+    grade_level = models.ForeignKey(
+        'tenants.GradeLevel',
+        on_delete=models.CASCADE,
+        related_name='syllabi',
+        help_text=_('Grade level')
+    )
+    
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.CASCADE,
+        related_name='syllabi',
+        help_text=_('Academic year')
+    )
+    
+    name = models.CharField(
+        max_length=200,
+        help_text=_('Syllabus name')
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text=_('Syllabus description')
+    )
+    
+    total_hours = models.IntegerField(
+        default=0,
+        help_text=_('Total teaching hours')
+    )
+    
+    class Meta:
+        db_table = 'syllabus'
+        verbose_name = _('Syllabus')
+        verbose_name_plural = _('Syllabi')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'subject', 'grade_level', 'academic_year'],
+                name='unique_syllabus_per_subject_grade_year'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'subject', 'grade_level']),
+        ]
+    
+    def __str__(self):
+        return f"{self.subject.name} - {self.grade_level.name} ({self.academic_year})"
+    
+    def get_completion_percentage(self, section=None):
+        """Calculate completion percentage for syllabus."""
+        total_chapters = self.chapters.filter(is_deleted=False).count()
+        if total_chapters == 0:
+            return 0
+        
+        completed = self.chapters.filter(is_deleted=False, is_completed=True).count()
+        return round((completed / total_chapters) * 100, 2)
+
+
+class Chapter(TenantAwareModel):
+    """
+    Chapter in a syllabus.
+    """
+    
+    syllabus = models.ForeignKey(
+        Syllabus,
+        on_delete=models.CASCADE,
+        related_name='chapters',
+        help_text=_('Parent syllabus')
+    )
+    
+    name = models.CharField(
+        max_length=300,
+        help_text=_('Chapter name')
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text=_('Chapter description')
+    )
+    
+    order = models.IntegerField(
+        default=0,
+        help_text=_('Display order')
+    )
+    
+    estimated_hours = models.IntegerField(
+        default=1,
+        help_text=_('Estimated teaching hours')
+    )
+    
+    topics = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_('List of topics in this chapter')
+    )
+    
+    is_completed = models.BooleanField(
+        default=False,
+        help_text=_('Whether chapter is completed')
+    )
+    
+    completed_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=_('Date when completed')
+    )
+    
+    completed_by = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completed_chapters',
+        help_text=_('Teacher who marked this complete')
+    )
+    
+    class Meta:
+        db_table = 'syllabus_chapters'
+        verbose_name = _('Chapter')
+        verbose_name_plural = _('Chapters')
+        ordering = ['syllabus', 'order', 'name']
+        indexes = [
+            models.Index(fields=['tenant', 'syllabus', 'is_completed']),
+        ]
+    
+    def __str__(self):
+        return f"{self.order}. {self.name}"
+    
+    def mark_complete(self, teacher=None):
+        """Mark chapter as completed."""
+        self.is_completed = True
+        self.completed_date = timezone.now().date()
+        self.completed_by = teacher
+        self.save()
+
+
+class SyllabusProgress(TenantAwareModel):
+    """
+    Track syllabus progress per section.
+    Teachers update this as they cover material.
+    """
+    
+    syllabus = models.ForeignKey(
+        Syllabus,
+        on_delete=models.CASCADE,
+        related_name='progress_records',
+        help_text=_('Syllabus')
+    )
+    
+    section = models.ForeignKey(
+        'tenants.Section',
+        on_delete=models.CASCADE,
+        related_name='syllabus_progress',
+        help_text=_('Section')
+    )
+    
+    chapter = models.ForeignKey(
+        Chapter,
+        on_delete=models.CASCADE,
+        related_name='progress_records',
+        help_text=_('Chapter')
+    )
+    
+    is_completed = models.BooleanField(
+        default=False,
+        help_text=_('Whether completed for this section')
+    )
+    
+    completed_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=_('Date when completed')
+    )
+    
+    teacher = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='syllabus_progress_updates',
+        help_text=_('Teacher who updated')
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text=_('Teaching notes')
+    )
+    
+    class Meta:
+        db_table = 'syllabus_progress'
+        verbose_name = _('Syllabus Progress')
+        verbose_name_plural = _('Syllabus Progress Records')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['syllabus', 'section', 'chapter'],
+                name='unique_progress_per_section_chapter'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'section', 'is_completed']),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.is_completed else "✗"
+        return f"{self.section} - {self.chapter.name} [{status}]"
+

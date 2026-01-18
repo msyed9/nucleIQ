@@ -1,4 +1,4 @@
-# NucleIQ Production Deployment Pipeline
+# NucleiQ Production Deployment Pipeline
 # Deploys to Azure Container Apps on push to main/production branch
 
 name: Deploy to Production

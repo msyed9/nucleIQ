@@ -50,9 +50,9 @@ RUN npm run build
 FROM nginx:alpine as production
 
 # Labels for container metadata
-LABEL org.opencontainers.image.title="NucleIQ Frontend" \
-    org.opencontainers.image.description="React SPA for NucleIQ Multi-Tenant SaaS" \
-    org.opencontainers.image.vendor="NucleIQ"
+LABEL org.opencontainers.image.title="NucleiQ Frontend" \
+    org.opencontainers.image.description="React SPA for NucleiQ Multi-Tenant SaaS" \
+    org.opencontainers.image.vendor="NucleiQ"
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

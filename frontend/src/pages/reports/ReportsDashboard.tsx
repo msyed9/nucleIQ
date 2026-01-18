@@ -1,5 +1,5 @@
 /**
- * Reports Dashboard - Redesigned with NucleIQ Design System
+ * Reports Dashboard - Redesigned with NucleiQ Design System
  * Modern reports interface with export functionality
  */
 

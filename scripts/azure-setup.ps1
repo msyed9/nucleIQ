@@ -1,7 +1,7 @@
 # PowerShell version of Azure Infrastructure Setup
 # For Windows users who prefer PowerShell over Bash
 # =============================================================================
-# NucleIQ Azure Infrastructure Setup Script (PowerShell)
+# NucleiQ Azure Infrastructure Setup Script (PowerShell)
 # Creates all required Azure resources for production deployment
 # 
 # Prerequisites:
@@ -31,7 +31,7 @@ function Write-Warning { param($Message) Write-Host "[WARNING] $Message" -Foregr
 function Write-Error { param($Message) Write-Host "[ERROR] $Message" -ForegroundColor Red }
 
 Write-Host "`n=============================================="
-Write-Host "NucleIQ Azure Infrastructure Setup"
+Write-Host "NucleiQ Azure Infrastructure Setup"
 Write-Host "==============================================`n"
 
 # =============================================================================
@@ -41,7 +41,7 @@ Write-Info "Creating Resource Group: $RESOURCE_GROUP in $LOCATION..."
 az group create `
     --name $RESOURCE_GROUP `
     --location $LOCATION `
-    --tags Environment=Production Project=NucleIQ
+    --tags Environment=Production Project=NucleiQ
 
 Write-Success "Resource Group created!"
 

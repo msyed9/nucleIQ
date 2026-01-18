@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Card Component
+ * NucleiQ Design System - Card Component
  * Flexible container component with elevation and hover effects
  */
 

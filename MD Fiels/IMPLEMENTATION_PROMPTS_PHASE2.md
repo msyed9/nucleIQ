@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 2: Library Management System
+#  NucleiQ Implementation Prompts - Phase 2: Library Management System
 
 **Purpose:** Complete library module with all CRUD operations and advanced features
 
@@ -209,7 +209,7 @@
      - Days borrowed
      - Fine amount (if overdue)
    - Fine calculation:
-     - Auto-calculate based on overdue days × fine_per_day
+     - Auto-calculate based on overdue days ï¿½ fine_per_day
      - Show fine breakdown
      - Option to waive fine (with reason and admin approval)
      - Record fine payment if collected

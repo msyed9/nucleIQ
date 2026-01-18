@@ -82,7 +82,7 @@ export const ForgotPasswordPage: React.FC = () => {
                         />
                     ) : (
                         <h1 className="text-4xl font-bold" style={{ color: branding?.primary_color || '#1976D2' }}>
-                            NucleIQ
+                            NucleiQ
                         </h1>
                     )}
                     <h2 className="mt-6 text-3xl font-extrabold text-foreground">

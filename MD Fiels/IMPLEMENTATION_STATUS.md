@@ -41,7 +41,7 @@ import { useTenantBranding } from '../../contexts/TenantBrandingContext';
 // Inside component:
 const { branding, loading } = useTenantBranding();
 
-// Replace the hardcoded "NucleIQ" header:
+// Replace the hardcoded "NucleiQ" header:
 <div className="sidebar-header">
     <h1 className="sidebar-logo">
         {branding?.logo_url ? (
@@ -49,7 +49,7 @@ const { branding, loading } = useTenantBranding();
         ) : (
             <GraduationCap size={32} style={{ color: 'var(--color-primary-600)' }} />
         )}
-        <span>{branding?.tenant_name || 'NucleIQ'}</span>
+        <span>{branding?.tenant_name || 'NucleiQ'}</span>
     </h1>
 </div>
 ```
@@ -107,7 +107,7 @@ const { branding, loading } = useTenantBranding();
 
 ## Next Steps for User
 
-1. **Update Sidebar.tsx** - Replace "NucleIQ" with tenant branding
+1. **Update Sidebar.tsx** - Replace "NucleiQ" with tenant branding
 2. **Create TenantBranding.tsx** - Settings page for branding management
 3. **Add route** for branding page
 4**. Test** the complete flow
@@ -116,6 +116,6 @@ const { branding, loading } = useTenantBranding();
 ## Notes
 
 - All changes maintain backward compatibility
-- Tenant branding falls back to default "NucleIQ" if not configured
+- Tenant branding falls back to default "NucleiQ" if not configured
 - Platform admin access (`localhost:8000/`) is now explicitly secured
 - No new models created - using existing `User(is_superuser=True)` for platform owners

@@ -1,5 +1,5 @@
 /**
- * Mark Attendance - Redesigned with NucleIQ Design System
+ * Mark Attendance - Redesigned with NucleiQ Design System
  * Bulk attendance marking with search, filters, and quick actions
  */
 
@@ -96,18 +96,18 @@ const MarkAttendance: React.FC = () => {
             setLoading(true);
             let url = '/students/students/';
             const params: string[] = [];
-            
+
             if (classFilter) {
                 params.push(`class_name=${classFilter}`);
             }
             if (sectionFilter) {
                 params.push(`section=${sectionFilter}`);
             }
-            
+
             if (params.length > 0) {
                 url += `?${params.join('&')}`;
             }
-            
+
             const response = await api.get(url);
             const studentList = response.data.results || response.data;
             setStudents(studentList);
@@ -166,10 +166,10 @@ const MarkAttendance: React.FC = () => {
         // Search filter
         const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.admission_number.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         // Status filter
         const matchesStatus = !statusFilter || attendance[student.id] === statusFilter;
-        
+
         return matchesSearch && matchesStatus;
     });
 
@@ -315,7 +315,7 @@ const MarkAttendance: React.FC = () => {
                         Filters
                     </h3>
                 </div>
-                
+
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -424,7 +424,7 @@ const MarkAttendance: React.FC = () => {
                         </Button>
                     </div>
                 )}
-                
+
                 {/* Search and Quick Actions */}
                 <div style={{
                     display: 'flex',

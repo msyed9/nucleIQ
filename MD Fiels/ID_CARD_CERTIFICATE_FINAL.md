@@ -45,7 +45,7 @@ docker-compose exec frontend npm install qrcode html2canvas
 - ✅ Modal-based editor
 - ✅ 10 dynamic placeholders with click-to-insert
 - ✅ Template categories and status management
-- ✅ Modern UI with NucleIQ design system
+- ✅ Modern UI with NucleiQ design system
 
 **ID Card Designer (`/idcards/designer`)**
 - ✅ Real QR code generation (scannable)
@@ -157,4 +157,4 @@ Both pages are production-ready and can be used to:
 5. Export designs for printing
 6. Save designs to backend
 
-The system is fully integrated with the NucleIQ design system and follows all best practices!
+The system is fully integrated with the NucleiQ design system and follows all best practices!

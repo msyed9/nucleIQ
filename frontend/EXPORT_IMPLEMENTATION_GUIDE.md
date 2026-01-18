@@ -609,4 +609,4 @@ For issues or questions:
 ---
 
 **Last Updated:** January 4, 2026  
-**Maintained By:** NucleIQ Development Team
+**Maintained By:** NucleiQ Development Team

@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Select Component
+ * NucleiQ Design System - Select Component
  * Accessible dropdown select with search
  */
 

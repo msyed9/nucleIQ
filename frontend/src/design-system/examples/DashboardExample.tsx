@@ -1,5 +1,5 @@
 /**
- * Example Dashboard using NucleIQ Design System
+ * Example Dashboard using NucleiQ Design System
  * Demonstrates usage of KPI cards, buttons, and cards
  */
 

@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Toast Notification Component
+ * NucleiQ Design System - Toast Notification Component
  * Accessible, animated toast notifications for user feedback
  */
 

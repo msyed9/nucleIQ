@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Toast Hook
+ * NucleiQ Design System - Toast Hook
  * React hook for managing toast notifications
  */
 

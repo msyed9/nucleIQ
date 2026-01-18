@@ -1,5 +1,5 @@
 """
-User Models for NucleIQ
+User Models for NucleiQ
 Implements custom User model with tenant awareness, UserPreference, and RBAC models.
 """
 

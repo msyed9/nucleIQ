@@ -1,7 +1,7 @@
-# 🌌 GEMINI.MD - NucleIQ Development Constitution
+# 🌌 GEMINI.MD - NucleiQ Development Constitution
 ## Common Guiding Principles & System Standards
 
-**Project**: NucleIQ (School Management SaaS)
+**Project**: NucleiQ (School Management SaaS)
 **Target**: Premium, Multi-Tenant Educational Ecosystem
 **Tech Stack**: React 18 (Shadcn UI) | Django 4.2 (DRF) | PostgreSQL (RLS) | Redis
 
@@ -77,5 +77,5 @@ When generating code or features:
 1.  **Container Enforcement**: Any command to be executed (migrations, tests, management commands) **MUST** be done inside the Docker container.
 
 
-**This file serves as the Single Source of Truth for the "Spirit" of the NucleIQ codebase.**
+**This file serves as the Single Source of Truth for the "Spirit" of the NucleiQ codebase.**
 Refer to this whenever making architectural or design decisions.

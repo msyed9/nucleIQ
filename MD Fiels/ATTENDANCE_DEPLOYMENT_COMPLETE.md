@@ -464,5 +464,5 @@ See **Deployment Checklist** section above.
 
 ---
 
-** NucleIQ School Management System**
+** NucleiQ School Management System**
 *Attendance Module - Mobile Capture & Reporting*

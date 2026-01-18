@@ -1,4 +1,4 @@
-# NucleIQ Design System - Visual Guide
+# NucleiQ Design System - Visual Guide
 
 ## 🎨 Color Palette
 

@@ -1,5 +1,5 @@
 """
-Core Permissions Module for NucleIQ
+Core Permissions Module for NucleiQ
 Provides custom permission classes and utility functions for RBAC.
 """
 

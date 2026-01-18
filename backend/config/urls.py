@@ -1,5 +1,5 @@
 """
-URL Configuration for NucleIQ
+URL Configuration for NucleiQ
 """
 
 from django.contrib import admin
@@ -152,6 +152,6 @@ if settings.DEBUG:
         ] + urlpatterns
 
 # Customize admin site
-admin.site.site_header = 'NucleIQ Administration'
-admin.site.site_title = 'NucleIQ Admin'
-admin.site.index_title = 'Welcome to NucleIQ Administration'
+admin.site.site_header = 'NucleiQ Administration'
+admin.site.site_title = 'NucleiQ Admin'
+admin.site.index_title = 'Welcome to NucleiQ Administration'

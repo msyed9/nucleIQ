@@ -1,4 +1,4 @@
-# NucleIQ Design System - Quick Start Guide
+# NucleiQ Design System - Quick Start Guide
 
 ## 🚀 Getting Started in 5 Minutes
 

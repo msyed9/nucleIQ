@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 6: Staff Management Enhancement
+#  NucleiQ Implementation Prompts - Phase 6: Staff Management Enhancement
 
 **Purpose:** Enhance staff module with documents, attendance, leave, and health tracking
 

@@ -1,11 +1,10 @@
 /**
  * Website Builder - Premium Visual Editor for School Websites
- * Complete redesign with template gallery, drag-and-drop, and live preview
+ * Backend-driven template system with drag-and-drop and live preview
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './WebsiteBuilder.css';
-import { WEBSITE_TEMPLATES, TEMPLATE_CATEGORIES, WebsiteTemplate, TemplateSection, TemplatePage } from './websiteTemplates';
 import api from '../../services/api';
 
 // Types
@@ -20,709 +19,701 @@ interface Section {
   text_color?: string;
   background_image?: string;
   padding?: string;
-  page?: string;
 }
 
 interface Page {
-  id: string;
   title: string;
   slug: string;
   page_type: string;
   sections: Section[];
 }
 
-interface Website {
-  id: string;
-  site_title: string;
-  subdomain: string;
-  is_published: boolean;
-  theme?: any;
-  primary_color?: string;
-  font_family?: string;
+interface WebsiteTemplate {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  thumbnail: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  font_family: string;
+  structure?: { pages: Page[] };
+  is_system: boolean;
+  is_custom: boolean;
+  pages_count: number;
 }
 
-// Component Icons
-const SECTION_TYPES = [
-  { type: 'HERO', label: 'Hero Banner', icon: '🎯', desc: 'Full-width header with CTA' },
-  { type: 'FEATURES', label: 'Features Grid', icon: '✨', desc: '4-column feature cards' },
-  { type: 'STATS', label: 'Statistics', icon: '📊', desc: 'Key numbers display' },
-  { type: 'PRINCIPAL_MESSAGE', label: 'Principal Message', icon: '👨‍🏫', desc: 'Quote with image' },
-  { type: 'GALLERY', label: 'Photo Gallery', icon: '📸', desc: 'Image grid display' },
-  { type: 'TESTIMONIALS', label: 'Testimonials', icon: '💬', desc: 'Parent/student quotes' },
-  { type: 'CTA', label: 'Call to Action', icon: '🚀', desc: 'Action banner' },
-  { type: 'NEWS', label: 'News Feed', icon: '📰', desc: 'Latest updates' },
-  { type: 'EVENTS', label: 'Events', icon: '📅', desc: 'Upcoming events' },
-  { type: 'FACULTY', label: 'Faculty Grid', icon: '👥', desc: 'Teacher profiles' },
-  { type: 'CONTACT', label: 'Contact Form', icon: '📧', desc: 'Get in touch' },
-  { type: 'MAP', label: 'Location Map', icon: '📍', desc: 'Google Maps embed' },
-  { type: 'TEXT_BLOCK', label: 'Text Content', icon: '📝', desc: 'Rich text area' },
-  { type: 'VIDEO', label: 'Video Section', icon: '🎬', desc: 'YouTube/Vimeo embed' },
-  { type: 'FAQ', label: 'FAQ Accordion', icon: '❓', desc: 'Questions & answers' },
-];
+interface WebsiteInstance {
+  id: number;
+  name: string;
+  source_template: number;
+  source_template_name: string;
+  subdomain: string;
+  domain: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  font_family: string;
+  custom_structure: { pages: Page[] };
+  effective_structure: { pages: Page[] };
+  effective_theme: any;
+  status: string;
+  is_published: boolean;
+  meta_title: string;
+  meta_description: string;
+}
 
+interface SectionType {
+  type: string;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+// Main Component
 const WebsiteBuilder: React.FC = () => {
   // State
-  const [step, setStep] = useState<'templates' | 'editor'>('templates');
-  const [website, setWebsite] = useState<Website | null>(null);
-  const [pages, setPages] = useState<Page[]>([]);
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null);
-  const [selectedSection, setSelectedSection] = useState<Section | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null);
-  const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<'gallery' | 'editor' | 'upload'>('gallery');
+  const [templates, setTemplates] = useState<WebsiteTemplate[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [sectionTypes, setSectionTypes] = useState<SectionType[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [instances, setInstances] = useState<WebsiteInstance[]>([]);
+  const [currentInstance, setCurrentInstance] = useState<WebsiteInstance | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [templateCategory, setTemplateCategory] = useState('all');
-  const [templateSearch, setTemplateSearch] = useState('');
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddSection, setShowAddSection] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [undoStack, setUndoStack] = useState<Page[][]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
 
-  // Fetch existing website on mount
+  // Refs
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Load data on mount
   useEffect(() => {
-    fetchWebsiteData();
+    loadInitialData();
   }, []);
 
-  const fetchWebsiteData = async () => {
+  const loadInitialData = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/cms/websites/');
-      const data = Array.isArray(response.data) ? response.data : response.data.results || [];
-      if (data.length > 0) {
-        const site = data[0];
-        setWebsite({
-          ...site,
-          site_title: site.name,
-          subdomain: site.domain
-        });
-        // Fetch pages
-        const pagesRes = await api.get(`/cms/pages/?website=${data[0].id}`);
-        const pagesData = Array.isArray(pagesRes.data) ? pagesRes.data : pagesRes.data.results || [];
-        setPages(pagesData);
-        if (pagesData.length > 0) {
-          setSelectedPage(pagesData[0]);
-          setStep('editor');
-        }
-      }
+      const [templatesRes, categoriesRes, sectionTypesRes, instancesRes] = await Promise.all([
+        api.get('/cms/templates/'),
+        api.get('/cms/templates/categories/'),
+        api.get('/cms/templates/section_types/'),
+        api.get('/cms/instances/')
+      ]);
+
+      setTemplates(templatesRes.data);
+      setCategories(categoriesRes.data);
+      setSectionTypes(sectionTypesRes.data);
+      setInstances(instancesRes.data);
     } catch (error) {
-      console.error('Error fetching website:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Template filtering
-  const filteredTemplates = WEBSITE_TEMPLATES.filter(t => {
-    const matchesCategory = templateCategory === 'all' || t.category === templateCategory;
-    const matchesSearch = t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
-      t.description.toLowerCase().includes(templateSearch.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Filter templates by category
+  const filteredTemplates = selectedCategory === 'all'
+    ? templates
+    : templates.filter(t => t.category === selectedCategory);
 
-  // Apply template
-  const applyTemplate = async (template: WebsiteTemplate) => {
-    setLoading(true);
+  // Fork a template to create instance
+  const handleForkTemplate = async (template: WebsiteTemplate) => {
     try {
-      // Create or update website
-      let siteId = website?.id;
-      if (!siteId) {
-        const subdomain = template.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30);
-        const siteRes = await api.post('/cms/websites/', {
-          name: template.name, // Fixed field name
-          domain: `${subdomain}-${Math.floor(Math.random() * 1000)}`,
-          primary_color: template.primaryColor,
-          font_family: template.fontFamily
-        });
-        siteId = siteRes.data.id;
-        setWebsite({ ...siteRes.data, site_title: siteRes.data.name, subdomain: siteRes.data.domain });
-      }
-
-      // Create pages and sections from template
-      const createdPages: Page[] = [];
-      for (const templatePage of template.pages) {
-        // Handle slug conflict
-        let currentSlug = templatePage.slug;
-        let pageRes;
-
-        try {
-          pageRes = await api.post('/cms/pages/', {
-            website: siteId,
-            title: templatePage.title,
-            slug: currentSlug,
-            page_type: templatePage.page_type,
-            menu_order: createdPages.length // Fixed field name
-          });
-        } catch (err: any) {
-          if (err.response?.status === 400) {
-            // Try unique slug
-            currentSlug = `${templatePage.slug}-${Math.floor(Math.random() * 1000)}`;
-            pageRes = await api.post('/cms/pages/', {
-              website: siteId,
-              title: templatePage.title,
-              slug: currentSlug,
-              page_type: templatePage.page_type,
-              menu_order: createdPages.length
-            });
-          } else {
-            throw err;
-          }
-        }
-
-        const pageId = pageRes.data.id;
-        const createdSections: Section[] = [];
-
-        for (const templateSection of templatePage.sections) {
-          const sectionRes = await api.post('/cms/sections/', {
-            page: pageId,
-            section_type: templateSection.component_type, // Fixed field name
-            title: templateSection.title,
-            content: templateSection.content,
-            order: templateSection.order,
-            is_active: true,
-            background_color: templateSection.background_color,
-            text_color: templateSection.text_color
-          });
-          createdSections.push(sectionRes.data);
-        }
-
-        createdPages.push({ ...pageRes.data, sections: createdSections });
-      }
-
-      setPages(createdPages);
-      if (createdPages.length > 0) {
-        setSelectedPage(createdPages[0]);
-      }
-      setSelectedTemplate(template);
-      setStep('editor');
-    } catch (error) {
-      console.error('Error applying template:', error);
-      alert('Failed to apply template. Please check console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Section management
-  const addSection = async (type: string) => {
-    if (!selectedPage) return;
-
-    const sectionConfig = SECTION_TYPES.find(s => s.type === type);
-    const newSection: Partial<Section> = {
-      page: selectedPage.id,
-      component_type: type,
-      title: sectionConfig?.label || 'New Section',
-      content: getDefaultContent(type),
-      order: selectedPage.sections.length,
-      is_visible: true
-    };
-
-    try {
-      const response = await api.post('/cms/sections/', newSection);
-      const updatedSections = [...selectedPage.sections, response.data];
-      const updatedPage = { ...selectedPage, sections: updatedSections };
-      setSelectedPage(updatedPage);
-      setPages(pages.map(p => p.id === selectedPage.id ? updatedPage : p));
-      setSelectedSection(response.data);
-      setShowAddSection(false);
-    } catch (error) {
-      console.error('Error adding section:', error);
-    }
-  };
-
-  const updateSection = async (sectionId: string, updates: Partial<Section>) => {
-    if (!selectedPage) return;
-
-    // Optimistic update
-    const updatedSections = selectedPage.sections.map(s =>
-      s.id === sectionId ? { ...s, ...updates } : s
-    );
-    const updatedPage = { ...selectedPage, sections: updatedSections };
-    setSelectedPage(updatedPage);
-    if (selectedSection?.id === sectionId) {
-      setSelectedSection({ ...selectedSection, ...updates });
-    }
-
-    try {
-      await api.patch(`/cms/sections/${sectionId}/`, updates);
-    } catch (error) {
-      console.error('Error updating section:', error);
-    }
-  };
-
-  const deleteSection = async (sectionId: string) => {
-    if (!selectedPage || !confirm('Delete this section?')) return;
-
-    try {
-      await api.delete(`/cms/sections/${sectionId}/`);
-      const updatedSections = selectedPage.sections.filter(s => s.id !== sectionId);
-      const updatedPage = { ...selectedPage, sections: updatedSections };
-      setSelectedPage(updatedPage);
-      setPages(pages.map(p => p.id === selectedPage.id ? updatedPage : p));
-      if (selectedSection?.id === sectionId) {
-        setSelectedSection(null);
-      }
-    } catch (error) {
-      console.error('Error deleting section:', error);
-    }
-  };
-
-  const moveSection = async (sectionId: string, direction: 'up' | 'down') => {
-    if (!selectedPage) return;
-
-    const sections = [...selectedPage.sections];
-    const index = sections.findIndex(s => s.id === sectionId);
-    if (index === -1) return;
-
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= sections.length) return;
-
-    [sections[index], sections[newIndex]] = [sections[newIndex], sections[index]];
-    sections.forEach((s, i) => s.order = i);
-
-    const updatedPage = { ...selectedPage, sections };
-    setSelectedPage(updatedPage);
-
-    // Persist order changes
-    try {
-      await Promise.all(sections.map(s =>
-        api.patch(`/cms/sections/${s.id}/`, { order: s.order })
-      ));
-    } catch (error) {
-      console.error('Error reordering sections:', error);
-    }
-  };
-
-  const duplicateSection = async (section: Section) => {
-    if (!selectedPage) return;
-
-    const newSection = {
-      ...section,
-      id: undefined,
-      title: `${section.title} (Copy)`,
-      order: selectedPage.sections.length
-    };
-
-    try {
-      const response = await api.post('/cms/sections/', newSection);
-      const updatedSections = [...selectedPage.sections, response.data];
-      const updatedPage = { ...selectedPage, sections: updatedSections };
-      setSelectedPage(updatedPage);
-      setPages(pages.map(p => p.id === selectedPage.id ? updatedPage : p));
-    } catch (error) {
-      console.error('Error duplicating section:', error);
-    }
-  };
-
-  // Page management
-  const addPage = async () => {
-    if (!website) return;
-    const title = prompt('Enter page title:');
-    if (!title) return;
-
-    try {
-      const response = await api.post('/cms/pages/', {
-        website: website.id,
-        title,
-        slug: title.toLowerCase().replace(/\s+/g, '-'),
-        page_type: 'CUSTOM',
-        order: pages.length
+      setLoading(true);
+      const response = await api.post(`/cms/templates/${template.id}/fork/`, {
+        name: `${template.name} - My Website`
       });
-      setPages([...pages, { ...response.data, sections: [] }]);
+
+      setCurrentInstance(response.data);
+      setCurrentPageIndex(0);
+      setSelectedSectionIndex(null);
+      setView('editor');
+
+      // Refresh instances list
+      const instancesRes = await api.get('/cms/instances/');
+      setInstances(instancesRes.data);
     } catch (error) {
-      console.error('Error adding page:', error);
+      console.error('Failed to fork template:', error);
+      alert('Failed to create website from template');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Publish
-  const handlePublish = async () => {
-    if (!website) return;
+  // Load existing instance for editing
+  const handleEditInstance = async (instance: WebsiteInstance) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/cms/instances/${instance.id}/`);
+      setCurrentInstance(response.data);
+      setCurrentPageIndex(0);
+      setSelectedSectionIndex(null);
+      setView('editor');
+    } catch (error) {
+      console.error('Failed to load instance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get current page
+  const getCurrentPage = (): Page | null => {
+    if (!currentInstance) return null;
+    const structure = currentInstance.custom_structure || currentInstance.effective_structure;
+    return structure?.pages?.[currentPageIndex] || null;
+  };
+
+  // Update section
+  const handleUpdateSection = async (sectionIndex: number, updates: Partial<Section>) => {
+    if (!currentInstance) return;
+
     setSaving(true);
     try {
-      await api.post(`/cms/websites/${website.id}/publish/`);
-      setWebsite({ ...website, is_published: true });
-      alert('🎉 Website published successfully!');
+      const response = await api.post(`/cms/instances/${currentInstance.id}/update_section/`, {
+        page_index: currentPageIndex,
+        section_index: sectionIndex,
+        updates
+      });
+      setCurrentInstance(response.data);
     } catch (error) {
-      console.error('Error publishing:', error);
-      alert('Failed to publish. Please try again.');
+      console.error('Failed to update section:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  // Default content generator
+  // Add section
+  const handleAddSection = async (sectionType: string) => {
+    if (!currentInstance) return;
+
+    setSaving(true);
+    try {
+      const response = await api.post(`/cms/instances/${currentInstance.id}/add_section/`, {
+        page_index: currentPageIndex,
+        section_type: sectionType,
+        title: `New ${sectionType} Section`,
+        content: getDefaultContent(sectionType)
+      });
+      setCurrentInstance(response.data);
+      setShowAddSection(false);
+    } catch (error) {
+      console.error('Failed to add section:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete section
+  const handleDeleteSection = async (sectionIndex: number) => {
+    if (!currentInstance || !confirm('Delete this section?')) return;
+
+    setSaving(true);
+    try {
+      const response = await api.post(`/cms/instances/${currentInstance.id}/delete_section/`, {
+        page_index: currentPageIndex,
+        section_index: sectionIndex
+      });
+      setCurrentInstance(response.data);
+      setSelectedSectionIndex(null);
+    } catch (error) {
+      console.error('Failed to delete section:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Move section (drag and drop)
+  const handleMoveSection = async (fromIndex: number, toIndex: number) => {
+    if (!currentInstance || fromIndex === toIndex) return;
+
+    const page = getCurrentPage();
+    if (!page) return;
+
+    // Calculate new order
+    const newOrder = page.sections.map((_, i) => i);
+    const [removed] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, removed);
+
+    setSaving(true);
+    try {
+      const response = await api.post(`/cms/instances/${currentInstance.id}/reorder_sections/`, {
+        page_index: currentPageIndex,
+        section_order: newOrder
+      });
+      setCurrentInstance(response.data);
+    } catch (error) {
+      console.error('Failed to reorder sections:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Add page
+  const handleAddPage = async () => {
+    if (!currentInstance) return;
+
+    const title = prompt('Enter page title:');
+    if (!title) return;
+
+    const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    setSaving(true);
+    try {
+      const response = await api.post(`/cms/instances/${currentInstance.id}/add_page/`, {
+        title,
+        slug,
+        page_type: 'CUSTOM',
+        sections: [{
+          id: `section_${Date.now()}`,
+          component_type: 'PAGE_HEADER',
+          title: 'Page Header',
+          content: { heading: title, breadcrumb: `Home > ${title}` },
+          order: 0,
+          is_visible: true
+        }]
+      });
+      setCurrentInstance(response.data);
+      setCurrentPageIndex(response.data.custom_structure.pages.length - 1);
+    } catch (error) {
+      console.error('Failed to add page:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete page
+  const handleDeletePage = async (pageIndex: number) => {
+    if (!currentInstance || !confirm('Delete this page and all its sections?')) return;
+
+    setSaving(true);
+    try {
+      const response = await api.post(`/cms/instances/${currentInstance.id}/delete_page/`, {
+        page_index: pageIndex
+      });
+      setCurrentInstance(response.data);
+      if (currentPageIndex >= pageIndex && currentPageIndex > 0) {
+        setCurrentPageIndex(currentPageIndex - 1);
+      }
+    } catch (error) {
+      console.error('Failed to delete page:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Publish/Unpublish
+  const handlePublish = async () => {
+    if (!currentInstance) return;
+
+    setSaving(true);
+    try {
+      const endpoint = currentInstance.is_published ? 'unpublish' : 'publish';
+      const response = await api.post(`/cms/instances/${currentInstance.id}/${endpoint}/`);
+      setCurrentInstance({ ...currentInstance, is_published: !currentInstance.is_published });
+    } catch (error) {
+      console.error('Failed to publish:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Update theme
+  const handleUpdateTheme = async (updates: any) => {
+    if (!currentInstance) return;
+
+    setSaving(true);
+    try {
+      const response = await api.patch(`/cms/instances/${currentInstance.id}/update_theme/`, updates);
+      setCurrentInstance(response.data);
+    } catch (error) {
+      console.error('Failed to update theme:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Upload custom template
+  const handleUploadTemplate = async (templateData: any) => {
+    try {
+      setSaving(true);
+      await api.post('/cms/templates/upload/', templateData);
+      await loadInitialData();
+      setShowUploadModal(false);
+      alert('Template uploaded successfully!');
+    } catch (error) {
+      console.error('Failed to upload template:', error);
+      alert('Failed to upload template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Default content for new sections
   const getDefaultContent = (type: string) => {
     const defaults: Record<string, any> = {
       HERO: { heading: 'Welcome to Our School', subheading: 'Excellence in Education', buttonText: 'Learn More', buttonLink: '/about' },
-      FEATURES: { heading: 'Why Choose Us', features: [{ icon: '🎓', title: 'Feature 1', description: 'Description' }] },
+      FEATURES: { heading: 'Our Features', features: [{ icon: '⭐', title: 'Feature 1', description: 'Description' }] },
       STATS: { stats: [{ value: '100+', label: 'Students' }] },
-      PRINCIPAL_MESSAGE: { name: 'Principal Name', message: 'Welcome message...', designation: 'Principal' },
-      GALLERY: { heading: 'Photo Gallery', images: [] },
-      TESTIMONIALS: { heading: 'What Parents Say', testimonials: [] },
-      CTA: { heading: 'Get Started Today', buttonText: 'Apply Now', buttonLink: '/apply' },
-      NEWS: { heading: 'Latest News' },
-      EVENTS: { heading: 'Upcoming Events' },
-      FACULTY: { heading: 'Our Faculty' },
-      CONTACT: { address: 'School Address', phone: '+1234567890', email: 'info@school.edu' },
+      TESTIMONIALS: { heading: 'What People Say', testimonials: [{ name: 'John', quote: 'Great school!', role: 'Parent' }] },
+      CONTACT: { address: 'Your Address', phone: '+1234567890', email: 'info@school.com' },
+      CTA: { heading: 'Get Started', subheading: 'Join us today', buttonText: 'Apply Now', buttonLink: '/apply' },
+      PAGE_HEADER: { heading: 'Page Title', breadcrumb: 'Home > Page' },
       TEXT_BLOCK: { text: 'Enter your content here...' },
-      VIDEO: { heading: 'Watch Our Story', videoUrl: '' },
-      FAQ: { heading: 'Frequently Asked Questions', items: [] }
+      FAQ: { heading: 'FAQ', items: [{ question: 'Question?', answer: 'Answer.' }] },
     };
     return defaults[type] || {};
   };
 
-  // ==============================
-  // RENDER: Template Gallery
-  // ==============================
-  if (step === 'templates') {
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedSectionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedSectionIndex !== null && draggedSectionIndex !== index) {
+      e.currentTarget.classList.add('drag-over');
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (draggedSectionIndex !== null) {
+      handleMoveSection(draggedSectionIndex, index);
+    }
+    setDraggedSectionIndex(null);
+  };
+
+  // Render loading state
+  if (loading) {
     return (
-      <div className="website-builder">
-        <div className="template-gallery">
-          {/* Gallery Header */}
-          <div className="gallery-header">
-            <div className="gallery-header-content">
-              <h1>🌐 Choose Your Website Template</h1>
-              <p>Select a professional template to get started. Customize everything later.</p>
-            </div>
-            {website && (
-              <button className="btn-secondary" onClick={() => setStep('editor')}>
-                ← Back to Editor
-              </button>
-            )}
-          </div>
-
-          {/* Filters */}
-          <div className="gallery-filters">
-            <div className="filter-categories">
-              {TEMPLATE_CATEGORIES.map(cat => (
-                <button
-                  key={cat.value}
-                  className={`filter-btn ${templateCategory === cat.value ? 'active' : ''}`}
-                  onClick={() => setTemplateCategory(cat.value)}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-            <div className="filter-search">
-              <input
-                type="text"
-                placeholder="🔍 Search templates..."
-                value={templateSearch}
-                onChange={(e) => setTemplateSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Template Grid */}
-          <div className="template-grid">
-            {filteredTemplates.map(template => (
-              <div key={template.id} className="template-card">
-                <div
-                  className="template-preview"
-                  style={{ background: template.thumbnail }}
-                >
-                  <div className="template-overlay">
-                    <button
-                      className="btn-use-template"
-                      onClick={() => applyTemplate(template)}
-                      disabled={loading}
-                    >
-                      {loading ? 'Applying...' : 'Use Template'}
-                    </button>
-                    <button className="btn-preview-template">
-                      👁️ Preview
-                    </button>
-                  </div>
-                </div>
-                <div className="template-info">
-                  <h3>{template.name}</h3>
-                  <p>{template.description}</p>
-                  <div className="template-meta">
-                    <span className="template-category">{template.category}</span>
-                    <span className="template-pages">{template.pages.length} pages</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredTemplates.length === 0 && (
-            <div className="no-templates">
-              <p>No templates match your search. Try different keywords.</p>
-            </div>
-          )}
-        </div>
+      <div className="wb-loading">
+        <div className="wb-spinner"></div>
+        <p>Loading Website Builder...</p>
       </div>
     );
   }
 
-  // ==============================
-  // RENDER: Website Editor
-  // ==============================
-  return (
-    <div className={`website-builder ${previewMode ? 'preview-mode' : ''}`}>
-      {/* Top Bar */}
-      <div className="builder-header">
-        <div className="header-left">
-          <div className="header-logo-group">
-            <div className="creative-logo">
-              <span className="dot dot-1"></span>
-              <span className="dot dot-2"></span>
-              <span className="dot dot-3"></span>
-              <span className="dot dot-4"></span>
+  // Render Gallery View
+  if (view === 'gallery') {
+    return (
+      <div className="website-builder">
+        <div className="wb-header">
+          <div className="wb-header-left">
+            <h1>🌐 Website Builder</h1>
+            <p>Create stunning websites for your institution</p>
+          </div>
+          <div className="wb-header-right">
+            <button className="wb-btn wb-btn-secondary" onClick={() => setShowUploadModal(true)}>
+              📤 Upload Template
+            </button>
+          </div>
+        </div>
+
+        {/* Existing Instances */}
+        {instances.length > 0 && (
+          <div className="wb-section">
+            <h2>📁 Your Websites</h2>
+            <div className="wb-instances-grid">
+              {instances.map(instance => (
+                <div key={instance.id} className="wb-instance-card">
+                  <div className="wb-instance-header">
+                    <h3>{instance.name}</h3>
+                    <span className={`wb-status ${instance.is_published ? 'published' : 'draft'}`}>
+                      {instance.is_published ? '🟢 Published' : '🟡 Draft'}
+                    </span>
+                  </div>
+                  <p className="wb-instance-template">Based on: {instance.source_template_name}</p>
+                  <div className="wb-instance-actions">
+                    <button className="wb-btn wb-btn-primary" onClick={() => handleEditInstance(instance)}>
+                      ✏️ Edit
+                    </button>
+                    {instance.is_published && instance.subdomain && (
+                      <a
+                        href={`/api/cms/render/${instance.subdomain}/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="wb-btn wb-btn-secondary"
+                      >
+                        🔗 View
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <h1 className="builder-title">Website Builder</h1>
           </div>
-          <div className="subdomain-box">
-            <span className="prefix">.</span>
-            <span className="domain">nucleiq.app</span>
+        )}
+
+        {/* Category Filter */}
+        <div className="wb-section">
+          <h2>📚 Template Gallery</h2>
+          <div className="wb-categories">
+            <button
+              className={`wb-category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedCategory('all')}
+            >
+              All Templates
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                className={`wb-category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.icon} {cat.name}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="header-center">
-          <div className="viewport-controls">
-            <button className={viewMode === 'desktop' ? 'active' : ''} onClick={() => setViewMode('desktop')}>
-              💻
-            </button>
-            <button className={viewMode === 'tablet' ? 'active' : ''} onClick={() => setViewMode('tablet')}>
-              📱
-            </button>
-            <button className={viewMode === 'mobile' ? 'active' : ''} onClick={() => setViewMode('mobile')}>
-              📲
-            </button>
-          </div>
+        {/* Templates Grid */}
+        <div className="wb-templates-grid">
+          {filteredTemplates.map(template => (
+            <div key={template.id} className="wb-template-card">
+              <div
+                className="wb-template-preview"
+                style={{ background: template.thumbnail }}
+              >
+                {template.is_custom && (
+                  <span className="wb-custom-badge">Custom</span>
+                )}
+              </div>
+              <div className="wb-template-info">
+                <h3>{template.name}</h3>
+                <p>{template.description}</p>
+                <div className="wb-template-meta">
+                  <span>{template.pages_count} pages</span>
+                  <span className="wb-template-category">{template.category}</span>
+                </div>
+                <div className="wb-template-colors">
+                  <span style={{ background: template.primary_color }}></span>
+                  <span style={{ background: template.secondary_color }}></span>
+                  <span style={{ background: template.accent_color }}></span>
+                </div>
+                <button
+                  className="wb-btn wb-btn-primary wb-btn-full"
+                  onClick={() => handleForkTemplate(template)}
+                >
+                  🚀 Use This Template
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="header-right">
-          <button className="btn-templates-header" onClick={() => setStep('templates')}>
-            📚 Templates
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <UploadTemplateModal
+            onClose={() => setShowUploadModal(false)}
+            onUpload={handleUploadTemplate}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Render Editor View
+  const currentPage = getCurrentPage();
+  const structure = currentInstance?.custom_structure || currentInstance?.effective_structure;
+  const theme = currentInstance?.effective_theme || {};
+
+  return (
+    <div className="website-builder wb-editor-mode">
+      {/* Editor Header */}
+      <div className="wb-editor-header">
+        <div className="wb-editor-left">
+          <button className="wb-btn wb-btn-ghost" onClick={() => setView('gallery')}>
+            ← Back
           </button>
-          <button className={`btn-action-preview ${previewMode ? 'active' : ''}`} onClick={() => setPreviewMode(!previewMode)}>
-            <span className="icon">👁️</span> Preview
-          </button>
-          <button className="btn-action-live" onClick={() => window.open(`/public/${website?.subdomain}`, '_blank')}>
-            <span className="icon">🌐</span> View Live
-          </button>
-          <button className="btn-action-publish" onClick={handlePublish} disabled={saving}>
-            <span className="icon">🚀</span> {saving ? 'Publishing...' : 'Publish'}
+          <h2>{currentInstance?.name}</h2>
+          {saving && <span className="wb-saving">Saving...</span>}
+        </div>
+        <div className="wb-editor-center">
+          <div className="wb-preview-modes">
+            <button
+              className={previewMode === 'desktop' ? 'active' : ''}
+              onClick={() => setPreviewMode('desktop')}
+              title="Desktop"
+            >🖥️</button>
+            <button
+              className={previewMode === 'tablet' ? 'active' : ''}
+              onClick={() => setPreviewMode('tablet')}
+              title="Tablet"
+            >📱</button>
+            <button
+              className={previewMode === 'mobile' ? 'active' : ''}
+              onClick={() => setPreviewMode('mobile')}
+              title="Mobile"
+            >📲</button>
+          </div>
+        </div>
+        <div className="wb-editor-right">
+          <button
+            className={`wb-btn ${currentInstance?.is_published ? 'wb-btn-secondary' : 'wb-btn-primary'}`}
+            onClick={handlePublish}
+          >
+            {currentInstance?.is_published ? '📤 Unpublish' : '🚀 Publish'}
           </button>
         </div>
       </div>
 
-      <div className="builder-workspace">
-        {/* Sidebar */}
-        {!previewMode && (
-          <div className="builder-sidebar">
-            <div className="sidebar-group">
-              <div className="group-header">
-                <span className="icon">📑</span>
-                <h3>PAGES</h3>
-                <button className="btn-add-circle" onClick={addPage}>+</button>
-              </div>
-              <ul className="page-items">
-                {pages.map(page => (
-                  <li
-                    key={page.id}
-                    className={selectedPage?.id === page.id ? 'selected' : ''}
-                    onClick={() => { setSelectedPage(page); setSelectedSection(null); }}
-                  >
-                    <span className="title">{page.title}</span>
-                    <span className="badge">{page.sections?.length || 0}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="sidebar-group">
-              <div className="group-header">
-                <span className="icon">🧱</span>
-                <h3>SECTIONS</h3>
-                <button className="btn-add-circle" onClick={() => setShowAddSection(true)}>+</button>
-              </div>
-              {selectedPage && (
-                <div className="section-container">
-                  {(!selectedPage.sections || selectedPage.sections.length === 0) ? (
-                    <div className="empty-sidebar-info">
-                      <p>Add sections or</p>
-                      <button className="btn-text-link" onClick={() => setStep('templates')}>
-                        Use Template
-                      </button>
-                    </div>
-                  ) : (
-                    <ul className="section-items">
-                      {selectedPage.sections?.sort((a, b) => a.order - b.order).map(section => (
-                        <li
-                          key={section.id}
-                          className={selectedSection?.id === section.id ? 'selected' : ''}
-                          onClick={() => setSelectedSection(section)}
-                        >
-                          <span className="icon">
-                            {SECTION_TYPES.find(s => s.type === section.component_type)?.icon || '📦'}
-                          </span>
-                          <span className="name">{section.title}</span>
-                          <div className="section-item-actions">
-                            <button onClick={(e) => { e.stopPropagation(); moveSection(section.id!, 'up'); }}>↑</button>
-                            <button onClick={(e) => { e.stopPropagation(); moveSection(section.id!, 'down'); }}>↓</button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Properties Editor */}
-            {selectedSection && (
-              <div className="sidebar-section properties-panel">
-                <div className="sidebar-header">
-                  <h3>⚙️ Properties</h3>
-                  <div className="property-actions">
-                    <button title="Duplicate" onClick={() => duplicateSection(selectedSection)}>📋</button>
-                    <button title="Delete" onClick={() => deleteSection(selectedSection.id!)}>🗑️</button>
-                  </div>
-                </div>
-                <div className="property-form">
-                  <div className="form-group">
-                    <label>Section Title</label>
-                    <input
-                      type="text"
-                      value={selectedSection.title}
-                      onChange={(e) => updateSection(selectedSection.id!, { title: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Dynamic content fields */}
-                  {Object.entries(selectedSection.content || {}).map(([key, value]) => (
-                    <div className="form-group" key={key}>
-                      <label>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label>
-                      {typeof value === 'string' ? (
-                        key.includes('message') || key.includes('text') || key.includes('description') ? (
-                          <textarea
-                            value={value}
-                            onChange={(e) => updateSection(selectedSection.id!, {
-                              content: { ...selectedSection.content, [key]: e.target.value }
-                            })}
-                            rows={4}
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={value}
-                            onChange={(e) => updateSection(selectedSection.id!, {
-                              content: { ...selectedSection.content, [key]: e.target.value }
-                            })}
-                          />
-                        )
-                      ) : null}
-                    </div>
-                  ))}
-
-                  <div className="style-group">
-                    <h4>Styling</h4>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Background</label>
-                        <input
-                          type="color"
-                          value={selectedSection.background_color || '#ffffff'}
-                          onChange={(e) => updateSection(selectedSection.id!, { background_color: e.target.value })}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Text Color</label>
-                        <input
-                          type="color"
-                          value={selectedSection.text_color || '#000000'}
-                          onChange={(e) => updateSection(selectedSection.id!, { text_color: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+      {/* Editor Body */}
+      <div className="wb-editor-body">
+        {/* Left Sidebar - Pages */}
+        <div className="wb-sidebar wb-sidebar-left">
+          <div className="wb-sidebar-header">
+            <h3>Pages</h3>
+            <button className="wb-btn-icon" onClick={handleAddPage} title="Add Page">+</button>
           </div>
-        )}
-
-        {/* Canvas */}
-        <div className="builder-canvas-wrapper">
-          <div className={`builder-canvas ${viewMode}`}>
-            {selectedPage ? (
-              <div className="preview-page">
-                {selectedPage.sections?.sort((a, b) => a.order - b.order).map(section => (
-                  <div
-                    key={section.id}
-                    className={`preview-section ${selectedSection?.id === section.id ? 'selected' : ''} ${!previewMode ? 'editable' : ''}`}
-                    onClick={() => !previewMode && setSelectedSection(section)}
-                    style={{
-                      backgroundColor: section.background_color || 'transparent',
-                      color: section.text_color || 'inherit',
-                      backgroundImage: section.background_image ? `url(${section.background_image})` : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    {!previewMode && (
-                      <div className="section-toolbar">
-                        <span className="section-type-badge">
-                          {SECTION_TYPES.find(s => s.type === section.component_type)?.icon} {section.component_type}
-                        </span>
-                      </div>
-                    )}
-                    {renderSectionPreview(section)}
-                  </div>
-                ))}
-
-                {(!selectedPage.sections || selectedPage.sections.length === 0) && (
-                  <div className="empty-page">
-                    <div className="empty-icon">📄</div>
-                    <h3>This page is empty</h3>
-                    <p>Start building your page by adding sections or choose a ready-made template</p>
-                    <div className="empty-page-actions">
-                      <button className="btn-browse-templates" onClick={() => setStep('templates')}>
-                        🎨 Browse Templates
-                      </button>
-                      <button className="btn-add-section" onClick={() => setShowAddSection(true)}>
-                        + Add Section Manually
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Add Section Button at bottom */}
-                {selectedPage.sections?.length > 0 && !previewMode && (
-                  <div className="add-section-bar">
-                    <button onClick={() => setShowAddSection(true)}>+ Add Section</button>
-                  </div>
+          <div className="wb-pages-list">
+            {structure?.pages?.map((page, idx) => (
+              <div
+                key={idx}
+                className={`wb-page-item ${idx === currentPageIndex ? 'active' : ''}`}
+                onClick={() => { setCurrentPageIndex(idx); setSelectedSectionIndex(null); }}
+              >
+                <span className="wb-page-icon">📄</span>
+                <span className="wb-page-title">{page.title}</span>
+                {idx > 0 && (
+                  <button
+                    className="wb-btn-delete"
+                    onClick={(e) => { e.stopPropagation(); handleDeletePage(idx); }}
+                  >×</button>
                 )}
               </div>
-            ) : (
-              <div className="no-page-selected">
-                <p>Select a page to start editing</p>
-              </div>
-            )}
+            ))}
           </div>
+
+          {/* Theme Settings */}
+          <div className="wb-sidebar-section">
+            <h3>Theme</h3>
+            <div className="wb-theme-colors">
+              <label>
+                Primary
+                <input
+                  type="color"
+                  value={currentInstance?.primary_color || theme.primary_color || '#2563eb'}
+                  onChange={(e) => handleUpdateTheme({ primary_color: e.target.value })}
+                />
+              </label>
+              <label>
+                Secondary
+                <input
+                  type="color"
+                  value={currentInstance?.secondary_color || theme.secondary_color || '#1e40af'}
+                  onChange={(e) => handleUpdateTheme({ secondary_color: e.target.value })}
+                />
+              </label>
+              <label>
+                Accent
+                <input
+                  type="color"
+                  value={currentInstance?.accent_color || theme.accent_color || '#60a5fa'}
+                  onChange={(e) => handleUpdateTheme({ accent_color: e.target.value })}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Preview Area */}
+        <div className={`wb-preview-container wb-preview-${previewMode}`}>
+          <div className="wb-preview-frame" ref={previewRef}>
+            {/* Preview Navigation */}
+            <div className="wb-preview-nav" style={{ background: theme.primary_color }}>
+              {structure?.pages?.map((page, idx) => (
+                <span key={idx} className={idx === currentPageIndex ? 'active' : ''}>
+                  {page.title}
+                </span>
+              ))}
+            </div>
+
+            {/* Sections */}
+            <div className="wb-preview-sections">
+              {currentPage?.sections?.map((section, idx) => (
+                <div
+                  key={section.id || idx}
+                  className={`wb-preview-section ${selectedSectionIndex === idx ? 'selected' : ''} ${!section.is_visible ? 'hidden' : ''}`}
+                  onClick={() => setSelectedSectionIndex(idx)}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, idx)}
+                >
+                  <div className="wb-section-controls">
+                    <span className="wb-section-type">{section.component_type}</span>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSection(idx); }}>🗑️</button>
+                  </div>
+                  <SectionPreview section={section} theme={theme} />
+                </div>
+              ))}
+
+              {/* Add Section Button */}
+              <button
+                className="wb-add-section-btn"
+                onClick={() => setShowAddSection(true)}
+              >
+                + Add Section
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Section Editor */}
+        <div className="wb-sidebar wb-sidebar-right">
+          {selectedSectionIndex !== null && currentPage?.sections?.[selectedSectionIndex] ? (
+            <SectionEditor
+              section={currentPage.sections[selectedSectionIndex]}
+              onUpdate={(updates) => handleUpdateSection(selectedSectionIndex, updates)}
+            />
+          ) : (
+            <div className="wb-sidebar-empty">
+              <p>Select a section to edit</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Add Section Modal */}
       {showAddSection && (
-        <div className="modal-overlay" onClick={() => setShowAddSection(false)}>
-          <div className="modal add-section-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Add Section</h2>
-              <button className="btn-close" onClick={() => setShowAddSection(false)}>×</button>
+        <div className="wb-modal-overlay" onClick={() => setShowAddSection(false)}>
+          <div className="wb-modal" onClick={e => e.stopPropagation()}>
+            <div className="wb-modal-header">
+              <h3>Add Section</h3>
+              <button onClick={() => setShowAddSection(false)}>×</button>
             </div>
-            <div className="section-types-grid">
-              {SECTION_TYPES.map(type => (
+            <div className="wb-section-types-grid">
+              {sectionTypes.map(st => (
                 <button
-                  key={type.type}
-                  className="section-type-card"
-                  onClick={() => addSection(type.type)}
+                  key={st.type}
+                  className="wb-section-type-btn"
+                  onClick={() => handleAddSection(st.type)}
                 >
-                  <span className="section-type-icon">{type.icon}</span>
-                  <span className="section-type-label">{type.label}</span>
-                  <span className="section-type-desc">{type.desc}</span>
+                  <span className="wb-st-icon">{st.icon}</span>
+                  <span className="wb-st-label">{st.label}</span>
+                  <span className="wb-st-desc">{st.description}</span>
                 </button>
               ))}
             </div>
@@ -733,331 +724,357 @@ const WebsiteBuilder: React.FC = () => {
   );
 };
 
-// Section Preview Renderer
-const renderSectionPreview = (section: Section) => {
-  const { component_type, content } = section;
+// Section Preview Component
+const SectionPreview: React.FC<{ section: Section; theme: any }> = ({ section, theme }) => {
+  const { component_type, content, background_color, text_color } = section;
+
+  const style: React.CSSProperties = {
+    backgroundColor: background_color || '#fff',
+    color: text_color || '#000',
+    padding: '2rem',
+  };
 
   switch (component_type) {
     case 'HERO':
       return (
-        <div className="hero-section">
-          <div className="hero-content">
-            <h1>{content?.heading || 'Hero Heading'}</h1>
-            <p>{content?.subheading || 'Subheading text'}</p>
-            <div className="hero-buttons">
-              <button className="btn-primary">{content?.buttonText || 'Learn More'}</button>
-              {content?.secondaryButtonText && (
-                <button className="btn-secondary">{content.secondaryButtonText}</button>
-              )}
-            </div>
-          </div>
+        <div className="wb-p-hero" style={style}>
+          <h1>{content.heading}</h1>
+          <p>{content.subheading}</p>
+          <button style={{ background: theme.accent_color }}>{content.buttonText}</button>
         </div>
       );
-
     case 'FEATURES':
       return (
-        <div className="features-section">
-          <h2>{content?.heading || 'Features'}</h2>
-          <div className="features-grid">
-            {(content?.features || []).slice(0, 4).map((feature: any, i: number) => (
-              <div key={i} className="feature-card">
-                <span className="feature-icon">{feature.icon || '✨'}</span>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
+        <div className="wb-p-features" style={style}>
+          <h2>{content.heading}</h2>
+          <div className="wb-p-features-grid">
+            {content.features?.map((f: any, i: number) => (
+              <div key={i} className="wb-p-feature">
+                <span>{f.icon}</span>
+                <h4>{f.title}</h4>
+                <p>{f.description}</p>
               </div>
             ))}
           </div>
         </div>
       );
-
     case 'STATS':
       return (
-        <div className="stats-section">
-          <div className="stats-grid">
-            {(content?.stats || []).map((stat: any, i: number) => (
-              <div key={i} className="stat-item">
-                <span className="stat-value">{stat.value}</span>
-                <span className="stat-label">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'PRINCIPAL_MESSAGE':
-      return (
-        <div className="principal-section">
-          <div className="principal-image">
-            {content?.image ? (
-              <img src={content.image} alt={content.name} />
-            ) : (
-              <div className="placeholder-avatar">👤</div>
-            )}
-          </div>
-          <div className="principal-content">
-            <h3>{content?.name || 'Principal Name'}</h3>
-            <span className="designation">{content?.designation || 'Principal'}</span>
-            <blockquote>{content?.message || 'Welcome message...'}</blockquote>
-          </div>
-        </div>
-      );
-
-    case 'CTA':
-      return (
-        <div className="cta-section">
-          <h2>{content?.heading || 'Call to Action'}</h2>
-          <p>{content?.subheading}</p>
-          <button className="btn-primary">{content?.buttonText || 'Get Started'}</button>
-        </div>
-      );
-
-    case 'GALLERY':
-      return (
-        <div className="gallery-section">
-          <h2>{content?.heading || 'Gallery'}</h2>
-          <div className="gallery-grid">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="gallery-placeholder">📷</div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'TESTIMONIALS':
-      return (
-        <div className="testimonials-section">
-          <h2>{content?.heading || 'Testimonials'}</h2>
-          <div className="testimonials-grid">
-            {(content?.testimonials || [{ name: 'Parent', quote: 'Great school!' }]).map((t: any, i: number) => (
-              <div key={i} className="testimonial-card">
-                <blockquote>"{t.quote}"</blockquote>
-                <cite>— {t.name}, {t.role || 'Parent'}</cite>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'CONTACT':
-      return (
-        <div className="contact-section">
-          <div className="contact-info">
-            <h2>Contact Us</h2>
-            <p>📍 {content?.address || 'Address'}</p>
-            <p>📞 {content?.phone || 'Phone'}</p>
-            <p>✉️ {content?.email || 'Email'}</p>
-          </div>
-          <div className="contact-form-preview">
-            <div className="form-placeholder">
-              <input type="text" placeholder="Your Name" disabled />
-              <input type="email" placeholder="Your Email" disabled />
-              <textarea placeholder="Your Message" disabled />
-              <button className="btn-primary" disabled>Send Message</button>
+        <div className="wb-p-stats" style={style}>
+          {content.stats?.map((s: any, i: number) => (
+            <div key={i} className="wb-p-stat">
+              <span className="wb-p-stat-value" style={{ color: theme.primary_color }}>{s.value}</span>
+              <span className="wb-p-stat-label">{s.label}</span>
             </div>
-          </div>
+          ))}
         </div>
       );
-
-    case 'TEXT_BLOCK':
-      return (
-        <div className="text-section">
-          <p>{content?.text || 'Enter your content here...'}</p>
-        </div>
-      );
-
-    case 'FAQ':
-      return (
-        <div className="faq-section">
-          <h2>{content?.heading || 'FAQ'}</h2>
-          <div className="faq-list">
-            {(content?.items || [{ question: 'Sample Question?', answer: 'Sample answer.' }]).map((item: any, i: number) => (
-              <div key={i} className="faq-item">
-                <h4>{item.question}</h4>
-                <p>{item.answer}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
     case 'PAGE_HEADER':
       return (
-        <div className="page-header-section">
-          <h1>{content?.heading || 'Page Title'}</h1>
-          <p className="breadcrumb">{content?.breadcrumb || 'Home > Page'}</p>
+        <div className="wb-p-header" style={style}>
+          <h1>{content.heading}</h1>
+          <p>{content.breadcrumb}</p>
         </div>
       );
-
-    case 'TEXT_WITH_IMAGE':
+    case 'CONTACT':
       return (
-        <div className="text-image-section">
-          <div className="text-image-container">
-            <div className="ti-text">
-              <h2>{content?.heading || 'Section Title'}</h2>
-              <p>{content?.text || 'Section content goes here...'}</p>
+        <div className="wb-p-contact" style={style}>
+          <h2>Contact Us</h2>
+          <p>📍 {content.address}</p>
+          <p>📞 {content.phone}</p>
+          <p>✉️ {content.email}</p>
+        </div>
+      );
+    case 'CTA':
+      return (
+        <div className="wb-p-cta" style={style}>
+          <h2>{content.heading}</h2>
+          <p>{content.subheading}</p>
+          <button style={{ background: theme.accent_color }}>{content.buttonText}</button>
+        </div>
+      );
+    case 'TESTIMONIALS':
+      return (
+        <div className="wb-p-testimonials" style={style}>
+          <h2>{content.heading}</h2>
+          {content.testimonials?.slice(0, 2).map((t: any, i: number) => (
+            <div key={i} className="wb-p-testimonial">
+              <p>"{t.quote}"</p>
+              <strong>— {t.name}</strong>
             </div>
-            <div className="ti-image">
-              <div className="img-placeholder">🖼️</div>
-            </div>
-          </div>
+          ))}
         </div>
       );
-
-    case 'MISSION_VISION':
-      return (
-        <div className="mission-vision-section">
-          <div className="mv-grid">
-            <div className="mv-card">
-              <h3>Mission</h3>
-              <p>{content?.mission}</p>
-            </div>
-            <div className="mv-card">
-              <h3>Vision</h3>
-              <p>{content?.vision}</p>
-            </div>
-          </div>
-          {content?.values && (
-            <div className="values-list">
-              <h3>Our Values</h3>
-              <ul>
-                {content.values.map((v: string, i: number) => <li key={i}>{v}</li>)}
-              </ul>
-            </div>
-          )}
-        </div>
-      );
-
-    case 'IMAGE_GRID':
-      return (
-        <div className="image-grid-section">
-          <div className={`grid cols-${content?.columns || 3}`}>
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="grid-item">🖼️</div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'TIMELINE':
-      return (
-        <div className="timeline-section">
-          <h2>{content?.heading || 'Our Journey'}</h2>
-          <div className="timeline-list">
-            {(content?.events || []).map((ev: any, i: number) => (
-              <div key={i} className="timeline-item">
-                <div className="year">{ev.year}</div>
-                <div className="details">
-                  <h4>{ev.title}</h4>
-                  <p>{ev.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'PROGRAMS':
-      return (
-        <div className="programs-section">
-          <h2>{content?.heading || 'Our Programs'}</h2>
-          <div className="programs-grid">
-            {(content?.programs || []).map((p: any, i: number) => (
-              <div key={i} className="program-card">
-                <h3>{p.name}</h3>
-                <p>{p.description}</p>
-                <span className="age">{p.ages}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'MAP':
-      return (
-        <div className="map-section">
-          <div className="map-container">
-            <div className="map-placeholder">
-              📍 Map Location
-              <p>{content?.description}</p>
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'NEWS':
-      return (
-        <div className="news-section">
-          <h2>{content?.heading || 'Latest News'}</h2>
-          <div className="news-grid">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="news-card">
-                <div className="news-date">Jan {10 + i}, 2024</div>
-                <h3>Sample News Title {i}</h3>
-                <p>This is a preview of the school news update...</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'EVENTS':
-      return (
-        <div className="events-section">
-          <h2>{content?.heading || 'Upcoming Events'}</h2>
-          <div className="events-list">
-            {[1, 2].map(i => (
-              <div key={i} className="event-item-preview">
-                <div className="event-date">
-                  <span className="day">{15 + i}</span>
-                  <span className="month">FEB</span>
-                </div>
-                <div className="event-info">
-                  <h3>Annual Sports Meet {i}</h3>
-                  <p>Join us for our annual day celebrations.</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'FACULTY':
-      return (
-        <div className="faculty-section">
-          <h2>{content?.heading || 'Our Faculty'}</h2>
-          <div className="faculty-grid">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="faculty-card">
-                <div className="faculty-avatar">👤</div>
-                <h3>Teacher Name {i}</h3>
-                <p>Department Head</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-    case 'VIDEO':
-      return (
-        <div className="video-section">
-          <h2>{content?.heading || 'Watch Our Story'}</h2>
-          <div className="video-container">
-            <div className="video-placeholder">
-              <span>▶️ Play Video</span>
-              <p>{content?.videoUrl || 'No video URL provided'}</p>
-            </div>
-          </div>
-        </div>
-      );
-
     default:
       return (
-        <div className="generic-section">
-          <h3>{section.title}</h3>
-          <p className="section-type-label">{component_type}</p>
+        <div className="wb-p-default" style={style}>
+          <p>{component_type} Section</p>
         </div>
       );
   }
+};
+
+// Section Editor Component
+const SectionEditor: React.FC<{ section: Section; onUpdate: (updates: Partial<Section>) => void }> = ({ section, onUpdate }) => {
+  const [localContent, setLocalContent] = useState(section.content);
+
+  useEffect(() => {
+    setLocalContent(section.content);
+  }, [section]);
+
+  const handleContentChange = (key: string, value: any) => {
+    const newContent = { ...localContent, [key]: value };
+    setLocalContent(newContent);
+  };
+
+  const handleSave = () => {
+    onUpdate({ content: localContent });
+  };
+
+  return (
+    <div className="wb-section-editor">
+      <h3>Edit {section.component_type}</h3>
+
+      <div className="wb-editor-field">
+        <label>Visibility</label>
+        <label className="wb-toggle">
+          <input
+            type="checkbox"
+            checked={section.is_visible !== false}
+            onChange={(e) => onUpdate({ is_visible: e.target.checked })}
+          />
+          <span>Visible</span>
+        </label>
+      </div>
+
+      <div className="wb-editor-field">
+        <label>Background Color</label>
+        <input
+          type="color"
+          value={section.background_color || '#ffffff'}
+          onChange={(e) => onUpdate({ background_color: e.target.value })}
+        />
+      </div>
+
+      <div className="wb-editor-field">
+        <label>Text Color</label>
+        <input
+          type="color"
+          value={section.text_color || '#000000'}
+          onChange={(e) => onUpdate({ text_color: e.target.value })}
+        />
+      </div>
+
+      <hr />
+
+      {/* Content fields based on section type */}
+      {section.component_type === 'HERO' && (
+        <>
+          <div className="wb-editor-field">
+            <label>Heading</label>
+            <input
+              type="text"
+              value={localContent.heading || ''}
+              onChange={(e) => handleContentChange('heading', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Subheading</label>
+            <textarea
+              value={localContent.subheading || ''}
+              onChange={(e) => handleContentChange('subheading', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Button Text</label>
+            <input
+              type="text"
+              value={localContent.buttonText || ''}
+              onChange={(e) => handleContentChange('buttonText', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Button Link</label>
+            <input
+              type="text"
+              value={localContent.buttonLink || ''}
+              onChange={(e) => handleContentChange('buttonLink', e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {section.component_type === 'PAGE_HEADER' && (
+        <>
+          <div className="wb-editor-field">
+            <label>Heading</label>
+            <input
+              type="text"
+              value={localContent.heading || ''}
+              onChange={(e) => handleContentChange('heading', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Breadcrumb</label>
+            <input
+              type="text"
+              value={localContent.breadcrumb || ''}
+              onChange={(e) => handleContentChange('breadcrumb', e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {section.component_type === 'CONTACT' && (
+        <>
+          <div className="wb-editor-field">
+            <label>Address</label>
+            <input
+              type="text"
+              value={localContent.address || ''}
+              onChange={(e) => handleContentChange('address', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Phone</label>
+            <input
+              type="text"
+              value={localContent.phone || ''}
+              onChange={(e) => handleContentChange('phone', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Email</label>
+            <input
+              type="email"
+              value={localContent.email || ''}
+              onChange={(e) => handleContentChange('email', e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {section.component_type === 'CTA' && (
+        <>
+          <div className="wb-editor-field">
+            <label>Heading</label>
+            <input
+              type="text"
+              value={localContent.heading || ''}
+              onChange={(e) => handleContentChange('heading', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Subheading</label>
+            <textarea
+              value={localContent.subheading || ''}
+              onChange={(e) => handleContentChange('subheading', e.target.value)}
+            />
+          </div>
+          <div className="wb-editor-field">
+            <label>Button Text</label>
+            <input
+              type="text"
+              value={localContent.buttonText || ''}
+              onChange={(e) => handleContentChange('buttonText', e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      <button className="wb-btn wb-btn-primary wb-btn-full" onClick={handleSave}>
+        💾 Save Changes
+      </button>
+    </div>
+  );
+};
+
+// Upload Template Modal
+const UploadTemplateModal: React.FC<{ onClose: () => void; onUpload: (data: any) => void }> = ({ onClose, onUpload }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('modern');
+  const [jsonStructure, setJsonStructure] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('#2563eb');
+  const [secondaryColor, setSecondaryColor] = useState('#1e40af');
+  const [accentColor, setAccentColor] = useState('#60a5fa');
+
+  const handleSubmit = () => {
+    try {
+      const structure = JSON.parse(jsonStructure);
+      onUpload({
+        name,
+        description,
+        category,
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
+        accent_color: accentColor,
+        thumbnail: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+        font_family: 'Inter, sans-serif',
+        structure
+      });
+    } catch (e) {
+      alert('Invalid JSON structure');
+    }
+  };
+
+  return (
+    <div className="wb-modal-overlay" onClick={onClose}>
+      <div className="wb-modal wb-modal-large" onClick={e => e.stopPropagation()}>
+        <div className="wb-modal-header">
+          <h3>📤 Upload Custom Template</h3>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="wb-modal-body">
+          <div className="wb-editor-field">
+            <label>Template Name *</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="My Custom Template" />
+          </div>
+          <div className="wb-editor-field">
+            <label>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Template description..." />
+          </div>
+          <div className="wb-editor-field">
+            <label>Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="modern">Modern</option>
+              <option value="classic">Classic</option>
+              <option value="minimal">Minimal</option>
+              <option value="vibrant">Vibrant</option>
+              <option value="professional">Professional</option>
+            </select>
+          </div>
+          <div className="wb-color-row">
+            <div className="wb-editor-field">
+              <label>Primary</label>
+              <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} />
+            </div>
+            <div className="wb-editor-field">
+              <label>Secondary</label>
+              <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} />
+            </div>
+            <div className="wb-editor-field">
+              <label>Accent</label>
+              <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} />
+            </div>
+          </div>
+          <div className="wb-editor-field">
+            <label>Template Structure (JSON) *</label>
+            <textarea
+              className="wb-json-input"
+              value={jsonStructure}
+              onChange={e => setJsonStructure(e.target.value)}
+              placeholder='{"pages": [{"title": "Home", "slug": "home", "page_type": "HOME", "sections": [...]}]}'
+            />
+          </div>
+        </div>
+        <div className="wb-modal-footer">
+          <button className="wb-btn wb-btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="wb-btn wb-btn-primary" onClick={handleSubmit} disabled={!name || !jsonStructure}>Upload Template</button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default WebsiteBuilder;

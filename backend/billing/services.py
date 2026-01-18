@@ -1,5 +1,5 @@
 """
-Payment Gateway Services for NucleIQ
+Payment Gateway Services for NucleiQ
 Wrappers for Razorpay and Stripe payment gateways
 """
 

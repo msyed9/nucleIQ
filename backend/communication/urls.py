@@ -7,7 +7,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CommunicationProviderViewSet, MessageTemplateViewSet,
     NoticeViewSet, MessageLogViewSet, BroadcastMessageViewSet,
-    SchoolEventViewSet
+    SchoolEventViewSet, DeviceTokenViewSet
 )
 
 router = DefaultRouter()
@@ -17,6 +17,7 @@ router.register(r'notices', NoticeViewSet, basename='notice')
 router.register(r'logs', MessageLogViewSet, basename='messagelog')
 router.register(r'broadcasts', BroadcastMessageViewSet, basename='broadcastmessage')
 router.register(r'events', SchoolEventViewSet, basename='schoolevent')
+router.register(r'device-tokens', DeviceTokenViewSet, basename='devicetoken')
 
 urlpatterns = router.urls
 

@@ -258,3 +258,120 @@ class StudentSubmissionSerializer(serializers.ModelSerializer):
     def get_grade_letter(self, obj):
         """Get letter grade."""
         return obj.get_grade_letter()
+
+
+# New Serializers for Homework and Syllabus
+from .models import Homework, HomeworkCompletion, Syllabus, Chapter, SyllabusProgress
+
+
+class HomeworkSerializer(serializers.ModelSerializer):
+    """Serializer for Homework."""
+    
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    section_name = serializers.CharField(source='section.__str__', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Homework
+        fields = [
+            'id', 'title', 'description', 'academic_year',
+            'subject', 'subject_name', 'section', 'section_name',
+            'teacher', 'teacher_name', 'assigned_date', 'due_date',
+            'priority', 'attachment', 'is_overdue',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_teacher_name(self, obj):
+        return obj.teacher.get_full_name() if obj.teacher else None
+    
+    def get_is_overdue(self, obj):
+        return obj.is_overdue()
+
+
+class HomeworkCompletionSerializer(serializers.ModelSerializer):
+    """Serializer for HomeworkCompletion."""
+    
+    homework_title = serializers.CharField(source='homework.title', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = HomeworkCompletion
+        fields = [
+            'id', 'homework', 'homework_title', 'student', 'student_name',
+            'is_completed', 'completed_at', 'notes', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'completed_at']
+    
+    def get_student_name(self, obj):
+        return obj.student.get_full_name()
+
+
+class ChapterSerializer(serializers.ModelSerializer):
+    """Serializer for Chapter."""
+    
+    completed_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Chapter
+        fields = [
+            'id', 'syllabus', 'name', 'description', 'order',
+            'estimated_hours', 'topics', 'is_completed',
+            'completed_date', 'completed_by', 'completed_by_name'
+        ]
+        read_only_fields = ['id', 'completed_date']
+    
+    def get_completed_by_name(self, obj):
+        return obj.completed_by.get_full_name() if obj.completed_by else None
+
+
+class SyllabusSerializer(serializers.ModelSerializer):
+    """Serializer for Syllabus."""
+    
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    grade_level_name = serializers.CharField(source='grade_level.name', read_only=True)
+    chapters = ChapterSerializer(many=True, read_only=True)
+    completion_percentage = serializers.SerializerMethodField()
+    total_chapters = serializers.SerializerMethodField()
+    completed_chapters = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Syllabus
+        fields = [
+            'id', 'name', 'description', 'subject', 'subject_name',
+            'grade_level', 'grade_level_name', 'academic_year',
+            'total_hours', 'chapters', 'completion_percentage',
+            'total_chapters', 'completed_chapters', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_completion_percentage(self, obj):
+        return obj.get_completion_percentage()
+    
+    def get_total_chapters(self, obj):
+        return obj.chapters.filter(is_deleted=False).count()
+    
+    def get_completed_chapters(self, obj):
+        return obj.chapters.filter(is_deleted=False, is_completed=True).count()
+
+
+class SyllabusProgressSerializer(serializers.ModelSerializer):
+    """Serializer for SyllabusProgress."""
+    
+    chapter_name = serializers.CharField(source='chapter.name', read_only=True)
+    section_name = serializers.CharField(source='section.__str__', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SyllabusProgress
+        fields = [
+            'id', 'syllabus', 'section', 'section_name', 'chapter',
+            'chapter_name', 'is_completed', 'completed_date',
+            'teacher', 'teacher_name', 'notes'
+        ]
+        read_only_fields = ['id', 'completed_date']
+    
+    def get_teacher_name(self, obj):
+        return obj.teacher.get_full_name() if obj.teacher else None
+

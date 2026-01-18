@@ -1,6 +1,6 @@
-# NucleIQ Design System
+# NucleiQ Design System
 
-A comprehensive, accessible design system for the NucleIQ School ERP platform, optimized for government schools and low-tech users.
+A comprehensive, accessible design system for the NucleiQ School ERP platform, optimized for government schools and low-tech users.
 
 ## 🎨 Design Principles
 
@@ -537,7 +537,7 @@ const CustomButton = styled(Button)`
 
 ## 📝 License
 
-Internal use only for NucleIQ School ERP platform.
+Internal use only for NucleiQ School ERP platform.
 
 ---
 

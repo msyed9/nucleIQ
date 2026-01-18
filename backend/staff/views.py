@@ -2,12 +2,19 @@
 Staff API Views
 """
 
+from datetime import date, time
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes as perm_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
 from core.permissions import IsTenantUser
+from .qr_attendance import (
+    generate_staff_attendance_token,
+    verify_staff_attendance_token,
+    TOKEN_EXPIRY_SECONDS
+)
 from .models import (
     Staff, StaffDocument, StaffAttendance, StaffLeave,
     StaffHealthProfile, StaffMedicalHistory, StaffMedicalCheckup,
@@ -369,6 +376,162 @@ class StaffAttendanceViewSet(viewsets.ModelViewSet):
         
         return Response(response_data)
 
+
+# ============================================================================
+# QR-Based Staff Attendance API Views
+# ============================================================================
+
+@api_view(['POST'])
+@perm_classes([IsAuthenticated, IsTenantUser])
+def generate_qr_token(request):
+    """
+    Generate a secure, short-lived QR token for staff attendance.
+    
+    Only staff members with TEACHER, STAFF, or related designations can generate tokens.
+    Returns a token that expires in 90 seconds and is unique for every request.
+    """
+    user = request.user
+    
+    # Check if user has a staff profile
+    if not hasattr(user, 'staff_profile') or user.staff_profile is None:
+        return Response(
+            {'error': 'Only staff members can generate attendance QR codes'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    staff = user.staff_profile
+    
+    # Check if staff is active
+    if staff.status != 'ACTIVE':
+        return Response(
+            {'error': 'Only active staff members can generate attendance QR codes'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Generate the token
+    token = generate_staff_attendance_token(
+        staff_id=staff.id,
+        tenant_id=user.tenant.id
+    )
+    
+    return Response({
+        'token': token,
+        'expires_in': TOKEN_EXPIRY_SECONDS,
+        'staff_name': staff.get_full_name(),
+        'employee_id': staff.employee_id,
+        'generated_at': timezone.now().isoformat()
+    })
+
+
+@api_view(['POST'])
+@perm_classes([IsAuthenticated, IsTenantUser])
+def verify_qr_token(request):
+    """
+    Verify a scanned QR token and mark staff attendance.
+    
+    This endpoint should be called by authorized scanner devices (ADMIN/RECEPTIONIST).
+    It validates the token, checks for tenant isolation, and marks attendance.
+    
+    - First scan of the day: Records check_in_time
+    - Subsequent scans: Updates check_out_time
+    """
+    user = request.user
+    
+    # Check if user has permission to verify attendance
+    # Allow ADMIN, PRINCIPAL, VICE_PRINCIPAL, RECEPTIONIST, or users with is_staff=True
+    allowed_designations = ['PRINCIPAL', 'VICE_PRINCIPAL', 'RECEPTIONIST', 'HEAD_TEACHER']
+    has_staff_profile = hasattr(user, 'staff_profile') and user.staff_profile is not None
+    
+    is_authorized = (
+        user.is_superuser or
+        user.is_staff or
+        (hasattr(user, 'role') and user.role and user.role.name in ['Admin', 'Principal', 'Receptionist']) or
+        (has_staff_profile and user.staff_profile.designation in allowed_designations)
+    )
+    
+    if not is_authorized:
+        return Response(
+            {'error': 'You are not authorized to verify staff attendance'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Get the token from request
+    token = request.data.get('token')
+    if not token:
+        return Response(
+            {'error': 'QR token is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Verify the token
+    verification_result = verify_staff_attendance_token(
+        token=token,
+        expected_tenant_id=user.tenant.id
+    )
+    
+    if not verification_result['valid']:
+        return Response(
+            {'error': verification_result['error']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Get the staff member
+    staff_id = verification_result['staff_id']
+    try:
+        staff = Staff.objects.get(id=staff_id, tenant=user.tenant)
+    except Staff.DoesNotExist:
+        return Response(
+            {'error': 'Staff member not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Get or create attendance record for today
+    today = date.today()
+    current_time = timezone.now().time()
+    
+    attendance, created = StaffAttendance.objects.get_or_create(
+        tenant=user.tenant,
+        staff=staff,
+        date=today,
+        defaults={
+            'status': 'PRESENT',
+            'check_in_time': current_time,
+            'marked_by': user,
+            'remarks': 'Marked via QR scan'
+        }
+    )
+    
+    if created:
+        # First scan of the day - check in
+        action_type = 'check_in'
+        result_message = f'Check-in successful for {staff.get_full_name()}'
+    else:
+        # Subsequent scan - check out
+        attendance.check_out_time = current_time
+        attendance.save()
+        action_type = 'check_out'
+        result_message = f'Check-out successful for {staff.get_full_name()}'
+    
+    return Response({
+        'success': True,
+        'message': result_message,
+        'action': action_type,
+        'staff': {
+            'id': staff.id,
+            'name': staff.get_full_name(),
+            'employee_id': staff.employee_id,
+            'designation': staff.get_designation_display(),
+            'photo': staff.photo.url if staff.photo else None
+        },
+        'attendance': {
+            'date': str(today),
+            'status': attendance.status,
+            'check_in_time': str(attendance.check_in_time) if attendance.check_in_time else None,
+            'check_out_time': str(attendance.check_out_time) if attendance.check_out_time else None
+        },
+        'verified_by': user.email,
+        'verified_at': timezone.now().isoformat()
+    })
 
 
 class StaffLeaveViewSet(viewsets.ModelViewSet):

@@ -87,7 +87,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         const root = document.documentElement;
 
         // Determine primary color: custom > branding > default
-        const primaryColor = customColor || branding?.primary_color || '#0b3b66'; // Default NucleIQ blue
+        const primaryColor = customColor || branding?.primary_color || '#0b3b66'; // Default NucleiQ blue
 
         root.style.setProperty('--color-primary', primaryColor);
 

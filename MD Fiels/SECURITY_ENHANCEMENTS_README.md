@@ -374,7 +374,7 @@ For questions or issues, contact:
 
 ## License
 
-Proprietary - NucleIQ School Management System
+Proprietary - NucleiQ School Management System
 
 ---
 

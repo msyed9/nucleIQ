@@ -1,4 +1,4 @@
-# UI/UX Improvements - NucleIQ Frontend
+# UI/UX Improvements - NucleiQ Frontend
 
 ## Summary of Changes
 

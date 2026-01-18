@@ -1,6 +1,6 @@
-# ERP Migration Guide - NucleIQ
+# ERP Migration Guide - NucleiQ
 
-Complete guide for migrating your school/institution data from existing ERP systems to NucleIQ.
+Complete guide for migrating your school/institution data from existing ERP systems to NucleiQ.
 
 ---
 
@@ -19,9 +19,9 @@ Complete guide for migrating your school/institution data from existing ERP syst
 
 ### Before You Begin
 
-- [ ] **Admin Access**: Ensure you have tenant admin access to NucleIQ
+- [ ] **Admin Access**: Ensure you have tenant admin access to NucleiQ
 - [ ] **Current ERP Backup**: Create a full backup of your existing ERP data
-- [ ] **Academic Year Setup**: Create the current academic year in NucleIQ (Settings → Academic Setup)
+- [ ] **Academic Year Setup**: Create the current academic year in NucleiQ (Settings → Academic Setup)
 - [ ] **Classes & Sections**: Set up all classes and sections first (Settings → Academic Setup)
 - [ ] **Fee Categories**: Create fee categories if importing fee data (Fees → Configure)
 - [ ] **Estimated Time**: Plan for 2-4 hours depending on data volume
@@ -40,7 +40,7 @@ Complete guide for migrating your school/institution data from existing ERP syst
 
 ### Downloading Templates
 
-1. Login to NucleIQ as Tenant Admin
+1. Login to NucleiQ as Tenant Admin
 2. Navigate to **Settings → Data Management**
 3. Select the module you want to import
 4. Click **"Download Template"**
@@ -124,9 +124,9 @@ WHERE status = 'Active';
 | SARAL | Administration → Data Export |
 | Custom | Contact your IT team for database export |
 
-### Step 2: Map Data to NucleIQ Format
+### Step 2: Map Data to NucleiQ Format
 
-1. Open the downloaded NucleIQ template
+1. Open the downloaded NucleiQ template
 2. Open your exported data
 3. Copy data column by column, matching headers
 4. Ensure date formats are correct (dd-mm-yyyy or dd/mm/yyyy)
@@ -134,7 +134,7 @@ WHERE status = 'Active';
 
 #### Field Mapping Examples
 
-| Your ERP Field | NucleIQ Field |
+| Your ERP Field | NucleiQ Field |
 |---------------|---------------|
 | student_id / roll_no | admission_number |
 | fname / firstname | first_name |
@@ -149,7 +149,7 @@ Check for:
 - [ ] No duplicate admission numbers
 - [ ] All required fields have values
 - [ ] Dates are in correct format
-- [ ] Class names match exactly with NucleIQ setup
+- [ ] Class names match exactly with NucleiQ setup
 - [ ] Phone numbers are 10 digits (Indian format)
 
 ### Step 4: Import Data
@@ -198,11 +198,11 @@ Failed Records: ___
 ## Common Issues & Solutions
 
 ### Issue: "Class not found" Error
-**Solution**: Ensure the class name in your import file exactly matches the class name in NucleIQ (case-sensitive).
+**Solution**: Ensure the class name in your import file exactly matches the class name in NucleiQ (case-sensitive).
 
 ### Issue: "Duplicate admission number"
 **Solution**: 
-- Check if student already exists in NucleIQ
+- Check if student already exists in NucleiQ
 - Use "Override Duplicates" option to update existing records
 - Or modify admission number in import file
 
@@ -232,7 +232,7 @@ Failed Records: ___
    - Use the updated file to re-import
 
 3. **Contact Support**:
-   - For critical issues, contact NucleIQ support
+   - For critical issues, contact NucleiQ support
    - Provide audit log exports for debugging
 
 ---

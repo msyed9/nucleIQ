@@ -10,7 +10,7 @@ import axios from 'axios';
 import { useToast, ToastContainer } from '@/design-system';
 import './TimetableBuilder.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Time slots configuration
 const TIME_SLOTS = [

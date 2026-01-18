@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Component Exports
+ * NucleiQ Design System - Component Exports
  * Central export file for all design system components
  */
 

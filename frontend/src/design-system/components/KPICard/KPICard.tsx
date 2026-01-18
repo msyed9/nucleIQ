@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - KPI Card Component
+ * NucleiQ Design System - KPI Card Component
  * Enhanced stat card with trend indicators and icons
  */
 

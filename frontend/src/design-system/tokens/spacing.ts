@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Spacing Tokens
+ * NucleiQ Design System - Spacing Tokens
  * 8px base grid system for consistent spacing
  */
 

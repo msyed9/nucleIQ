@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Color Tokens
+ * NucleiQ Design System - Color Tokens
  * Education-focused color palette optimized for government schools
  * WCAG 2.1 AA compliant for accessibility
  */

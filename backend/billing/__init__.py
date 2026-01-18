@@ -1,5 +1,5 @@
 """
-Billing app for NucleIQ
+Billing app for NucleiQ
 Handles subscriptions, payments, and monetization
 """
 

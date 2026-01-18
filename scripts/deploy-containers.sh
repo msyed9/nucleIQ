@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# NucleIQ Container Apps Deployment Script
+# NucleiQ Container Apps Deployment Script
 # Deploys all container applications to Azure
 # 
 # Prerequisites:

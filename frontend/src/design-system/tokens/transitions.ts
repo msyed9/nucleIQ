@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Transition Tokens
+ * NucleiQ Design System - Transition Tokens
  * Animation timing and easing functions
  */
 

@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 9: Exam & Assessment Features
+#  NucleiQ Implementation Prompts - Phase 9: Exam & Assessment Features
 
 **Purpose:** Enhance exam module with advanced features
 

@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('tenants', '0009_add_icon_theme'),
-        ('students', '0012_merge_20260115_0805'),
+        ('students', '0011_historicalstudent_citizenship_and_more'),
     ]
 
     operations = [

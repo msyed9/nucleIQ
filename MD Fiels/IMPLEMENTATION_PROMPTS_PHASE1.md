@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 1: Critical Backend Completions
+#  NucleiQ Implementation Prompts - Phase 1: Critical Backend Completions
 
 **Generated:** January 3, 2026  
 **Purpose:** Detailed prompts to complete critical backend features  

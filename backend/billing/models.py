@@ -1,5 +1,5 @@
 """
-Billing Models for NucleIQ
+Billing Models for NucleiQ
 Handles subscription plans, subscriptions, invoices, and payment transactions
 """
 

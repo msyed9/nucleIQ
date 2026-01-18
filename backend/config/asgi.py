@@ -1,5 +1,5 @@
 """
-ASGI config for NucleIQ project.
+ASGI config for NucleiQ project.
 """
 
 import os

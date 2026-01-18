@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
                             />
                         ) : (
                             <h1 className="text-4xl font-bold" style={{ color: branding?.primary_color || '#1976D2' }}>
-                                NucleIQ
+                                NucleiQ
                             </h1>
                         )}
                         <h2 className="mt-6 text-3xl font-extrabold text-foreground">
@@ -189,7 +189,7 @@ export const LoginPage: React.FC = () => {
                 <div className="h-full flex items-center justify-center bg-black bg-opacity-40">
                     <div className="text-center text-white px-8">
                         <h2 className="text-4xl font-bold mb-4">
-                            Welcome to NucleIQ
+                            Welcome to NucleiQ
                         </h2>
                         <p className="text-xl opacity-90">
                             Comprehensive School Management System

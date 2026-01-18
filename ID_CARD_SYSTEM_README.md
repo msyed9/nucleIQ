@@ -2,7 +2,7 @@
 
 ## Overview
 
-The NucleIQ ID Card System provides a complete solution for designing, generating, and managing ID cards for students and staff. It includes:
+The NucleiQ ID Card System provides a complete solution for designing, generating, and managing ID cards for students and staff. It includes:
 
 - 🎨 **Drag-and-Drop Template Designer**
 - 📦 **Bulk ID Card Generation**

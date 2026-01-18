@@ -1,4 +1,4 @@
-# NucleIQ - Frontend Troubleshooting Guide
+# NucleiQ - Frontend Troubleshooting Guide
 
 ## Common Issues and Solutions
 

@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Typography Tokens
+ * NucleiQ Design System - Typography Tokens
  * Inter font family with Telugu support
  * Responsive type scale for mobile-first design
  */

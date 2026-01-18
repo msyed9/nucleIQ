@@ -662,6 +662,6 @@ To use this implementation:
 ##  CREDITS
 
 Implementation completed on January 3, 2026
-Part of the NucleIQ School Management System
+Part of the NucleiQ School Management System
 
 ---

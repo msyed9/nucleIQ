@@ -131,7 +131,7 @@ npm install qrcode.react html2canvas
 ## 🎨 Design System Integration
 
 ### Certificate Templates
-- Uses NucleIQ design system colors
+- Uses NucleiQ design system colors
 - Consistent spacing and typography
 - Modern card-based layout
 - Lucide React icons (Award, FileText, Edit2, Trash2, Save, X, Plus)

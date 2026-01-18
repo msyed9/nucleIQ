@@ -1,4 +1,4 @@
-# NucleIQ Azure Deployment Plan
+# NucleiQ Azure Deployment Plan
 ## Comprehensive Production Deployment Guide
 
 **Domain**: nucleiq.io  
@@ -991,5 +991,5 @@ az monitor log-analytics workspace create \
 
 **Document Version**: 1.0  
 **Created**: January 2026  
-**Author**: NucleIQ DevOps Team  
+**Author**: NucleiQ DevOps Team  
 **Review Date**: Quarterly

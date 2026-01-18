@@ -1,5 +1,5 @@
 export function getBackendBase(): string {
-    const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
+    const apiBase = (import.meta.env.VITE_API_URL || '/api');
     return apiBase.replace(/\/api\/?$/, '');
 }
 

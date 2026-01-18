@@ -15,7 +15,7 @@
 - ✅ Display student age in list
 - ✅ Export functionality (Excel, CSV, PDF)
 - ✅ Bulk selection
-- ✅ Responsive design with NucleIQ Design System
+- ✅ Responsive design with NucleiQ Design System
 
 ### 2. Student Details Form (Add/Edit)
 - ✅ PEN Number field

@@ -1,5 +1,5 @@
 """
-WSGI config for NucleIQ project.
+WSGI config for NucleiQ project.
 """
 
 import os

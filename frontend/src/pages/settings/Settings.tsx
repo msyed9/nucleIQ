@@ -1,12 +1,12 @@
 /**
- * Settings Page - Redesigned with NucleIQ Design System
+ * Settings Page - Redesigned with NucleiQ Design System
  * Modern settings interface with tabs and form controls
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences, UserPreferences } from '../../contexts/PreferencesContext';
 import {
     Settings as SettingsIcon,
     School,
@@ -107,10 +107,10 @@ const Settings: React.FC = () => {
     const handleSave = async () => {
         try {
             setSavingSettings(true);
-            
+
             // Prepare settings based on active tab
             const settingsToUpdate: Partial<UserPreferences> = {};
-            
+
             if (activeTab === 'general') {
                 settingsToUpdate.language = language;
                 settingsToUpdate.timezone = timezone;
@@ -122,10 +122,10 @@ const Settings: React.FC = () => {
             } else if (activeTab === 'appearance') {
                 settingsToUpdate.theme_mode = themeMode;
             }
-            
+
             // Save to backend
             await updatePreferences(settingsToUpdate);
-            
+
             alert('Settings saved successfully!');
         } catch (error) {
             console.error('Failed to save settings:', error);

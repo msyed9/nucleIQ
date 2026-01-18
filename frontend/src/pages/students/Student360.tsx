@@ -1,5 +1,5 @@
 /**
- * Student 360 Profile - Redesigned with NucleIQ Design System
+ * Student 360 Profile - Redesigned with NucleiQ Design System
  * Comprehensive student view with KPIs, tabs, and activity timeline
  */
 

@@ -280,3 +280,212 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(events, many=True)
         return Response(serializer.data)
 
+
+class DeviceTokenViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing device tokens for push notifications."""
+    
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['platform', 'is_active']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        from .models import DeviceToken
+        tenant = get_current_tenant()
+        return DeviceToken.objects.filter(
+            tenant=tenant,
+            user=self.request.user,
+            is_deleted=False
+        )
+    
+    def get_serializer_class(self):
+        from rest_framework import serializers
+        from .models import DeviceToken
+        
+        class DeviceTokenSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = DeviceToken
+                fields = [
+                    'id', 'token', 'platform', 'device_name', 
+                    'device_id', 'app_version', 'is_active',
+                    'subscribed_topics', 'created_at', 'updated_at'
+                ]
+                read_only_fields = ['id', 'created_at', 'updated_at']
+        
+        return DeviceTokenSerializer
+    
+    def perform_create(self, serializer):
+        from .models import DeviceToken
+        tenant = get_current_tenant()
+        
+        # Check if token already exists for this user
+        existing = DeviceToken.objects.filter(
+            tenant=tenant,
+            user=self.request.user,
+            token=serializer.validated_data.get('token')
+        ).first()
+        
+        if existing:
+            # Update existing token
+            for key, value in serializer.validated_data.items():
+                setattr(existing, key, value)
+            existing.is_active = True
+            existing.save()
+            return existing
+        
+        serializer.save(
+            tenant=tenant,
+            user=self.request.user
+        )
+    
+    @action(detail=False, methods=['post'])
+    def register(self, request):
+        """
+        Register or update a device token.
+        Called on app startup and when token is refreshed.
+        """
+        from .models import DeviceToken
+        
+        token = request.data.get('token')
+        platform = request.data.get('platform', 'ANDROID')
+        device_name = request.data.get('device_name', '')
+        device_id = request.data.get('device_id', '')
+        app_version = request.data.get('app_version', '')
+        
+        if not token:
+            return Response(
+                {'error': 'Token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        tenant = get_current_tenant()
+        
+        device_token, created = DeviceToken.objects.update_or_create(
+            tenant=tenant,
+            user=request.user,
+            token=token,
+            defaults={
+                'platform': platform,
+                'device_name': device_name,
+                'device_id': device_id,
+                'app_version': app_version,
+                'is_active': True,
+            }
+        )
+        
+        # Subscribe to user's default topics
+        topics = [
+            f"tenant_{tenant.id}",
+            f"user_{request.user.id}",
+        ]
+        
+        # Add role-based topics
+        if hasattr(request.user, 'role'):
+            topics.append(f"role_{request.user.role}")
+        
+        device_token.subscribed_topics = topics
+        device_token.save()
+        
+        return Response({
+            'success': True,
+            'created': created,
+            'device_id': str(device_token.id),
+            'topics': topics,
+        })
+    
+    @action(detail=False, methods=['post'])
+    def unregister(self, request):
+        """
+        Unregister a device token (on logout).
+        """
+        from .models import DeviceToken
+        
+        token = request.data.get('token')
+        
+        if not token:
+            return Response(
+                {'error': 'Token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        tenant = get_current_tenant()
+        
+        DeviceToken.objects.filter(
+            tenant=tenant,
+            user=request.user,
+            token=token
+        ).update(is_active=False)
+        
+        return Response({'success': True})
+    
+    @action(detail=False, methods=['post'])
+    def subscribe_topic(self, request):
+        """Subscribe device to a topic."""
+        from .models import DeviceToken
+        from .services.push_notifications import fcm_service
+        
+        token = request.data.get('token')
+        topic = request.data.get('topic')
+        
+        if not token or not topic:
+            return Response(
+                {'error': 'Token and topic are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update database
+        tenant = get_current_tenant()
+        device = DeviceToken.objects.filter(
+            tenant=tenant,
+            user=request.user,
+            token=token
+        ).first()
+        
+        if device:
+            topics = device.subscribed_topics or []
+            if topic not in topics:
+                topics.append(topic)
+                device.subscribed_topics = topics
+                device.save()
+        
+        # Subscribe in FCM
+        result = fcm_service.subscribe_to_topic([token], topic)
+        
+        return Response(result)
+    
+    @action(detail=False, methods=['post'])
+    def unsubscribe_topic(self, request):
+        """Unsubscribe device from a topic."""
+        from .models import DeviceToken
+        from .services.push_notifications import fcm_service
+        
+        token = request.data.get('token')
+        topic = request.data.get('topic')
+        
+        if not token or not topic:
+            return Response(
+                {'error': 'Token and topic are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update database
+        tenant = get_current_tenant()
+        device = DeviceToken.objects.filter(
+            tenant=tenant,
+            user=request.user,
+            token=token
+        ).first()
+        
+        if device:
+            topics = device.subscribed_topics or []
+            if topic in topics:
+                topics.remove(topic)
+                device.subscribed_topics = topics
+                device.save()
+        
+        # Unsubscribe in FCM
+        result = fcm_service.unsubscribe_from_topic([token], topic)
+        
+        return Response(result)
+
+

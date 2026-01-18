@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Badge Component
+ * NucleiQ Design System - Badge Component
  * Status indicators and labels
  */
 

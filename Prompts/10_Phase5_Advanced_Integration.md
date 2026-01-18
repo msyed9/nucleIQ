@@ -73,7 +73,7 @@ Build a single codebase that can adapt to 1000s of tenants dynamically.
 ## 📝 Functional Requirements
 
 1.  **Architecture (One App vs Many)**:
-    - **Strategy A (Standard)**: "NucleIQ Connect" app. User enters "School Code" -> App morphs into School's Branding (Logo, Colors, Name) using `TenantBranding` API.
+    - **Strategy A (Standard)**: "NucleiQ Connect" app. User enters "School Code" -> App morphs into School's Branding (Logo, Colors, Name) using `TenantBranding` API.
     - **Strategy B (Premium)**: CI/CD Pipeline (Fastlane) to auto-build standalone APK/IPA files with unique Bundle IDs (`com.schoolname.app`) for top-tier clients.
 
 2.  **Dynamic Theming**:

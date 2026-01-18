@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Page Layout Component
+ * NucleiQ Design System - Page Layout Component
  * Consistent page wrapper with header, actions, and content area
  */
 

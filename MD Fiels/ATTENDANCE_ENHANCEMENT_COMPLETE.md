@@ -352,7 +352,7 @@ Export option available
 ##  UI/UX Enhancements
 
 ### Design System Consistency
-- Uses NucleIQ Design System components (Card, Button, Input, Select)
+- Uses NucleiQ Design System components (Card, Button, Input, Select)
 - Consistent spacing and typography
 - Color-coded status indicators
 - Responsive grid layouts

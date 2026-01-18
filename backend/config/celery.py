@@ -1,5 +1,5 @@
 """
-Celery configuration for NucleIQ
+Celery configuration for NucleiQ
 """
 
 import os

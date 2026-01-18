@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Shadow Tokens
+ * NucleiQ Design System - Shadow Tokens
  * Elevation system for depth and hierarchy
  */
 

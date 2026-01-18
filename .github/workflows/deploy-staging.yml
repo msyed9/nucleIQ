@@ -1,4 +1,4 @@
-# NucleIQ Staging Deployment Pipeline
+# NucleiQ Staging Deployment Pipeline
 # Deploys to staging environment on push to develop branch
 
 name: Deploy to Staging

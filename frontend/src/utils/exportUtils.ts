@@ -110,7 +110,7 @@ export const exportToExcel = (
         wb.Props = {
             Title: title || filename,
             Subject: 'Data Export',
-            Author: 'NucleIQ ERP',
+            Author: 'NucleiQ ERP',
             CreatedDate: new Date()
         };
 

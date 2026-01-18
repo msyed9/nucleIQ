@@ -4,9 +4,9 @@ from django.contrib.auth.models import Group
 from django.db import models
 from django.urls import path
 
-class NucleIQAdminSite(AdminSite):
-    site_header = 'NucleIQ Platform Administration'
-    site_title = 'NucleIQ Admin'
+class NucleiQAdminSite(AdminSite):
+    site_header = 'NucleiQ Platform Administration'
+    site_title = 'NucleiQ Admin'
     index_title = 'Platform Management Dashboard'
     
     def get_urls(self):
@@ -95,7 +95,7 @@ class NucleIQAdminSite(AdminSite):
         return super().index(request, extra_context)
 
 # Create custom admin site instance
-admin_site = NucleIQAdminSite(name='nucleiq_admin')
+admin_site = NucleiQAdminSite(name='nucleiq_admin')
 
 # Hide unwanted models
 try:

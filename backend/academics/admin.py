@@ -109,3 +109,63 @@ class SubmissionAdmin(admin.ModelAdmin):
     
     raw_id_fields = ['assignment', 'student', 'graded_by']
     readonly_fields = ['submitted_at', 'graded_at', 'is_late']
+
+
+# Import new models
+from .models import Homework, HomeworkCompletion, Syllabus, Chapter, SyllabusProgress
+
+
+@admin.register(Homework)
+class HomeworkAdmin(admin.ModelAdmin):
+    """Admin interface for Homework."""
+    
+    list_display = [
+        'title', 'subject', 'section', 'teacher',
+        'assigned_date', 'due_date', 'priority'
+    ]
+    list_filter = ['priority', 'subject', 'section__grade_level', 'due_date']
+    search_fields = ['title', 'description']
+    ordering = ['-assigned_date']
+    raw_id_fields = ['subject', 'section', 'teacher']
+
+
+@admin.register(HomeworkCompletion)
+class HomeworkCompletionAdmin(admin.ModelAdmin):
+    """Admin interface for HomeworkCompletion."""
+    
+    list_display = ['homework', 'student', 'is_completed', 'completed_at']
+    list_filter = ['is_completed', 'homework__subject']
+    search_fields = ['student__first_name', 'student__last_name', 'homework__title']
+    raw_id_fields = ['homework', 'student']
+
+
+@admin.register(Syllabus)
+class SyllabusAdmin(admin.ModelAdmin):
+    """Admin interface for Syllabus."""
+    
+    list_display = ['name', 'subject', 'grade_level', 'academic_year', 'total_hours']
+    list_filter = ['subject', 'grade_level', 'academic_year']
+    search_fields = ['name', 'description']
+    raw_id_fields = ['subject', 'grade_level', 'academic_year']
+
+
+@admin.register(Chapter)
+class ChapterAdmin(admin.ModelAdmin):
+    """Admin interface for Chapter."""
+    
+    list_display = ['name', 'syllabus', 'order', 'estimated_hours', 'is_completed']
+    list_filter = ['is_completed', 'syllabus__subject']
+    search_fields = ['name', 'description']
+    ordering = ['syllabus', 'order']
+    raw_id_fields = ['syllabus', 'completed_by']
+
+
+@admin.register(SyllabusProgress)
+class SyllabusProgressAdmin(admin.ModelAdmin):
+    """Admin interface for SyllabusProgress."""
+    
+    list_display = ['syllabus', 'section', 'chapter', 'is_completed', 'completed_date']
+    list_filter = ['is_completed', 'syllabus__subject', 'section__grade_level']
+    search_fields = ['chapter__name', 'section__name']
+    raw_id_fields = ['syllabus', 'section', 'chapter', 'teacher']
+

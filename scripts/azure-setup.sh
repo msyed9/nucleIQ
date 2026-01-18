@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# NucleIQ Azure Infrastructure Setup Script
+# NucleiQ Azure Infrastructure Setup Script
 # Creates all required Azure resources for production deployment
 # 
 # Prerequisites:
@@ -43,7 +43,7 @@ echo_info "Creating Resource Group: $RESOURCE_GROUP in $LOCATION..."
 az group create \
   --name $RESOURCE_GROUP \
   --location $LOCATION \
-  --tags Environment=Production Project=NucleIQ
+  --tags Environment=Production Project=NucleiQ
 
 echo_success "Resource Group created!"
 

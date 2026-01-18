@@ -1,5 +1,5 @@
 /**
- * Student List - Redesigned with NucleIQ Design System
+ * Student List - Redesigned with NucleiQ Design System
  * Data table with search, filter, sort, and bulk actions
  */
 

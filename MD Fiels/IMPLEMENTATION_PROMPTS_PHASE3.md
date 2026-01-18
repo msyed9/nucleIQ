@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 3: Finance & Accounting Module
+#  NucleiQ Implementation Prompts - Phase 3: Finance & Accounting Module
 
 **Purpose:** Complete double-entry accounting system with all financial operations
 

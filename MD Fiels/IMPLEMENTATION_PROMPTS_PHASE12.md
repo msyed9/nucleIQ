@@ -1,4 +1,4 @@
-#  NucleIQ Implementation Prompts - Phase 12: Additional Features
+#  NucleiQ Implementation Prompts - Phase 12: Additional Features
 
 **Purpose:** Implement additional enhancements and nice-to-have features
 

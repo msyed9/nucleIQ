@@ -1,7 +1,7 @@
-# NucleIQ - Comprehensive API Gap Analysis & Feature Recommendations
+# NucleiQ - Comprehensive API Gap Analysis & Feature Recommendations
 
 **Analysis Date:** January 4, 2026  
-**Project:** NucleIQ - School Management ERP System  
+**Project:** NucleiQ - School Management ERP System  
 **Stack:** Django (Backend) + React (Frontend)
 
 ---

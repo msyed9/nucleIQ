@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0004_merge_20260112_1856'),
+        ('users', '0003_add_font_customization'),
     ]
 
     operations = [

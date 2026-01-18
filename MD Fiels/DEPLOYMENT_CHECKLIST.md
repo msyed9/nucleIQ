@@ -1,4 +1,4 @@
-# NucleIQ - Deployment Checklist
+# NucleiQ - Deployment Checklist
 
 ## 📋 Pre-Deployment Checklist
 

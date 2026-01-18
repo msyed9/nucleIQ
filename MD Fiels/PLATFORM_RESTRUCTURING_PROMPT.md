@@ -32,10 +32,10 @@ Restructure the application to strictly separate Platform Owner (Superuser) and 
 ## Phase 2: Frontend Tenant Features (React)
 
 1.  **Global Branding Application (Prominent UI)**:
-    -   **Objective**: Ensure the Tenant/School identity is the *primary* visual element, not NucleIQ.
+    -   **Objective**: Ensure the Tenant/School identity is the *primary* visual element, not NucleiQ.
     -   **Context**: Create `src/context/TenantBrandingContext.tsx` to fetch branding (`GET /api/tenants/current/branding`) on app load.
     -   **Sidebar (`Sidebar.tsx`)**:
-        -   Replace the generic "NucleIQ" header with the **Tenant's Logo** (if available) and **Tenant Name**.
+        -   Replace the generic "NucleiQ" header with the **Tenant's Logo** (if available) and **Tenant Name**.
         -   Ensure the logo is large and visible at the top.
         -   Apply `sidebar_color` from branding to the sidebar background.
     -   **Theme & Colors**:
@@ -113,7 +113,7 @@ You are an expert Full Stack Developer. Implement the following restructuring of
     - Wrap application in `TenantBrandingProvider`.
     - Apply CSS variables for colors (`--color-primary`, `--sidebar-bg`) dynamically based on context.
 - **Update File**: `src/components/layout/Sidebar.tsx`
-    - **CRITICAL**: Replace "NucleIQ" text/icon with the dynamic `tenantLogo` and `tenantName` from context.
+    - **CRITICAL**: Replace "NucleiQ" text/icon with the dynamic `tenantLogo` and `tenantName` from context.
     - Ensure the branding is prominent (top of sidebar, large logo).
 - **Create File**: `src/pages/settings/TenantBranding.tsx`
     - Create a form to manage Tenant Branding (Logo, Colors).

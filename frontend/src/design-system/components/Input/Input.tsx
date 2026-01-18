@@ -1,5 +1,5 @@
 /**
- * NucleIQ Design System - Input Component
+ * NucleiQ Design System - Input Component
  * Accessible form input with validation states
  */
 

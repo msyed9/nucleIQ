@@ -1,4 +1,4 @@
-# NucleIQ - Keyboard Shortcuts Reference
+# NucleiQ - Keyboard Shortcuts Reference
 
 ## Global Shortcuts
 

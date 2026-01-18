@@ -1,5 +1,5 @@
 """
-Tenant Models for NucleIQ Multi-Tenant SaaS
+Tenant Models for NucleiQ Multi-Tenant SaaS
 Defines Tenant, TenantBranding, Domain, and AcademicYear models.
 """
 

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useSearchParams } from 'react-router-dom';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const PublicSchoolSite: React.FC = () => {
     // We would typically use subdomain matching here, but for this demo, 
@@ -157,7 +157,7 @@ const PublicSchoolSite: React.FC = () => {
                 </div>
             </div>
             <div style={{ textAlign: 'center', marginTop: '4rem', color: '#6b7280', fontSize: '0.875rem' }}>
-                &copy; {new Date().getFullYear()} {website.site_title}. Powered by NucleIQ.
+                &copy; {new Date().getFullYear()} {website.site_title}. Powered by NucleiQ.
             </div>
         </footer>
     );

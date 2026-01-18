@@ -1,5 +1,5 @@
 /**
- * Login Page - Redesigned with NucleIQ Design System
+ * Login Page - Redesigned with NucleiQ Design System
  * Modern, accessible login with social auth and language toggle
  */
 
@@ -34,7 +34,7 @@ const Login: React.FC = () => {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:8000/api/auth/login/', {
+            const response = await fetch('/api/auth/login/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ const Login: React.FC = () => {
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text'
                             }}>
-                                NucleIQ
+                                NucleiQ
                             </span>
                         </h1>
                         <p style={{
