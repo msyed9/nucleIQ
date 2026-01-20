@@ -400,6 +400,14 @@ class StudentRemark(BaseModel):
         on_delete=models.CASCADE,
         related_name='remarks'
     )
+    
+    # Direct tenant FK for RLS (tenant is also available via student.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='student_remarks',
+        help_text=_('Tenant for RLS (denormalized from student)')
+    )
 
     academic_year = models.ForeignKey(
         'tenants.AcademicYear',
@@ -517,6 +525,12 @@ class StudentRemark(BaseModel):
             'SYSTEM': 'info',
         }
         return color_map.get(self.remark_type, 'secondary')
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate tenant from student for RLS."""
+        if not self.tenant_id and self.student_id:
+            self.tenant = self.student.tenant
+        super().save(*args, **kwargs)
 
 
 class StudentDocument(BaseModel):
@@ -566,6 +580,14 @@ class StudentDocument(BaseModel):
         blank=True,
         related_name='student_documents',
         help_text=_('Academic year for this document')
+    )
+    
+    # Direct tenant FK for RLS (tenant is also available via student.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='student_documents_all',
+        help_text=_('Tenant for RLS (denormalized from student)')
     )
     
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPE_CHOICES)
@@ -670,7 +692,12 @@ class StudentDocument(BaseModel):
         """
         Override save to sync is_verified with verification_status.
         Calculate file metadata.
+        Auto-populate tenant from student for RLS.
         """
+        # Auto-populate tenant from student for RLS
+        if not self.tenant_id and self.student_id:
+            self.tenant = self.student.tenant
+        
         # Sync legacy field
         self.is_verified = (self.verification_status == 'verified')
         
@@ -752,6 +779,14 @@ class StudentHealthRecord(BaseModel):
         help_text=_('Academic year for this health record')
     )
     
+    # Direct tenant FK for RLS (tenant is also available via student.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='student_health_records_all',
+        help_text=_('Tenant for RLS (denormalized from student)')
+    )
+    
     date = models.DateField()
     
     # Vitals
@@ -804,6 +839,12 @@ class StudentHealthRecord(BaseModel):
             height_m = self.height_cm / 100
             return round(self.weight_kg / (height_m ** 2), 2)
         return None
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate tenant from student for RLS."""
+        if not self.tenant_id and self.student_id:
+            self.tenant = self.student.tenant
+        super().save(*args, **kwargs)
 
 
 class BulkStudentImport(BaseModel):
@@ -965,6 +1006,14 @@ class StudentPromotionDetail(BaseModel):
         related_name='promotion_history'
     )
     
+    # Direct tenant FK for RLS (tenant is also available via student.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='student_promotion_details',
+        help_text=_('Tenant for RLS (denormalized from student)')
+    )
+    
     enrollment_from = models.ForeignKey(
         StudentEnrollment,
         on_delete=models.CASCADE,
@@ -998,6 +1047,12 @@ class StudentPromotionDetail(BaseModel):
     
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.promotion_status}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate tenant from student for RLS."""
+        if not self.tenant_id and self.student_id:
+            self.tenant = self.student.tenant
+        super().save(*args, **kwargs)
 
 
 class StudentTransfer(BaseModel):
@@ -1109,6 +1164,14 @@ class AlumniProfile(BaseModel):
         related_name='alumni_profile'
     )
     
+    # Direct tenant FK for RLS (tenant is also available via student.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='alumni_profiles',
+        help_text=_('Tenant for RLS (denormalized from student)')
+    )
+    
     graduation_year = models.IntegerField()
     
     current_occupation = models.CharField(max_length=200, blank=True)
@@ -1139,6 +1202,12 @@ class AlumniProfile(BaseModel):
     
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.graduation_year}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate tenant from student for RLS."""
+        if not self.tenant_id and self.student_id:
+            self.tenant = self.student.tenant
+        super().save(*args, **kwargs)
 
 
 class AlumniEvent(BaseModel):
@@ -1205,6 +1274,14 @@ class AlumniEventRegistration(BaseModel):
         related_name='event_registrations'
     )
     
+    # Direct tenant FK for RLS (tenant is also available via event.tenant)
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='alumni_event_registrations',
+        help_text=_('Tenant for RLS (denormalized from event)')
+    )
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='REGISTERED')
     
     guests_count = models.IntegerField(default=0)
@@ -1226,6 +1303,12 @@ class AlumniEventRegistration(BaseModel):
     
     def __str__(self):
         return f"{self.alumni} - {self.event.title}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate tenant from event for RLS."""
+        if not self.tenant_id and self.event_id:
+            self.tenant = self.event.tenant
+        super().save(*args, **kwargs)
 
 
 class AlumniJobPosting(BaseModel):

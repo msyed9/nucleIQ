@@ -34,6 +34,51 @@ RUN python -m pip install --upgrade pip wheel setuptools && \
     pip wheel -r requirements-prod.txt --wheel-dir /wheels
 
 
+# Development image
+FROM python:3.12-slim as development
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app/backend
+
+# Install system dependencies (minimal runtime requirements)
+# Note: dlib/face_recognition dependencies removed - install manually if needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    libjpeg-dev \
+    curl \
+    postgresql-client \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libglib2.0-0 \
+    libharfbuzz0b \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements files
+COPY requirements/ /app/backend/requirements/
+
+# Install development dependencies
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools && \
+    pip install --no-cache-dir -r requirements/dev.txt
+
+# Copy application code
+COPY . /app/backend/
+
+# Expose port
+EXPOSE 8000
+
+# CMD is usually overridden by docker-compose, but we provide a default
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
 # Production image: minimal runtime with only required system libs and wheels from builder
 FROM python:3.12-slim as production
 
@@ -51,11 +96,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libglib2.0-0 \
     libharfbuzz0b \
-    libffi7 || true && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy pre-built wheels from builder and install them (no compilation in final image)
 COPY --from=builder /wheels /wheels
@@ -107,3 +151,4 @@ CMD ["gunicorn", "config.wsgi:application", \
     "--error-logfile", "-", \
     "--capture-output", \
     "--log-level", "info"]
+

@@ -74,7 +74,10 @@
         "staff_qr_scanner": "Staff QR Scanner",
         "settings": "Settings",
         "general_settings": "General Settings",
-        "academic_setup": "Academic Setup"
+        "academic_setup": "Academic Setup",
+        "leaderboard": "Leaderboard",
+        "dashboard_settings": "Dashboard Settings",
+        "platform_analytics": "Platform Analytics"
     },
     "navigation": {
         "dashboard": "Dashboard",

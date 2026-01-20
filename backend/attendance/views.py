@@ -395,6 +395,15 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
                     record.save()
                 
                 from students.serializers import StudentSerializer
+                # Get enrollment for class/section info
+                enrollment = student.get_current_enrollment()
+                class_name = None
+                section_name = None
+                if enrollment and enrollment.section:
+                    section_name = enrollment.section.name
+                    if enrollment.section.grade_level:
+                        class_name = enrollment.section.grade_level.name
+                
                 return Response({
                     'success': True,
                     'message': 'Attendance marked successfully!',
@@ -402,8 +411,8 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
                         'id': str(student.id),
                         'full_name': student.get_full_name(),
                         'admission_number': student.admission_number,
-                        'class_name': student.current_class.name if student.current_class else 'N/A',
-                        'section': student.current_section.name if student.current_section else 'N/A',
+                        'class_name': class_name if class_name else 'N/A',
+                        'section': section_name if section_name else 'N/A',
                         'photo_url': student.photo.url if student.photo else None
                     },
                     'status': attendance_status,

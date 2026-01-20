@@ -54,14 +54,16 @@ twilio==9.0.4
 xlsxwriter==3.1.9
 pandas==2.2.0
 openpyxl==3.1.2
+xlrd==2.0.1  # For reading legacy .xls files
 
 # Monitoring & Logging (Development)
 django-debug-toolbar==4.4.6
 django-extensions==3.2.3
 
-# Face Recognition & Attendance
-face_recognition==1.3.0
-dlib==19.24.4
+# Face Recognition & Attendance (OPTIONAL - requires cmake, dlib build dependencies)
+# Uncomment if face recognition is needed and install cmake, libboost-all-dev first
+# face_recognition==1.3.0
+# dlib==19.24.4
 numpy==1.26.4
 pyzbar==0.1.9
 

@@ -877,15 +877,16 @@ class StudentViewSet(viewsets.ModelViewSet):
                         current_enrollment.end_date = timezone.now().date()
                         current_enrollment.save()
                     
-                    # Determine new class name and section
-                    new_class_name = target_grade.name if target_grade else student.current_class
-                    new_section = target_section.name if target_section else student.section
+                    # Determine new class name and section from current enrollment or target
+                    if current_enrollment:
+                        old_class_name = current_enrollment.section.grade_level.name if current_enrollment.section else 'N/A'
+                        old_section_name = current_enrollment.section.name if current_enrollment.section else None
+                    else:
+                        old_class_name = 'N/A'
+                        old_section_name = None
                     
-                    # Update student record
-                    student.current_class = new_class_name
-                    if new_section:
-                        student.section = new_section
-                    student.save()
+                    new_class_name = target_grade.name if target_grade else old_class_name
+                    new_section_name = target_section.name if target_section else old_section_name
                     
                     # Create new enrollment
                     new_enrollment_section = target_section

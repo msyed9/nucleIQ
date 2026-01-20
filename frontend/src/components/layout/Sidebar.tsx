@@ -232,6 +232,7 @@ const menuItems: MenuItem[] = [
         label: 'Analytics & Reports',
         children: [
             { path: '/analytics', iconKey: 'pieChart', labelKey: 'nav.platform_analytics', label: 'Platform Analytics' },
+            { path: '/leaderboard', iconKey: 'award', labelKey: 'nav.leaderboard', label: 'Leaderboard' },
             { path: '/reports/builder', iconKey: 'fileText', labelKey: 'nav.report_builder', label: 'Report Builder' },
             { path: '/reports/analytics', iconKey: 'trendingUp', labelKey: 'nav.advanced_analytics', label: 'Advanced Analytics' },
             { path: '/reports/scheduled', iconKey: 'calendar', labelKey: 'nav.scheduled_reports', label: 'Scheduled Reports' },
@@ -267,6 +268,7 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.admin',
         label: 'Admin',
         children: [
+            { path: '/admin/dashboard-settings', iconKey: 'layoutTemplate', labelKey: 'nav.dashboard_settings', label: 'Dashboard Settings' },
             { path: '/admin/audit-logs', iconKey: 'fileText', labelKey: 'nav.audit_logs', label: 'Audit Logs' },
             { path: '/admin/recycle-bin', iconKey: 'folderOpen', labelKey: 'nav.recycle_bin', label: 'Recycle Bin' },
             { path: '/users/manage', iconKey: 'users', labelKey: 'nav.user_management', label: 'User Management' },

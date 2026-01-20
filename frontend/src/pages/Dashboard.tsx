@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import api from '../services/api';
 import {
     Users,
     GraduationCap,
@@ -55,7 +55,7 @@ export const Dashboard: React.FC = () => {
 
     const fetchDashboardStats = async () => {
         try {
-            const response = await axios.get<DashboardStats>('/api/dashboard/analytics/stats/');
+            const response = await api.get<DashboardStats>('/dashboard/analytics/stats/');
             setStats(response.data);
         } catch (error) {
             console.error('Failed to fetch dashboard stats:', error);
@@ -78,7 +78,7 @@ export const Dashboard: React.FC = () => {
     const handleRefresh = () => {
         setLoading(true);
         fetchDashboardStats();
-        axios.post('/api/dashboard/analytics/invalidate_cache/').catch(console.error);
+        api.post('/dashboard/analytics/invalidate_cache/').catch(console.error);
     };
 
     const recentActivities: Activity[] = [

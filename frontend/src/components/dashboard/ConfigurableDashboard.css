@@ -1,0 +1,277 @@
+/**
+ * Configurable Dashboard Styles
+ */
+
+.configurable-dashboard {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-left {
+    flex: 1;
+    min-width: 200px;
+}
+
+.dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.dashboard-subtitle {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Edit Mode Banner */
+.edit-mode-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-200);
+    border-radius: var(--radius-lg);
+    color: var(--color-primary-700);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard Grid */
+.dashboard-grid-container {
+    min-height: 400px;
+}
+
+.dashboard-grid-container .react-grid-layout {
+    background: transparent;
+}
+
+.grid-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grid-item.selected {
+    z-index: 100;
+}
+
+.grid-item:hover {
+    z-index: 50;
+}
+
+.widget-container {
+    height: 100%;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.widget-container:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-hover);
+}
+
+/* Widget Header (Edit Mode) */
+.widget-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    cursor: move;
+}
+
+.widget-drag-handle {
+    color: var(--color-text-tertiary);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+}
+
+.widget-drag-handle:active {
+    cursor: grabbing;
+}
+
+.widget-title {
+    flex: 1;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.widget-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.widget-action-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.widget-action-btn.delete:hover {
+    background: var(--color-error-50);
+    color: var(--color-error-500);
+}
+
+/* Widget Content */
+.widget-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+}
+
+/* Empty Dashboard State */
+.empty-dashboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    padding: 2rem;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-xl);
+    border: 2px dashed var(--color-border);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-dashboard h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-dashboard p {
+    color: var(--color-text-secondary);
+    margin: 0 0 1.5rem 0;
+}
+
+/* Loading State */
+.dashboard-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1rem;
+}
+
+.dashboard-loading .loading-spinner {
+    font-size: 2rem;
+}
+
+.dashboard-loading p {
+    color: var(--color-text-secondary);
+}
+
+/* Grid Layout Resizing */
+.react-grid-item>.react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+}
+
+.react-grid-item>.react-resizable-handle::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--color-border);
+    border-bottom: 2px solid var(--color-border);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.grid-item:hover>.react-resizable-handle::after {
+    opacity: 1;
+}
+
+.react-grid-item.react-grid-placeholder {
+    background: var(--color-primary-100);
+    border: 2px dashed var(--color-primary-300);
+    border-radius: var(--radius-lg);
+    opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .configurable-dashboard {
+        padding: 1rem;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .dashboard-title {
+        font-size: 1.5rem;
+    }
+}

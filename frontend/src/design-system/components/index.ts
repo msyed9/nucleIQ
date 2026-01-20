@@ -54,3 +54,7 @@ export type { CardSkeletonProps } from './Skeleton/CardSkeleton';
 // Page Layout
 export { PageLayout } from './PageLayout/PageLayout';
 export type { PageLayoutProps } from './PageLayout/PageLayout';
+
+// Toggle
+export { Toggle } from './Toggle/Toggle';
+export type { ToggleProps } from './Toggle/Toggle';

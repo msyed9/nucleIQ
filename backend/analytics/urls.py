@@ -80,16 +80,18 @@ class TenantMetricsView(APIView):
 
         tenant = request.user.tenant
         
-        # Get student distribution by class
+        # Get student distribution by class using StudentEnrollment
+        from students.models import StudentEnrollment
         grade_levels = GradeLevel.objects.filter(tenant=tenant).order_by('display_order')
         class_distribution = []
         
         for grade in grade_levels:
-            count = Student.objects.filter(
+            count = StudentEnrollment.objects.filter(
                 tenant=tenant,
-                current_class=grade.name,
-                status='ACTIVE'
-            ).count()
+                section__grade_level=grade,
+                status='ACTIVE',
+                is_deleted=False
+            ).values('student_id').distinct().count()
             class_distribution.append({
                 'class_name': grade.name,
                 'count': count

@@ -1,0 +1,30 @@
+﻿docker : /usr/local/lib/pyth
+on3.12/site-packages/razorpa
+y/client.py:4: UserWarning: 
+pkg_resources is deprecated 
+as an API. See https://setup
+tools.pypa.io/en/latest/pkg_
+resources.html. The 
+pkg_resources package is 
+slated for removal as early 
+as 2025-11-30. Refrain from 
+using this package or pin 
+to Setuptools<81.
+At line:1 char:1
++ docker exec 
+nucleiq_backend python 
+manage.py makemigrations 
+core tena ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (/usr/  
+  local/lib/... Setuptool   
+ s<81.:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+  import pkg_resources
+No changes detected in apps 'core', 'users', 'tenants'

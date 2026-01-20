@@ -16,7 +16,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nucleiq_user -d nucleiq"]
+      test: [ "CMD-SHELL", "pg_isready -U nucleiq_user -d nucleiq" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -46,10 +46,9 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: nucleiq_backend
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+    # Use entrypoint for automated startup (migrations, RLS, server)
+    # For development, override with: docker-compose run --rm backend python manage.py runserver 0.0.0.0:8000
+    command: [ "bash", "/app/backend/docker-entrypoint.sh" ]
     volumes:
       - ./backend:/app/backend
       - static_volume:/app/backend/staticfiles
@@ -166,6 +165,7 @@ volumes:
   static_volume:
   media_volume:
   pgadmin_data:
+
 
 networks:
   nucleiq_network:

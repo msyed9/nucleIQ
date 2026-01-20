@@ -22,7 +22,7 @@ import {
     Shield
 } from 'lucide-react';
 import api from '../../services/api';
-import { Card, Button, useToast, ToastContainer } from '@/design-system';
+import { Card, Button, useToast, ToastContainer, PageLayout, Select, Input, Toggle, Badge, Checkbox } from '@/design-system';
 
 interface Role {
     id: string;
@@ -236,94 +236,77 @@ const UserManagement: React.FC = () => {
     return (
         <>
             <ToastContainer toasts={toasts} onDismiss={removeToast} position="top-right" />
-            <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem' }}>
-                {/* Header */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{
-                        fontFamily: 'var(--font-family-primary)',
-                        fontSize: '2.25rem',
-                        fontWeight: 700,
-                        color: 'var(--color-text-primary)',
-                        margin: '0 0 0.5rem 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem'
-                    }}>
-                        <Users size={32} />
-                        User Management
-                    </h1>
-                    <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                        Manage system users and assign roles
-                    </p>
-                </div>
-
+            <PageLayout
+                title="User Management"
+                subtitle="Manage system users and assign roles"
+                actions={
+                    <Button
+                        onClick={() => {
+                            setEditingUser(null);
+                            setFormData({
+                                email: '',
+                                first_name: '',
+                                last_name: '',
+                                phone_number: '',
+                                password: '',
+                                password_confirm: '',
+                                is_active: true,
+                                is_staff: false,
+                                role_ids: []
+                            });
+                            setShowUserForm(true);
+                        }}
+                        iconLeft={Plus}
+                    >
+                        Add User
+                    </Button>
+                }
+            >
                 {/* Filters */}
-                <Card style={{ marginBottom: '2rem' }}>
+                <Card style={{ marginBottom: '2rem', overflow: 'visible' }}>
                     <div style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px 200px auto', gap: '1rem', alignItems: 'center' }}>
-                            <div style={{ position: 'relative' }}>
-                                <Search size={20} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Search users..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.75rem 0.75rem 0.75rem 2.75rem',
-                                        border: '1px solid var(--color-border)',
-                                        borderRadius: '8px',
-                                        fontSize: '0.875rem'
-                                    }}
-                                />
-                            </div>
-                            <select
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px 200px 150px', gap: '1rem', alignItems: 'end' }}>
+                            <Input
+                                placeholder="Search users by name or email..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                iconLeft={Search}
+                                fullWidth
+                            />
+
+                            <Select
                                 value={filterRole}
-                                onChange={(e) => setFilterRole(e.target.value)}
-                                style={{
-                                    padding: '0.75rem',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: '8px',
-                                    fontSize: '0.875rem'
-                                }}
-                            >
-                                <option value="">All Roles</option>
-                                {roles.map(role => (
-                                    <option key={role.id} value={role.id}>{role.name}</option>
-                                ))}
-                            </select>
-                            <select
+                                onChange={setFilterRole}
+                                placeholder="All Roles"
+                                options={[
+                                    { value: '', label: 'All Roles' },
+                                    ...roles.map(role => ({ value: role.id, label: role.name }))
+                                ]}
+                                fullWidth
+                            />
+
+                            <Select
                                 value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                style={{
-                                    padding: '0.75rem',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: '8px',
-                                    fontSize: '0.875rem'
-                                }}
-                            >
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
+                                onChange={setFilterStatus}
+                                placeholder="All Status"
+                                options={[
+                                    { value: '', label: 'All Status' },
+                                    { value: 'active', label: 'Active' },
+                                    { value: 'inactive', label: 'Inactive' }
+                                ]}
+                                fullWidth
+                            />
+
                             <Button
+                                variant="outline"
+                                fullWidth
                                 onClick={() => {
-                                    setEditingUser(null);
-                                    setFormData({
-                                        email: '',
-                                        first_name: '',
-                                        last_name: '',
-                                        phone_number: '',
-                                        password: '',
-                                        password_confirm: '',
-                                        is_active: true,
-                                        is_staff: false,
-                                        role_ids: []
-                                    });
-                                    setShowUserForm(true);
+                                    setSearchTerm('');
+                                    setFilterRole('');
+                                    setFilterStatus('');
                                 }}
                             >
-                                <Plus size={16} /> Add User
+                                Reset
                             </Button>
                         </div>
                     </div>
@@ -352,128 +335,73 @@ const UserManagement: React.FC = () => {
                                                 transition: 'all 0.2s'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                                                 <div style={{ flex: 1 }}>
-                                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                         {user.first_name} {user.last_name}
                                                         {user.is_staff && (
-                                                            <span style={{
-                                                                fontSize: '0.625rem',
-                                                                padding: '0.125rem 0.5rem',
-                                                                backgroundColor: 'var(--color-warning)',
-                                                                color: 'white',
-                                                                borderRadius: '4px',
-                                                                fontWeight: 500
-                                                            }}>
-                                                                STAFF
-                                                            </span>
+                                                            <Badge variant="success" size="sm">STAFF</Badge>
                                                         )}
                                                     </h3>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                                                        <Mail size={12} />
+                                                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                        <Mail size={14} />
                                                         {user.email}
                                                     </div>
                                                     {user.phone_number && (
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                                                            <Phone size={12} />
+                                                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                            <Phone size={14} />
                                                             {user.phone_number}
                                                         </div>
                                                     )}
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                        <Calendar size={12} />
-                                                        Joined {new Date(user.date_joined).toLocaleDateString()}
-                                                    </div>
                                                 </div>
-                                                <span style={{
-                                                    fontSize: '0.75rem',
-                                                    padding: '0.25rem 0.75rem',
-                                                    borderRadius: '12px',
-                                                    backgroundColor: user.is_active ? 'var(--color-success-light)' : 'var(--color-danger-light)',
-                                                    color: user.is_active ? 'var(--color-success)' : 'var(--color-danger)',
-                                                    fontWeight: 500
-                                                }}>
+                                                <Badge variant={user.is_active ? "success" : "neutral"}>
                                                     {user.is_active ? 'Active' : 'Inactive'}
-                                                </span>
+                                                </Badge>
                                             </div>
 
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.75rem' }}>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
                                                 {user.roles.map(role => (
-                                                    <span
-                                                        key={role.id}
-                                                        style={{
-                                                            fontSize: '0.75rem',
-                                                            padding: '0.25rem 0.5rem',
-                                                            backgroundColor: 'var(--color-primary-light)',
-                                                            color: 'var(--color-primary)',
-                                                            borderRadius: '4px',
-                                                            fontWeight: 500
-                                                        }}
-                                                    >
+                                                    <Badge key={role.id} variant="primary" size="sm">
                                                         {role.name}
-                                                    </span>
+                                                    </Badge>
                                                 ))}
                                             </div>
 
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button
-                                                    onClick={(e) => {
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    style={{ flex: 1 }}
+                                                    onClick={(e: React.MouseEvent) => {
                                                         e.stopPropagation();
                                                         openEditUser(user);
                                                     }}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '0.5rem',
-                                                        fontSize: '0.75rem',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: '6px',
-                                                        backgroundColor: 'white',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '0.25rem'
-                                                    }}
+                                                    iconLeft={Edit}
                                                 >
-                                                    <Edit size={14} /> Edit
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    variant={user.is_active ? "outline" : "success"}
+                                                    size="sm"
+                                                    style={{ flex: 1, ...(user.is_active ? { color: 'var(--color-danger)', borderColor: 'var(--color-danger)' } : {}) }}
+                                                    onClick={(e: React.MouseEvent) => {
                                                         e.stopPropagation();
                                                         handleToggleActive(user);
                                                     }}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '0.5rem',
-                                                        fontSize: '0.75rem',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: '6px',
-                                                        backgroundColor: user.is_active ? 'var(--color-danger-light)' : 'var(--color-success-light)',
-                                                        color: user.is_active ? 'var(--color-danger)' : 'var(--color-success)',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '0.25rem'
-                                                    }}
+                                                    iconLeft={user.is_active ? UserX : UserCheck}
                                                 >
-                                                    {user.is_active ? <><UserX size={14} /> Deactivate</> : <><UserCheck size={14} /> Activate</>}
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
+                                                    {user.is_active ? 'Deactivate' : 'Activate'}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={(e: React.MouseEvent) => {
                                                         e.stopPropagation();
                                                         handleDeleteUser(user.id);
                                                     }}
-                                                    style={{
-                                                        padding: '0.5rem',
-                                                        border: '1px solid var(--color-danger)',
-                                                        borderRadius: '6px',
-                                                        backgroundColor: 'transparent',
-                                                        color: 'var(--color-danger)',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                                    iconOnly={Trash2}
+                                                    style={{ color: 'var(--color-danger)' }}
+                                                />
                                             </div>
                                         </div>
                                     ))}
@@ -499,41 +427,14 @@ const UserManagement: React.FC = () => {
                                     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {roles.map(role => (
-                                                <label
+                                                <Checkbox
                                                     key={role.id}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'start',
-                                                        gap: '0.75rem',
-                                                        padding: '1rem',
-                                                        borderRadius: '8px',
-                                                        cursor: 'pointer',
-                                                        backgroundColor: selectedRoles.has(role.id) ? 'var(--color-primary-light)' : 'transparent',
-                                                        border: '1px solid ' + (selectedRoles.has(role.id) ? 'var(--color-primary)' : 'var(--color-border)'),
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedRoles.has(role.id)}
-                                                        onChange={() => handleToggleRole(role.id)}
-                                                        style={{ marginTop: '0.25rem', width: '18px', height: '18px', cursor: 'pointer' }}
-                                                    />
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <Shield size={16} />
-                                                            {role.name}
-                                                        </div>
-                                                        {role.description && (
-                                                            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-                                                                {role.description}
-                                                            </div>
-                                                        )}
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                                                            {role.code}
-                                                        </div>
-                                                    </div>
-                                                </label>
+                                                    label={role.name}
+                                                    helperText={role.description}
+                                                    checked={selectedRoles.has(role.id)}
+                                                    onChange={() => handleToggleRole(role.id)}
+                                                    className="role-checkbox-item"
+                                                />
                                             ))}
                                         </div>
                                     </div>
@@ -542,8 +443,9 @@ const UserManagement: React.FC = () => {
                                         <Button
                                             onClick={handleSaveUserRoles}
                                             disabled={saving}
+                                            iconLeft={Save}
                                         >
-                                            {saving ? 'Saving...' : <><Save size={16} /> Save Roles</>}
+                                            {saving ? 'Saving...' : 'Save Roles'}
                                         </Button>
                                     </div>
                                 </div>
@@ -573,203 +475,144 @@ const UserManagement: React.FC = () => {
                         justifyContent: 'center',
                         zIndex: 1000
                     }}>
-                        <Card style={{ maxWidth: '600px', width: '100%', margin: '1rem', maxHeight: '90vh', overflowY: 'auto' }}>
-                            <div style={{ padding: '1.5rem' }}>
-                                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem' }}>
-                                    {editingUser ? 'Edit User' : 'Create New User'}
-                                </h2>
+                        <Card style={{ maxWidth: '600px', width: '100%', margin: '1rem', position: 'relative' }}>
+                            <div style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
+                                        {editingUser ? 'Edit User' : 'Create New User'}
+                                    </h2>
+                                    <Button variant="ghost" iconOnly={X} onClick={() => setShowUserForm(false)} />
+                                </div>
 
                                 <form onSubmit={handleCreateOrUpdateUser}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                First Name *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.first_name}
-                                                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    border: '1px solid var(--color-border)',
-                                                    borderRadius: '6px'
-                                                }}
-                                                placeholder="John"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                Last Name *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.last_name}
-                                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    border: '1px solid var(--color-border)',
-                                                    borderRadius: '6px'
-                                                }}
-                                                placeholder="Doe"
-                                            />
-                                        </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                        <Input
+                                            label="First Name"
+                                            required
+                                            value={formData.first_name}
+                                            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                            placeholder="John"
+                                            fullWidth
+                                        />
+                                        <Input
+                                            label="Last Name"
+                                            required
+                                            value={formData.last_name}
+                                            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                            placeholder="Doe"
+                                            fullWidth
+                                        />
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                Email *
-                                            </label>
-                                            <input
-                                                type="email"
-                                                required
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    border: '1px solid var(--color-border)',
-                                                    borderRadius: '6px'
-                                                }}
-                                                placeholder="john.doe@example.com"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                Phone
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                value={formData.phone_number}
-                                                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    border: '1px solid var(--color-border)',
-                                                    borderRadius: '6px'
-                                                }}
-                                                placeholder="+1234567890"
-                                            />
-                                        </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                        <Input
+                                            label="Email Address"
+                                            type="email"
+                                            required
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="john.doe@example.com"
+                                            fullWidth
+                                        />
+                                        <Input
+                                            label="Phone Number"
+                                            type="tel"
+                                            value={formData.phone_number}
+                                            onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                                            placeholder="+1234567890"
+                                            fullWidth
+                                        />
                                     </div>
 
                                     {!editingUser && (
-                                        <>
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                    Password *
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    required={!editingUser}
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '0.75rem',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: '6px'
-                                                    }}
-                                                    placeholder="••••••••"
-                                                />
-                                            </div>
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                    Confirm Password *
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    required={!editingUser}
-                                                    value={formData.password_confirm}
-                                                    onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '0.75rem',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: '6px'
-                                                    }}
-                                                    placeholder="••••••••"
-                                                />
-                                            </div>
-                                        </>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                            <Input
+                                                label="Password"
+                                                type="password"
+                                                required={!editingUser}
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                placeholder="••••••••"
+                                                fullWidth
+                                            />
+                                            <Input
+                                                label="Confirm Password"
+                                                type="password"
+                                                required={!editingUser}
+                                                value={formData.password_confirm}
+                                                onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                                                placeholder="••••••••"
+                                                fullWidth
+                                            />
+                                        </div>
                                     )}
 
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500, fontSize: '0.875rem' }}>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
                                             Roles
                                         </label>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem', border: '1px solid var(--color-border)', borderRadius: '6px' }}>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                            gap: '0.75rem',
+                                            padding: '1rem',
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto'
+                                        }}>
                                             {roles.map(role => (
-                                                <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '4px', backgroundColor: formData.role_ids.includes(role.id) ? 'var(--color-primary-light)' : 'transparent' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.role_ids.includes(role.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setFormData({ ...formData, role_ids: [...formData.role_ids, role.id] });
-                                                            } else {
-                                                                setFormData({ ...formData, role_ids: formData.role_ids.filter(r => r !== role.id) });
-                                                            }
-                                                        }}
-                                                        style={{ width: '16px', height: '16px' }}
-                                                    />
-                                                    <span style={{ fontSize: '0.875rem' }}>{role.name}</span>
-                                                </label>
+                                                <Checkbox
+                                                    key={role.id}
+                                                    label={role.name}
+                                                    checked={formData.role_ids.includes(role.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setFormData({ ...formData, role_ids: [...formData.role_ids, role.id] });
+                                                        } else {
+                                                            setFormData({ ...formData, role_ids: formData.role_ids.filter(r => r !== role.id) });
+                                                        }
+                                                    }}
+                                                />
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-background-secondary)', borderRadius: '8px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input
-                                                type="checkbox"
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '2rem',
+                                        marginBottom: '2rem',
+                                        padding: '1.25rem',
+                                        backgroundColor: 'var(--color-bg-secondary)',
+                                        borderRadius: 'var(--radius-lg)',
+                                        border: '1px solid var(--color-border-light)'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <Toggle
                                                 checked={formData.is_active}
-                                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                                style={{ width: '18px', height: '18px' }}
+                                                onChange={(checked) => setFormData({ ...formData, is_active: checked })}
                                             />
-                                            <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Active</span>
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input
-                                                type="checkbox"
+                                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Active Account</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <Toggle
                                                 checked={formData.is_staff}
-                                                onChange={(e) => setFormData({ ...formData, is_staff: e.target.checked })}
-                                                style={{ width: '18px', height: '18px' }}
+                                                onChange={(checked) => setFormData({ ...formData, is_staff: checked })}
                                             />
-                                            <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Staff Access</span>
-                                        </label>
+                                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Staff Access</span>
+                                        </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                         <Button
                                             type="button"
-                                            variant="secondary"
-                                            onClick={() => {
-                                                setShowUserForm(false);
-                                                setEditingUser(null);
-                                                setFormData({
-                                                    email: '',
-                                                    first_name: '',
-                                                    last_name: '',
-                                                    phone_number: '',
-                                                    password: '',
-                                                    password_confirm: '',
-                                                    is_active: true,
-                                                    is_staff: false,
-                                                    role_ids: []
-                                                });
-                                            }}
+                                            variant="ghost"
+                                            onClick={() => setShowUserForm(false)}
                                         >
-                                            <X size={16} /> Cancel
+                                            Cancel
                                         </Button>
-                                        <Button type="submit" disabled={saving}>
-                                            {saving ? 'Saving...' : <><Check size={16} /> {editingUser ? 'Update' : 'Create'}</>}
+                                        <Button type="submit" loading={saving} iconLeft={editingUser ? Save : Plus}>
+                                            {editingUser ? 'Update User' : 'Create User'}
                                         </Button>
                                     </div>
                                 </form>
@@ -777,7 +620,7 @@ const UserManagement: React.FC = () => {
                         </Card>
                     </div>
                 )}
-            </div>
+            </PageLayout>
         </>
     );
 };

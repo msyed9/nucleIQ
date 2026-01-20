@@ -176,6 +176,10 @@ import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 import BillingManagement from './pages/billing/BillingManagement';
 import StaffProfile from './pages/staff/StaffProfile';
 
+// Dashboard & Leaderboard Pages
+import LeaderboardPage from './pages/leaderboard/LeaderboardPage';
+import DashboardAdmin from './pages/admin/DashboardAdmin';
+
 // Newly added for Sidebar Consistency
 import PettyCash from './pages/finance/PettyCash';
 import MessManagement from './pages/hostel/MessManagement';
@@ -431,8 +435,10 @@ function App() {
                                                     <Route path="/helpdesk" element={<Layout><TicketBoard /></Layout>} />
                                                     <Route path="/helpdesk/tickets" element={<Layout><HelpdeskTickets /></Layout>} />
 
-                                                    {/* Analytics & Billing */}
+                                                    {/* Analytics, Dashboard & Billing */}
                                                     <Route path="/analytics" element={<Layout><AnalyticsDashboard /></Layout>} />
+                                                    <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+                                                    <Route path="/admin/dashboard-settings" element={<Layout><DashboardAdmin /></Layout>} />
                                                     <Route path="/library" element={<Layout><LibraryManagement /></Layout>} />
                                                     <Route path="/billing" element={<Layout><BillingManagement /></Layout>} />
 

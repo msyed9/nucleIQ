@@ -17,7 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import api from '../../services/api';
-import { Card, Button, useToast, ToastContainer } from '@/design-system';
+import { Card, Button, useToast, ToastContainer, PageLayout, Input, Checkbox, Badge } from '@/design-system';
 
 interface Permission {
   id: string;
@@ -204,108 +204,87 @@ const RolesPermissions: React.FC = () => {
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={removeToast} position="top-right" />
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-family-primary)',
-            fontSize: '2.25rem',
-            fontWeight: 700,
-            color: 'var(--color-text-primary)',
-            margin: '0 0 0.5rem 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <Shield size={32} />
-            Roles & Permissions
-          </h1>
-          <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-            Manage user roles and assign permissions
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
+      <PageLayout
+        title="Roles & Permissions"
+        subtitle="Manage user roles and assign granular permissions for system resources"
+        actions={
+          <Button
+            onClick={() => {
+              setEditingRole(null);
+              setFormData({ name: '', code: '', description: '' });
+              setShowRoleForm(true);
+            }}
+            iconLeft={Plus}
+          >
+            Add Role
+          </Button>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
           {/* Roles List */}
           <div>
-            <Card>
-              <div style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Roles</h2>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setEditingRole(null);
-                      setFormData({ name: '', code: '', description: '' });
-                      setShowRoleForm(true);
+            <Card title="Roles" style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
+                {roles.map(role => (
+                  <div
+                    key={role.id}
+                    onClick={() => setSelectedRole(role)}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid ' + (selectedRole?.id === role.id ? 'var(--color-primary)' : 'var(--color-border-light)'),
+                      backgroundColor: selectedRole?.id === role.id ? 'var(--color-bg-primary-light)' : 'var(--color-bg-paper)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    <Plus size={16} /> Add Role
-                  </Button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {roles.map(role => (
-                    <div
-                      key={role.id}
-                      onClick={() => setSelectedRole(role)}
-                      style={{
-                        padding: '1rem',
-                        borderRadius: '8px',
-                        border: selectedRole?.id === role.id ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                        backgroundColor: selectedRole?.id === role.id ? 'var(--color-primary-light)' : 'var(--color-background)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
-                            {role.name}
-                          </h3>
-                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0' }}>
-                            {role.code}
-                          </p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', margin: 0 }}>
-                            {role.user_count || 0} users  {role.permissions?.length || 0} permissions
-                          </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditRole(role);
-                            }}
-                            style={{
-                              padding: '0.25rem',
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              color: 'var(--color-text-secondary)'
-                            }}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRole(role.id);
-                            }}
-                            style={{
-                              padding: '0.25rem',
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              color: 'var(--color-danger)'
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                    {selectedRole?.id === role.id && (
+                      <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '4px',
+                        backgroundColor: 'var(--color-primary)'
+                      }} />
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.25rem 0', color: 'var(--color-text-primary)' }}>
+                          {role.name}
+                        </h3>
+                        <code>{role.code}</code>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                          <Badge variant="neutral" size="sm">{role.user_count || 0} users</Badge>
+                          <Badge variant="primary" size="sm">{role.permissions?.length || 0} perms</Badge>
                         </div>
                       </div>
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconOnly={Edit}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditRole(role);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconOnly={Trash2}
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteRole(role.id);
+                          }}
+                        />
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
@@ -313,124 +292,99 @@ const RolesPermissions: React.FC = () => {
           {/* Permissions Panel */}
           <div>
             {selectedRole ? (
-              <Card>
-                <div style={{ padding: '1.5rem' }}>
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>
-                      Permissions for {selectedRole.name}
-                    </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                      Select permissions to grant to this role
-                    </p>
-                  </div>
-
-                  <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                    {permissionGroups.map(group => (
-                      <div key={group.name} style={{ marginBottom: '1rem' }}>
-                        <div
-                          onClick={() => {
-                            setExpandedGroups(prev => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(group.name)) {
-                                newSet.delete(group.name);
-                              } else {
-                                newSet.add(group.name);
-                              }
-                              return newSet;
-                            });
-                          }}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-background-secondary)',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            marginBottom: '0.5rem'
+              <Card
+                title={`Permissions for ${selectedRole.name}`}
+                subtitle="Select granular permissions to grant to this role"
+                actions={
+                  <Button
+                    onClick={handleSavePermissions}
+                    loading={saving}
+                    iconLeft={Save}
+                  >
+                    Save Changes
+                  </Button>
+                }
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem' }}>
+                  {permissionGroups.map(group => (
+                    <div key={group.name} style={{
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: 'var(--radius-lg)',
+                      overflow: 'hidden'
+                    }}>
+                      <div
+                        onClick={() => {
+                          setExpandedGroups(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(group.name)) {
+                              newSet.delete(group.name);
+                            } else {
+                              newSet.add(group.name);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '1rem 1.25rem',
+                          backgroundColor: 'var(--color-bg-secondary)',
+                          cursor: 'pointer',
+                          borderBottom: expandedGroups.has(group.name) ? '1px solid var(--color-border-light)' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ color: 'var(--color-text-tertiary)' }}>
+                            {expandedGroups.has(group.name) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                          </div>
+                          <span style={{ fontWeight: 600, fontSize: '1rem' }}>{group.name}</span>
+                          <Badge variant="outline" size="sm">
+                            {group.permissions.filter(p => selectedPermissions.has(p.id)).length} / {group.permissions.length}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectAllInGroup(group);
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {expandedGroups.has(group.name) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                            <strong>{group.name}</strong>
-                            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                              ({group.permissions.filter(p => selectedPermissions.has(p.id)).length}/{group.permissions.length})
-                            </span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectAllInGroup(group);
-                            }}
-                            style={{
-                              padding: '0.25rem 0.75rem',
-                              fontSize: '0.75rem',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: '4px',
-                              backgroundColor: 'white',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {group.permissions.every(p => selectedPermissions.has(p.id)) ? 'Deselect All' : 'Select All'}
-                          </button>
-                        </div>
-
-                        {expandedGroups.has(group.name) && (
-                          <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {group.permissions.map(permission => (
-                              <label
-                                key={permission.id}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'start',
-                                  gap: '0.75rem',
-                                  padding: '0.75rem',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  backgroundColor: selectedPermissions.has(permission.id) ? 'var(--color-primary-light)' : 'transparent',
-                                  border: '1px solid ' + (selectedPermissions.has(permission.id) ? 'var(--color-primary)' : 'transparent'),
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedPermissions.has(permission.id)}
-                                  onChange={() => handleTogglePermission(permission.id)}
-                                  style={{ marginTop: '0.25rem' }}
-                                />
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontWeight: 500 }}>{permission.display_name}</div>
-                                  {permission.description && (
-                                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-                                      {permission.description}
-                                    </div>
-                                  )}
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
-                                    {permission.code}
-                                  </div>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        )}
+                          {group.permissions.every(p => selectedPermissions.has(p.id)) ? 'Deselect All' : 'Select All'}
+                        </Button>
                       </div>
-                    ))}
-                  </div>
 
-                  <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      onClick={handleSavePermissions}
-                      disabled={saving}
-                    >
-                      {saving ? 'Saving...' : <><Save size={16} /> Save Permissions</>}
-                    </Button>
-                  </div>
+                      {expandedGroups.has(group.name) && (
+                        <div style={{
+                          padding: '1.25rem',
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                          gap: '1rem',
+                          backgroundColor: 'var(--color-bg-paper)'
+                        }}>
+                          {group.permissions.map(permission => (
+                            <Checkbox
+                              key={permission.id}
+                              label={permission.display_name}
+                              helperText={permission.description}
+                              checked={selectedPermissions.has(permission.id)}
+                              onChange={() => handleTogglePermission(permission.id)}
+                              className="permission-item"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Card>
             ) : (
               <Card>
-                <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-                  <Users size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                  <p>Select a role to manage its permissions</p>
+                <div style={{ padding: '6rem 2rem', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
+                  <Shield size={64} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Role Selected</h3>
+                  <p>Select a role from the sidebar to manage its granular permissions</p>
                 </div>
               </Card>
             )}
@@ -452,83 +406,71 @@ const RolesPermissions: React.FC = () => {
             zIndex: 1000
           }}>
             <Card style={{ maxWidth: '500px', width: '100%', margin: '1rem' }}>
-              <div style={{ padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem' }}>
-                  {editingRole ? 'Edit Role' : 'Create New Role'}
-                </h2>
+              <div style={{ padding: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
+                    {editingRole ? 'Edit Role' : 'Create New Role'}
+                  </h2>
+                  <Button variant="ghost" iconOnly={X} onClick={() => setShowRoleForm(false)} />
+                </div>
 
                 <form onSubmit={handleCreateOrUpdateRole}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-                      Role Name *
-                    </label>
-                    <input
-                      type="text"
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <Input
+                      label="Role Name"
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px'
-                      }}
                       placeholder="e.g., Principal, Teacher"
+                      fullWidth
                     />
-                  </div>
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-                      Role Code *
-                    </label>
-                    <input
-                      type="text"
+                    <Input
+                      label="Role Code"
                       required
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px'
-                      }}
-                      placeholder="e.g., principal, teacher"
+                      placeholder="e.g., principal_admin"
+                      helperText="Unique identifier used by the system"
+                      fullWidth
                     />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        Description
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={4}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-md)',
+                          resize: 'vertical',
+                          fontSize: '0.875rem',
+                          fontFamily: 'inherit'
+                        }}
+                        placeholder="Describe the role and its responsibilities..."
+                      />
+                    </div>
                   </div>
 
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px',
-                        resize: 'vertical'
-                      }}
-                      placeholder="Describe the role and its responsibilities"
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="ghost"
                       onClick={() => {
                         setShowRoleForm(false);
                         setEditingRole(null);
                         setFormData({ name: '', code: '', description: '' });
                       }}
                     >
-                      <X size={16} /> Cancel
+                      Cancel
                     </Button>
-                    <Button type="submit" disabled={saving}>
-                      {saving ? 'Saving...' : <><Check size={16} /> {editingRole ? 'Update' : 'Create'}</>}
+                    <Button type="submit" loading={saving} iconLeft={editingRole ? Save : Check}>
+                      {editingRole ? 'Update Role' : 'Create Role'}
                     </Button>
                   </div>
                 </form>
@@ -536,7 +478,7 @@ const RolesPermissions: React.FC = () => {
             </Card>
           </div>
         )}
-      </div>
+      </PageLayout>
     </>
   );
 };

@@ -1,0 +1,90 @@
+name: 🗄️ Database Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every night at midnight UTC
+  workflow_dispatch:      # Allows manual backup from GitHub Actions tab
+
+jobs:
+  backup:
+    name: 💾 Backup Database
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔑 Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: 🕸️ Generate Backup on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_PORT }}
+          script: |
+            # Create backup directory if not exists
+            mkdir -p ~/db_backups
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="~/db_backups/nucleiq_backup_$TIMESTAMP.sql"
+            
+            # Export DB (Assuming postgres is running local and user has access)
+            # Use .env credentials or pg_dump directly if configured
+            # If the DB is in Docker, use: docker exec -t db_container_name pg_dump -U username dbname > $BACKUP_FILE
+            
+            # For non-docker setup:
+            # We assume the user has a ~/.pgpass or environment variables set up
+            # Otherwise we might need to use sudo or pass the name
+            pg_dump -U nucleiq_user nucleiq > $BACKUP_FILE
+            
+            echo "✅ Backup created: $BACKUP_FILE"
+            echo "FILE_PATH=$BACKUP_FILE" >> $GITHUB_ENV
+
+      - name: 📥 Download Backup to GitHub Runner
+        run: |
+          # Create temporary folder outside of git repo to avoid loss during checkout
+          mkdir -p /tmp/backups_download
+          
+          # Get the latest backup file name from server
+          LATEST_BACKUP=$(ssh -p ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }} "ls -t ~/db_backups/nucleiq_backup_*.sql | head -1")
+          
+          # Download it
+          scp -P ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }}:$LATEST_BACKUP /tmp/backups_download/
+          
+          # Clean up on server (optional)
+          ssh -p ${{ secrets.ORACLE_PORT }} -o StrictHostKeyChecking=no ${{ secrets.ORACLE_USER }}@${{ secrets.ORACLE_HOST }} "rm $LATEST_BACKUP"
+
+      - name: 📤 Push Backup to GitHub Branch
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Switch to or create the db-backups branch
+          git fetch origin
+          if git branch -r | grep -q "origin/db-backups"; then
+            git checkout db-backups
+            git pull origin db-backups
+          else
+            git checkout --orphan db-backups
+            git rm -rf .
+            mkdir -p backups
+          fi
+          
+          # Move the new backup from temp to branch folder
+          mv /tmp/backups_download/*.sql ./backups/
+          
+          # Keep only 5 most recent files
+          # List files, sort by time, skip top 15, and delete the rest
+          ls -t ./backups/nucleiq_backup_*.sql | tail -n +16 | xargs -r rm
+          
+          git add ./backups/
+          git commit -m "Automated database backup $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          git push origin db-backups --force

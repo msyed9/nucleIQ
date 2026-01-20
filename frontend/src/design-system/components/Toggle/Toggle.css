@@ -1,0 +1,53 @@
+.ds-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+}
+
+.ds-toggle {
+    position: relative;
+    width: 2.5rem;
+    height: 1.25rem;
+    background-color: var(--color-background-tertiary, #e5e7eb);
+    border-radius: 9999px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.ds-toggle--checked {
+    background-color: var(--color-primary, #4f46e5);
+}
+
+.ds-toggle--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.ds-toggle__slider {
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.ds-toggle--checked .ds-toggle__slider {
+    transform: translateX(1.25rem);
+}
+
+.ds-toggle__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-primary, #111827);
+    cursor: pointer;
+}
+
+.ds-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}

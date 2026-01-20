@@ -42,12 +42,8 @@ class Tenant(BaseModel):
         help_text="Unique subdomain (e.g., 'myschool' for myschool.nucleiq.com)"
     )
     
-    schema_name = models.CharField(
-        max_length=63,
-        unique=True,
-        editable=False,
-        help_text="Database schema name (auto-generated from subdomain)"
-    )
+    # NOTE: Using Shared Schema with Row Level Security (RLS) strategy.
+    # All tenants share the same database schema, isolated by tenant_id FK.
     
     plan = models.CharField(
         max_length=20,
@@ -114,12 +110,6 @@ class Tenant(BaseModel):
     
     def __str__(self):
         return f"{self.name} ({self.subdomain})"
-    
-    def save(self, *args, **kwargs):
-        """Auto-generate schema_name from subdomain."""
-        if not self.schema_name:
-            self.schema_name = f"tenant_{self.subdomain}"
-        super().save(*args, **kwargs)
     
     @property
     def is_trial(self):
@@ -757,12 +747,13 @@ class GradeLevel(BaseModel):
         return self.sections.filter(is_active=True).count()
     
     def get_students_count(self):
-        """Get total number of students in this grade."""
-        from students.models import Student
-        return Student.objects.filter(
+        """Get total number of students in this grade (via active enrollments)."""
+        from students.models import StudentEnrollment
+        return StudentEnrollment.objects.filter(
             tenant=self.tenant,
-            current_class=self.name,
-            is_active=True
+            section__grade_level=self,
+            status='ACTIVE',
+            is_deleted=False
         ).count()
 
 
@@ -837,13 +828,13 @@ class Section(BaseModel):
         return f"{self.grade_level.name} - {self.name}"
     
     def get_students_count(self):
-        """Get number of students in this section."""
-        from students.models import Student
-        return Student.objects.filter(
+        """Get number of students in this section (via active enrollments)."""
+        from students.models import StudentEnrollment
+        return StudentEnrollment.objects.filter(
             tenant=self.tenant,
-            current_class=self.grade_level.name,
-            section=self.name,
-            is_active=True
+            section=self,
+            status='ACTIVE',
+            is_deleted=False
         ).count()
     
     def get_available_capacity(self):

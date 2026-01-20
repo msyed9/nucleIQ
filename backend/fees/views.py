@@ -156,20 +156,20 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
         
         queryset = self.get_queryset().filter(status__in=['PENDING', 'PARTIAL'])
         
-        # Apply class filter
+        # Apply class filter via enrollment
         class_filter = request.query_params.get('class_name')
         if class_filter:
             queryset = queryset.filter(
-                Q(student__current_class__name__icontains=class_filter) |
-                Q(student__class_level__icontains=class_filter)
+                student__enrollments__section__grade_level__name__icontains=class_filter,
+                student__enrollments__status='ACTIVE'
             )
         
-        # Apply section filter
+        # Apply section filter via enrollment
         section_filter = request.query_params.get('section')
         if section_filter:
             queryset = queryset.filter(
-                Q(student__current_section__name__icontains=section_filter) |
-                Q(student__section__icontains=section_filter)
+                student__enrollments__section__name__icontains=section_filter,
+                student__enrollments__status='ACTIVE'
             )
         
         # Apply status filter (within pending/partial)
@@ -370,13 +370,16 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
                     category_summary[cat_name]['total_paid'] += float(item.paid_amount)
                     category_summary[cat_name]['balance'] += float(item.balance_amount)
         
+        # Get current enrollment for class/section info
+        current_enrollment = student.get_current_enrollment()
+        
         return Response({
             'student': {
                 'id': str(student.id),
-                'full_name': student.full_name,
+                'full_name': student.get_full_name(),
                 'admission_number': student.admission_number,
-                'class_name': student.current_class.name if student.current_class else None,
-                'section_name': student.current_section.name if student.current_section else None
+                'class_name': current_enrollment.section.grade_level.name if current_enrollment and current_enrollment.section else None,
+                'section_name': current_enrollment.section.name if current_enrollment and current_enrollment.section else None
             },
             'ledger_entries': ledger_entries,
             'category_summary': list(category_summary.values()),

@@ -125,9 +125,6 @@ class TenantMiddleware(MiddlewareMixin):
                 # Set thread-local tenant
                 set_current_tenant(tenant)
                 
-                # Set PostgreSQL RLS context
-                self._set_rls_context(tenant)
-                
                 # Attach branding to request
                 request.tenant = tenant
                 request.branding = self._get_tenant_branding(tenant)
@@ -148,8 +145,14 @@ class TenantMiddleware(MiddlewareMixin):
                 logger.debug("No tenant context set")
             
             # Set current user in thread-local
+            user = None
             if request.user.is_authenticated:
-                set_current_user(request.user)
+                user = request.user
+                set_current_user(user)
+            
+            # Set PostgreSQL RLS context (after user is available for super admin check)
+            if tenant:
+                self._set_rls_context(tenant, user)
             
         except Exception as e:
             logger.error(f"Error in TenantMiddleware: {str(e)}", exc_info=True)
@@ -160,11 +163,20 @@ class TenantMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         """
-        Clean up thread-local storage after request.
+        Clean up thread-local storage and PostgreSQL session context after request.
+        CRITICAL: This prevents tenant context leakage between requests with connection pooling.
         """
         # Clear thread-local storage
         set_current_tenant(None)
         set_current_user(None)
+        
+        # Clear PostgreSQL RLS context to prevent leakage with connection pooling
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT set_config('app.current_tenant_id', '', TRUE)")
+                cursor.execute("SELECT set_config('app.is_super_admin', 'false', TRUE)")
+        except Exception as e:
+            logger.debug(f'Failed to clear RLS context: {e}')
         
         return response
     
@@ -208,18 +220,37 @@ class TenantMiddleware(MiddlewareMixin):
         except Domain.DoesNotExist:
             return None
     
-    def _set_rls_context(self, tenant):
+    def _set_rls_context(self, tenant, user=None):
         """
-        Set PostgreSQL session variable for Row Level Security.
+        Set PostgreSQL session variables for Row Level Security.
         
-        This sets the app.current_tenant_id variable that RLS policies use.
+        Sets:
+        - app.current_tenant_id: The current tenant UUID for RLS policies
+        - app.is_super_admin: Boolean flag for super admin RLS bypass
+        
+        Note: Using TRUE for set_config makes it transaction-scoped,
+        which is safer with connection pooling.
         """
         with connection.cursor() as cursor:
+            # Set tenant context
             cursor.execute(
-                "SELECT set_config('app.current_tenant_id', %s, FALSE)",
+                "SELECT set_config('app.current_tenant_id', %s, TRUE)",
                 [str(tenant.id)]
             )
-            logger.debug(f"RLS context set for tenant: {tenant.id}")
+            
+            # Set super admin flag for RLS bypass
+            is_super_admin = 'false'
+            if user and hasattr(user, 'is_platform_admin') and user.is_platform_admin:
+                is_super_admin = 'true'
+            elif user and hasattr(user, 'is_superuser') and user.is_superuser:
+                is_super_admin = 'true'
+            
+            cursor.execute(
+                "SELECT set_config('app.is_super_admin', %s, TRUE)",
+                [is_super_admin]
+            )
+            
+            logger.debug(f"RLS context set for tenant: {tenant.id}, is_super_admin: {is_super_admin}")
     
     def _get_tenant_branding(self, tenant):
         """

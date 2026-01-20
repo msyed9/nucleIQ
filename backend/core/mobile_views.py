@@ -19,8 +19,8 @@ class MobileConfigViewSet(viewsets.ViewSet):
         Fetch branding for a school based on code or domain.
         """
         try:
-            # Assuming 'slug' or 'schema_name' matches school_code
-            tenant = Tenant.objects.get(schema_name=school_code)
+            # Use subdomain to find tenant (shared schema RLS strategy)
+            tenant = Tenant.objects.get(subdomain=school_code)
             
             return Response({
                 'id': tenant.id,

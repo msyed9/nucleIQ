@@ -37,11 +37,11 @@ class TenantAdmin(admin.ModelAdmin):
     )
     list_filter = ('plan', 'is_active', 'created_at')
     search_fields = ('name', 'subdomain', 'admin_email')
-    readonly_fields = ('id', 'schema_name', 'created_at', 'updated_at')
+    readonly_fields = ('id', 'created_at', 'updated_at')
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'subdomain', 'schema_name', 'is_active')
+            'fields': ('name', 'subdomain', 'is_active')
         }),
         ('Contact Information', {
             'fields': ('admin_email', 'admin_phone')
