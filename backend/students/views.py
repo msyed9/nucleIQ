@@ -6,7 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
-from core.permissions import IsTenantUser, HasModulePermission
+from core.permissions import IsTenantUser, HasModulePermission, IsTenantAdmin
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db import models
@@ -23,7 +23,8 @@ from .serializers import (
     StudentHealthRecordSerializer,
     Student360Serializer,
     SiblingSerializer,
-    StudentEnrollmentSerializer
+    StudentEnrollmentSerializer,
+    ParentCredentialsSerializer
 )
 from .services import Student360Service, create_system_remark
 from .bulk_import import BulkStudentImportService
@@ -32,6 +33,8 @@ from .notifications import StudentNotificationService
 from . import tasks
 import io
 import pandas as pd
+import random
+import string
 
 
 def _get_active_academic_year(tenant):
@@ -336,18 +339,17 @@ class StudentViewSet(viewsets.ModelViewSet):
         
         return response
 
-    
     @action(detail=True, methods=['get'])
     def profile_360(self, request, pk=None):
         """
-        Get complete 360Â° profile for a student.
-        
+        Get complete 360° profile for a student.
+
         Returns comprehensive data from all modules.
         """
         student = self.get_object()
         service = Student360Service(student)
         profile_data = service.get_360_profile()
-        # Ensure photo URLs are absolute so frontend can load them correctly
+
         def _make_absolute(url):
             if not url:
                 return None
@@ -371,6 +373,36 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         serializer = Student360Serializer(profile_data)
         return Response(serializer.data)
+
+
+class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin endpoints to view parent credentials and reset passwords."""
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    serializer_class = ParentCredentialsSerializer
+
+    def get_queryset(self):
+        return ParentUser.objects.filter(
+            tenant=self.request.user.tenant,
+            portal_access_enabled=True
+        ).select_related('user').prefetch_related('students')
+
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        parent_profile = self.get_object()
+        user = parent_profile.user
+
+        temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        user.set_password(temp_password)
+        user.is_active = True
+        user.save(update_fields=['password', 'is_active'])
+
+        return Response({
+            'parent_id': str(parent_profile.id),
+            'user_email': user.email,
+            'user_phone': user.phone_number,
+            'user_name': user.get_full_name(),
+            'password': temp_password
+        })
     
     @action(detail=True, methods=['get'])
     def siblings(self, request, pk=None):

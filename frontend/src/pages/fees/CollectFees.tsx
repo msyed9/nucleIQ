@@ -273,7 +273,7 @@ const CollectFees: React.FC = () => {
     };
 
     const handleGenerateMonthly = async () => {
-        if (!confirm('Generate monthly invoices for all students?')) return;
+        if (!confirm('Generate invoices for the current period?')) return;
 
         try {
             const response = await api.post('/fees/invoices/generate_monthly/');
@@ -354,7 +354,7 @@ const CollectFees: React.FC = () => {
                     />
                     <button className="btn-generate" onClick={handleGenerateMonthly}>
                         <span className="btn-icon">📅</span>
-                        {t('fees.generate', 'Generate Monthly Invoices')}
+                        {t('fees.generate', 'Generate Invoices')}
                     </button>
                 </div>
             </div>

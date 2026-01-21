@@ -123,7 +123,7 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def generate_monthly(self, request):
-        """Generate monthly invoices for all students."""
+        """Generate invoices for current period (monthly or term-based)."""
         from datetime import date
         from tenants.models import AcademicYear
         
@@ -138,12 +138,109 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        frequency = request.data.get('frequency') or request.query_params.get('frequency')
+        today = date.today()
+        req_month = request.data.get('month') or request.query_params.get('month')
+        req_year = request.data.get('year') or request.query_params.get('year')
+
+        if frequency:
+            frequency = str(frequency).upper()
+
+        if frequency and frequency != 'MONTHLY':
+            count = FeeCalculationService.generate_term_invoices(
+                request.user.tenant,
+                academic_year,
+                today,
+                frequencies=[frequency] if frequency else None
+            )
+            return Response({
+                'message': f'Generated {count} invoices for {frequency}',
+                'count': count
+            })
+
+        # Auto-detect if term-based structures exist without monthly
+        from .models import FeeAllocation
+        term_frequencies = ['TERM', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY', 'ONE_TIME']
+        has_monthly = FeeAllocation.objects.filter(
+            tenant=request.user.tenant,
+            is_active=True,
+            fee_structure__academic_year=academic_year,
+            fee_structure__frequency='MONTHLY'
+        ).exists()
+        has_term = FeeAllocation.objects.filter(
+            tenant=request.user.tenant,
+            is_active=True,
+            fee_structure__academic_year=academic_year,
+            fee_structure__frequency__in=term_frequencies
+        ).exists()
+
+        if has_term and not has_monthly:
+            # Determine target month for term-based generation
+            target_date = today
+            try:
+                if req_month:
+                    req_month = int(req_month)
+                    year_for_month = int(req_year) if req_year else (
+                        academic_year.start_date.year if req_month >= academic_year.start_date.month else academic_year.end_date.year
+                    )
+                    target_date = date(year_for_month, req_month, 1)
+            except Exception:
+                pass
+
+            # If current month not in configured term months, use the earliest configured month
+            term_months_raw = FeeAllocation.objects.filter(
+                tenant=request.user.tenant,
+                is_active=True,
+                fee_structure__academic_year=academic_year,
+                fee_structure__frequency__in=term_frequencies
+            ).values_list('fee_structure__term_months', flat=True)
+
+            configured_months = set()
+            for entry in term_months_raw:
+                if isinstance(entry, dict):
+                    for months in entry.values():
+                        try:
+                            for m in months:
+                                configured_months.add(int(m))
+                        except Exception:
+                            continue
+
+            if not req_month and configured_months and target_date.month not in configured_months:
+                earliest = min(configured_months)
+                year_for_month = academic_year.start_date.year if earliest >= academic_year.start_date.month else academic_year.end_date.year
+                target_date = date(year_for_month, earliest, 1)
+
+            count = FeeCalculationService.generate_term_invoices(
+                request.user.tenant,
+                academic_year,
+                target_date,
+                frequencies=term_frequencies
+            )
+            if count == 0:
+                return Response({
+                    'message': 'No eligible term-based invoices found for the selected period',
+                    'count': 0,
+                    'configured_months': sorted(list(configured_months))
+                }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'message': f'Generated {count} term-based invoices',
+                'count': count,
+                'target_month': target_date.month,
+                'target_year': target_date.year
+            })
+
         count = FeeCalculationService.generate_monthly_invoices(
             request.user.tenant,
             academic_year,
-            date.today()
+            today
         )
         
+        if count == 0:
+            return Response({
+                'message': 'No eligible monthly invoices found for the current month',
+                'count': 0
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
             'message': f'Generated {count} invoices',
             'count': count

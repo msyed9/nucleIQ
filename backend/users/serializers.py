@@ -184,6 +184,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     preference = UserPreferenceSerializer(read_only=True)
     roles = RoleSerializer(many=True, read_only=True)
+    is_parent = serializers.SerializerMethodField()
     role_ids = serializers.ListField(
         child=serializers.UUIDField(),
         write_only=True,
@@ -197,7 +198,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name', 'full_name', 'short_name',
             'phone_number', 'avatar_url', 'is_active', 'is_2fa_enabled',
-            'is_platform_admin', 'tenant', 'roles', 'role_ids', 'preference',
+            'is_platform_admin', 'is_parent', 'tenant', 'roles', 'role_ids', 'preference',
             'last_login', 'last_login_ip', 'date_joined', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -221,6 +222,11 @@ class UserSerializer(serializers.ModelSerializer):
                     "Only platform administrators can grant platform admin access."
                 )
         return value
+
+    def get_is_parent(self, obj):
+        """Check if user has a parent profile."""
+        from students.models import ParentUser
+        return ParentUser.objects.filter(user=obj, portal_access_enabled=True).exists()
     
     def to_representation(self, instance):
         """

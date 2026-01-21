@@ -41,6 +41,7 @@ interface User {
     roles: Role[];
     phone_number?: string;
     date_joined: string;
+    is_parent?: boolean;
 }
 
 interface UserFormData {
@@ -212,6 +213,9 @@ const UserManagement: React.FC = () => {
     };
 
     const filteredUsers = users.filter(user => {
+        if (user.is_parent) {
+            return false;
+        }
         const matchesSearch =
             user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

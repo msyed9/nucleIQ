@@ -13,6 +13,7 @@ interface User {
     last_name: string;
     is_active: boolean;
     roles: string[];
+    is_parent?: boolean;
 }
 
 const UserList: React.FC = () => {
@@ -55,9 +56,11 @@ const UserList: React.FC = () => {
 
     const filteredUsers = users.filter(
         (user) =>
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.last_name.toLowerCase().includes(searchTerm.toLowerCase())
+            !user.is_parent && (
+                user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.last_name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
     );
 
     const { t } = useTranslation();

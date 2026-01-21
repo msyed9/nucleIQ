@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Input, Select, Badge } from '@/design-system';
 import api from '@/services/api';
+import * as XLSX from 'xlsx';
 import './DataMigration.css';
 
 // Module configuration with icons
@@ -131,26 +132,26 @@ const DataMigration: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'import' | 'export' | 'history'>('import');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     // File upload state
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [dragActive, setDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // Validation state
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
     const [isValidating, setIsValidating] = useState(false);
-    
+
     // Import state
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [skipDuplicates, setSkipDuplicates] = useState(true);
     const [updateExisting, setUpdateExisting] = useState(false);
-    
+
     // History state
     const [importHistory, setImportHistory] = useState<ImportJob[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
-    
+
     // Field info expansion
     const [showFieldInfo, setShowFieldInfo] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
@@ -228,7 +229,7 @@ const DataMigration: React.FC = () => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        
+
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFileSelect(e.dataTransfer.files[0]);
         }
@@ -237,17 +238,17 @@ const DataMigration: React.FC = () => {
     const handleFileSelect = (file: File) => {
         const validExtensions = ['.csv', '.xlsx', '.xls'];
         const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        
+
         if (!validExtensions.includes(extension)) {
             setError('Invalid file type. Please upload CSV, XLSX, or XLS file.');
             return;
         }
-        
+
         if (file.size > 10 * 1024 * 1024) { // 10MB limit
             setError('File too large. Maximum size is 10MB.');
             return;
         }
-        
+
         setSelectedFile(file);
         setError(null);
         setValidationResult(null);
@@ -263,14 +264,29 @@ const DataMigration: React.FC = () => {
     // Download template
     const downloadTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
         if (!selectedModule) return;
-        
+
         try {
             setLoading(true);
+            setError(null);
+
             const response = await api.get(`/data-management/template/${selectedModule}/`, {
                 params: { format },
                 responseType: 'blob'
             });
-            
+
+            // Check if response is actually a file or an error
+            const contentType = response.headers['content-type'];
+
+            // If it's JSON, it's probably an error response
+            if (contentType && contentType.includes('application/json')) {
+                // Parse the blob as text to get error message
+                const text = await response.data.text();
+                const errorData = JSON.parse(text);
+                setError(errorData.error || 'Failed to download template');
+                return;
+            }
+
+            // Create download link
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -280,28 +296,136 @@ const DataMigration: React.FC = () => {
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch (err: any) {
-            setError('Failed to download template');
+            console.error('Download template error:', err);
+            try {
+                let fields = moduleFields;
+                if (!fields) {
+                    fields = await fetchModuleFieldsForTemplate(selectedModule);
+                    if (fields) {
+                        setModuleFields(fields);
+                    }
+                }
+
+                if (fields) {
+                    downloadClientTemplate(format, fields);
+                    setError(null);
+                    return;
+                }
+                throw new Error('Template metadata not loaded');
+            } catch (fallbackError) {
+                // Try to extract error message from blob response
+                if (err.response?.data instanceof Blob) {
+                    try {
+                        const text = await err.response.data.text();
+                        const errorData = JSON.parse(text);
+                        setError(errorData.error || 'Failed to download template');
+                    } catch {
+                        setError('Failed to download template. Please check your permissions.');
+                    }
+                } else {
+                    setError(err.response?.data?.error || err.message || 'Failed to download template');
+                }
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const fetchModuleFieldsForTemplate = async (module: string) => {
+        try {
+            const response = await api.get(`/data-management/modules/${module}/fields/`);
+            return response.data as ModuleFields;
+        } catch (fetchError) {
+            console.error('Failed to load module fields for template:', fetchError);
+            return null;
+        }
+    };
+
+    const downloadClientTemplate = (format: 'xlsx' | 'csv', fieldsOverride?: ModuleFields) => {
+        const fieldsSource = fieldsOverride ?? moduleFields;
+        if (!fieldsSource) {
+            throw new Error('Template metadata not loaded');
+        }
+
+        const allFields = [...fieldsSource.required_fields, ...fieldsSource.optional_fields];
+        const headerNames = allFields.map((field) => field.name);
+        const sampleValues = allFields.map((field) => field.sample_value || '');
+        const requiredNames = fieldsSource.required_fields.map((field) => field.display_name || field.name);
+        const optionalNames = fieldsSource.optional_fields.map((field) => field.display_name || field.name);
+        const instructionLines = [
+            ...(fieldsSource.instructions || []),
+            '',
+            '✅ REQUIRED FIELDS (must be filled):',
+            requiredNames.length ? requiredNames.join(', ') : 'None',
+            '⚪ OPTIONAL FIELDS (can be left blank):',
+            optionalNames.length ? optionalNames.join(', ') : 'None'
+        ];
+
+        if (format === 'xlsx') {
+            const wb = XLSX.utils.book_new();
+            const dataSheet = XLSX.utils.aoa_to_sheet([
+                headerNames,
+                sampleValues
+            ]);
+
+            // Sanitize sheet title (max 31 chars, remove invalid chars)
+            let sheetTitle = fieldsSource.display_name || selectedModule;
+            sheetTitle = sheetTitle.substring(0, 31);
+            sheetTitle = sheetTitle.replace(/[:\\\/\?\*\[\]]/g, '_');
+
+            XLSX.utils.book_append_sheet(
+                wb,
+                dataSheet,
+                sheetTitle
+            );
+
+            const instructionsSheet = XLSX.utils.aoa_to_sheet(
+                instructionLines.map((line) => [line])
+            );
+            XLSX.utils.book_append_sheet(wb, instructionsSheet, 'Instructions');
+
+            XLSX.writeFile(wb, `${selectedModule}_import_template.xlsx`);
+            return;
+        }
+
+        const escapeCsvValue = (value: string) => {
+            const needsQuotes = /[",\n]/.test(value);
+            if (!needsQuotes) return value;
+            return `"${value.replace(/"/g, '""')}"`;
+        };
+
+        const csvLines = [headerNames, sampleValues].map((row) =>
+            row.map((cell) => escapeCsvValue(String(cell ?? ''))).join(',')
+        );
+
+        const csvContent = `\ufeff${csvLines.join('\n')}`;
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${selectedModule}_import_template.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
     // Validate file
     const validateFile = async () => {
         if (!selectedFile || !selectedModule) return;
-        
+
         try {
             setIsValidating(true);
             setError(null);
-            
+
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('module', selectedModule);
-            
+
             const response = await api.post('/data-management/validate/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
+
             setValidationResult(response.data);
         } catch (err: any) {
             setError(err.response?.data?.error || 'Validation failed');
@@ -313,23 +437,23 @@ const DataMigration: React.FC = () => {
     // Import file
     const importFile = async () => {
         if (!selectedFile || !selectedModule) return;
-        
+
         try {
             setIsImporting(true);
             setError(null);
-            
+
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('module', selectedModule);
             formData.append('skip_duplicates', skipDuplicates.toString());
             formData.append('update_existing', updateExisting.toString());
-            
+
             const response = await api.post('/data-management/import/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
+
             setImportResult(response.data);
-            
+
             // Refresh history
             if (response.data.success) {
                 loadImportHistory();
@@ -344,14 +468,14 @@ const DataMigration: React.FC = () => {
     // Export data
     const exportData = async (format: 'xlsx' | 'csv' = 'xlsx') => {
         if (!selectedModule) return;
-        
+
         try {
             setLoading(true);
             const response = await api.get(`/data-management/export/${selectedModule}/`, {
                 params: { format },
                 responseType: 'blob'
             });
-            
+
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -374,7 +498,7 @@ const DataMigration: React.FC = () => {
             const response = await api.get('/data-management/backup/', {
                 responseType: 'blob'
             });
-            
+
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -395,7 +519,7 @@ const DataMigration: React.FC = () => {
         if (!confirm('Are you sure you want to rollback this import? All imported records will be deleted.')) {
             return;
         }
-        
+
         try {
             setLoading(true);
             await api.post(`/data-management/import/${jobId}/rollback/`);
@@ -659,7 +783,7 @@ const DataMigration: React.FC = () => {
                                         onChange={handleFileInputChange}
                                         hidden
                                     />
-                                    
+
                                     {selectedFile ? (
                                         <div className="file-selected">
                                             <FileSpreadsheet size={40} />

@@ -77,7 +77,8 @@
         "academic_setup": "Academic Setup",
         "leaderboard": "Leaderboard",
         "dashboard_settings": "Dashboard Settings",
-        "platform_analytics": "Platform Analytics"
+        "platform_analytics": "Platform Analytics",
+        "data_migration": "Data Migration"
     },
     "navigation": {
         "dashboard": "Dashboard",

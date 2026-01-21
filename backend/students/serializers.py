@@ -3,7 +3,7 @@ Serializers for Student 360° System
 """
 
 from rest_framework import serializers
-from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment
+from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord, StudentEnrollment, ParentUser
 from .utils import generate_admission_number, validate_admission_number_unique
 from core.utils import mask_aadhar
 from core.permissions import check_permission
@@ -348,3 +348,29 @@ class StudentHistorySerializer(serializers.Serializer):
             'history_type', 'history_user', 'admission_number',
             'first_name', 'last_name', 'email', 'phone', 'is_active'
         ]
+
+
+class ParentCredentialsSerializer(serializers.ModelSerializer):
+    """Admin-facing parent credential info (no passwords)."""
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_phone = serializers.CharField(source='user.phone_number', read_only=True)
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    students_count = serializers.SerializerMethodField()
+    students = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ParentUser
+        fields = [
+            'id', 'relation_type', 'portal_access_enabled', 'last_login_at',
+            'user_email', 'user_phone', 'user_name', 'students_count', 'students'
+        ]
+        read_only_fields = fields
+
+    def get_students_count(self, obj):
+        return obj.students.filter(is_active=True).count()
+
+    def get_students(self, obj):
+        students = obj.students.filter(is_active=True).values(
+            'id', 'admission_number', 'first_name', 'last_name'
+        )
+        return list(students)

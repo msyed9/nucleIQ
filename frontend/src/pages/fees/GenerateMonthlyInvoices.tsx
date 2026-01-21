@@ -24,7 +24,7 @@ const GenerateMonthlyInvoices: React.FC = () => {
     <Container maxWidth="sm">
       <Box sx={{ mt: 4, p: 3, boxShadow: 3, borderRadius: 2, backgroundColor: '#fff' }}>
         <Typography variant="h4" align="center" gutterBottom>
-          Generate Monthly Invoices
+          Generate Invoices
         </Typography>
 
         {error && <Typography color="error" align="center">{error}</Typography>}

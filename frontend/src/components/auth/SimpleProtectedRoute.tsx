@@ -16,7 +16,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
     if (!token) {
         // Redirect to login if no token found
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        const isParentRoute = location.pathname.startsWith('/parent');
+        return <Navigate to={isParentRoute ? '/parent/login' : '/login'} state={{ from: location }} replace />;
     }
 
     return <>{children}</>;

@@ -260,9 +260,9 @@ const menuItems: MenuItem[] = [
             { path: '/settings/roles', iconKey: 'shieldCheck', labelKey: 'nav.roles_permissions', label: 'Roles & Permissions' },
             { path: '/settings/permissions', iconKey: 'shield', labelKey: 'nav.permissions', label: 'Permissions Matrix' },
             { path: '/settings/data-management', iconKey: 'database', labelKey: 'nav.data_management', label: 'Data Management' },
+            { path: '/settings/data-migration', iconKey: 'fileSpreadsheet', labelKey: 'nav.data_migration', label: 'Data Migration' },
         ]
     },
-    { path: '/parent/portal', iconKey: 'users', labelKey: 'nav.parent_portal', label: 'Parent Portal' },
     {
         iconKey: 'shieldCheck',
         labelKey: 'nav.admin',

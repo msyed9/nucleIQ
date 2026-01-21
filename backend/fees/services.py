@@ -77,9 +77,7 @@ class FeeCalculationService:
     
     @staticmethod
     def generate_monthly_invoices(tenant, academic_year, month_date):
-        """
-        Generate monthly invoices for all students.
-        """
+        """Generate monthly invoices for all students."""
         from students.models import Student
         
         students = Student.objects.filter(tenant=tenant, is_active=True)
@@ -144,6 +142,110 @@ class FeeCalculationService:
             
             invoices_created += 1
         
+        return invoices_created
+
+    @staticmethod
+    def generate_term_invoices(tenant, academic_year, month_date, frequencies=None):
+        """Generate term/period invoices based on fee structure term_months."""
+        from students.models import Student
+
+        if frequencies is None:
+            frequencies = ['TERM', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY', 'ONE_TIME']
+
+        students = Student.objects.filter(tenant=tenant, is_active=True)
+        invoices_created = 0
+
+        for student in students:
+            allocations = FeeAllocation.objects.filter(
+                tenant=tenant,
+                student=student,
+                is_active=True,
+                fee_structure__academic_year=academic_year,
+                fee_structure__frequency__in=frequencies
+            )
+
+            if not allocations.exists():
+                continue
+
+            # Skip if invoice already exists for this month/year
+            existing = FeeInvoice.objects.filter(
+                tenant=tenant,
+                student=student,
+                invoice_date__year=month_date.year,
+                invoice_date__month=month_date.month
+            ).exists()
+            if existing:
+                continue
+
+            total_amount = Decimal('0.00')
+            items_data = []
+
+            for allocation in allocations:
+                structure = allocation.fee_structure
+                term_months = structure.term_months or {}
+
+                # Determine if this structure should be collected in this month
+                should_collect = False
+                matched_term_index = None
+
+                if term_months:
+                    for term_key, months in term_months.items():
+                        try:
+                            if month_date.month in months:
+                                should_collect = True
+                                matched_term_index = term_key.replace('term_', '').strip()
+                                break
+                        except Exception:
+                            continue
+                else:
+                    # Default collection for yearly/one-time at academic year start month
+                    if structure.frequency in ['YEARLY', 'ONE_TIME', 'TERM', 'QUARTERLY', 'HALF_YEARLY']:
+                        should_collect = month_date.month == academic_year.start_date.month
+
+                if not should_collect:
+                    continue
+
+                amount = allocation.get_final_amount()
+                installment_amounts = structure.installment_amounts or {}
+                if matched_term_index:
+                    key = f"installment_{matched_term_index}"
+                    if key in installment_amounts:
+                        try:
+                            amount = Decimal(str(installment_amounts[key]))
+                        except Exception:
+                            pass
+
+                total_amount += amount
+                items_data.append({
+                    'allocation': allocation,
+                    'description': f"{structure.category.name}",
+                    'amount': amount
+                })
+
+            if not items_data:
+                continue
+
+            invoice = FeeInvoice.objects.create(
+                tenant=tenant,
+                student=student,
+                invoice_number=FeeCalculationService.generate_invoice_number(tenant),
+                academic_year=academic_year,
+                invoice_date=month_date,
+                due_date=month_date + timedelta(days=5),
+                total_amount=total_amount,
+                balance_amount=total_amount
+            )
+
+            for item_data in items_data:
+                FeeInvoiceItem.objects.create(
+                    invoice=invoice,
+                    fee_allocation=item_data['allocation'],
+                    description=item_data['description'],
+                    amount=item_data['amount']
+                )
+
+            invoices_created += 1
+
         return invoices_created
     
     @staticmethod

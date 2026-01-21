@@ -212,8 +212,8 @@ const resources = {
             // Fees
             'fees.title': 'Fee Collection',
             'fees.subtitle': 'Manage student fee payments',
-            'fees.generate_confirm': 'Generate monthly invoices for all students?',
-            'fees.generate': 'Generate Monthly Invoices',
+            'fees.generate_confirm': 'Generate invoices for the current period?',
+            'fees.generate': 'Generate Invoices',
             'fees.pending_invoices': 'Pending Invoices',
             'fees.total_outstanding': 'Total Outstanding',
             'fees.partial_payments': 'Partial Payments',

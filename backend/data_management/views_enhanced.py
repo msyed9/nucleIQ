@@ -8,9 +8,12 @@ import io
 import csv
 import json
 import zipfile
+import re
+import uuid
 from datetime import datetime, date
 from django.http import HttpResponse
-from django.db import transaction
+from django.db import transaction, IntegrityError
+from django.db.models import Max, Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
@@ -52,7 +55,8 @@ except ImportError:
 
 class ModuleListView(APIView):
     """List all available import modules with their specifications"""
-    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    # Allow any authenticated user to view available modules
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
         """Get list of all importable modules"""
@@ -74,7 +78,8 @@ class ModuleListView(APIView):
 
 class ModuleFieldsView(APIView):
     """Get detailed field information for a specific module"""
-    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    # Allow any authenticated user to view field information
+    permission_classes = [IsAuthenticated]
     
     def get(self, request, module):
         """Get field specifications for a module"""
@@ -91,7 +96,8 @@ class ModuleFieldsView(APIView):
 
 class DownloadTemplateView(APIView):
     """Download Excel/CSV template for a specific module"""
-    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    # Allow any authenticated user to download templates
+    permission_classes = [IsAuthenticated]
     
     def get(self, request, module):
         format_type = request.query_params.get('format', 'xlsx')
@@ -132,28 +138,24 @@ class DownloadTemplateView(APIView):
         )
         center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         
-        # Write headers
+        # Write header row using internal field names (required by parser)
         all_fields = template.fields
         for col, field_spec in enumerate(all_fields, 1):
-            cell = ws.cell(row=1, column=col, value=field_spec.display_name)
+            cell = ws.cell(row=1, column=col, value=field_spec.name)
+            # Visual hint: color the header to indicate required/optional
             cell.font = required_font if field_spec.required else optional_font
             cell.fill = required_fill if field_spec.required else optional_fill
             cell.border = thin_border
             cell.alignment = center_alignment
-            
-            # Set column width based on content
+
+            # Set column width based on display name for readability
             col_letter = openpyxl.utils.get_column_letter(col)
             ws.column_dimensions[col_letter].width = max(15, len(field_spec.display_name) + 2)
-        
-        # Write sample data row
+
+        # Write sample data row (row 2)
         for col, field_spec in enumerate(all_fields, 1):
             cell = ws.cell(row=2, column=col, value=field_spec.sample_value)
             cell.border = thin_border
-        
-        # Add field name row (actual column names for import)
-        for col, field_spec in enumerate(all_fields, 1):
-            cell = ws.cell(row=3, column=col, value=field_spec.name)
-            cell.font = Font(italic=True, color='888888')
         
         # Create Instructions sheet
         instructions_ws = wb.create_sheet('Instructions')
@@ -161,11 +163,25 @@ class DownloadTemplateView(APIView):
         row = 1
         for instruction in template.instructions:
             instructions_ws.cell(row=row, column=1, value=instruction)
-            if instruction.startswith('📋') or instruction.startswith('💡') or instruction.startswith('⚠️'):
+            if instruction.startswith('📋') or instruction.startswith('💡') or instruction.startswith('⚠️') or instruction.startswith('✅') or instruction.startswith('⚪'):
                 instructions_ws.cell(row=row, column=1).font = Font(bold=True, size=12)
             row += 1
-        
+
+        required_fields = [f.display_name for f in all_fields if f.required]
+        optional_fields = [f.display_name for f in all_fields if not f.required]
+
         row += 1
+        instructions_ws.cell(row=row, column=1, value='✅ REQUIRED FIELDS (must be filled):')
+        instructions_ws.cell(row=row, column=1).font = Font(bold=True, size=12)
+        row += 1
+        instructions_ws.cell(row=row, column=1, value=', '.join(required_fields) if required_fields else 'None')
+        row += 1
+        instructions_ws.cell(row=row, column=1, value='⚪ OPTIONAL FIELDS (can be left blank):')
+        instructions_ws.cell(row=row, column=1).font = Font(bold=True, size=12)
+        row += 1
+        instructions_ws.cell(row=row, column=1, value=', '.join(optional_fields) if optional_fields else 'None')
+
+        row += 2
         instructions_ws.cell(row=row, column=1, value='📝 FIELD SPECIFICATIONS:')
         instructions_ws.cell(row=row, column=1).font = Font(bold=True, size=12)
         row += 2
@@ -213,15 +229,11 @@ class DownloadTemplateView(APIView):
         
         writer = csv.writer(response)
         
-        # Write display names as header
-        headers = [f.display_name for f in template.fields]
-        writer.writerow(headers)
-        
-        # Write actual field names (for reference)
+        # Write internal field names as header (required by parser)
         field_names = [f.name for f in template.fields]
         writer.writerow(field_names)
-        
-        # Write sample data
+
+        # Write sample data (second row)
         sample_data = [f.sample_value for f in template.fields]
         writer.writerow(sample_data)
         
@@ -229,7 +241,7 @@ class DownloadTemplateView(APIView):
 
 
 class ValidateDataView(APIView):
-    """Validate uploaded file without importing"""
+    """Validate uploaded file without importing - Admin only"""
     permission_classes = [IsAuthenticated, IsTenantAdmin]
     parser_classes = [MultiPartParser, FormParser]
     
@@ -369,7 +381,7 @@ class ValidateDataView(APIView):
 
 
 class ImportDataView(APIView):
-    """Import data from CSV/XLSX/XLS file"""
+    """Import data from CSV/XLSX/XLS file - Admin only"""
     permission_classes = [IsAuthenticated, IsTenantAdmin]
     parser_classes = [MultiPartParser, FormParser]
     
@@ -458,7 +470,6 @@ class ImportDataView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @transaction.atomic
     def _process_import(self, module, template, data, tenant, skip_duplicates, update_existing, import_job):
         """Process the import with transaction management"""
         success = 0
@@ -473,42 +484,51 @@ class ImportDataView(APIView):
         
         for idx, row in enumerate(data):
             row_num = row.get('_row_number', idx + 2)
-            
+
             try:
-                # Transform the row
-                transformed = transformer(row) if transformer else row
-                
-                # Check for duplicates
-                existing = None
-                if unique_field and transformed.get(unique_field):
-                    existing = self._find_existing(module, unique_field, transformed[unique_field], tenant)
-                
-                if existing:
-                    if update_existing:
-                        self._update_record(module, existing, transformed, tenant)
-                        updated += 1
-                    elif skip_duplicates:
-                        duplicates_skipped += 1
-                        continue
+                # Use a nested savepoint so a failure in one row doesn't abort the whole import
+                with transaction.atomic():
+                    # Transform the row
+                    transformed = transformer(row) if transformer else row
+
+                    # Check for duplicates
+                    existing = None
+                    if unique_field and transformed.get(unique_field):
+                        existing = self._find_existing(module, unique_field, transformed[unique_field], tenant)
+
+                    if existing:
+                        if update_existing:
+                            self._update_record(module, existing, transformed, tenant)
+                            updated += 1
+                        elif skip_duplicates:
+                            duplicates_skipped += 1
+                            # commit savepoint and continue
+                            continue
+                        else:
+                            errors.append(f'Row {row_num}: Duplicate {unique_field}: {transformed[unique_field]}')
+                            failed += 1
+                            continue
                     else:
-                        errors.append(f'Row {row_num}: Duplicate {unique_field}: {transformed[unique_field]}')
-                        failed += 1
-                        continue
-                else:
-                    # Create new record
-                    record = self._create_record(module, transformed, tenant)
-                    if record:
-                        created_ids.append(str(record.id))
-                        success += 1
-                    else:
-                        failed += 1
-                        errors.append(f'Row {row_num}: Failed to create record')
-                
-                # Update progress
-                import_job.processed_rows = idx + 1
-                if (idx + 1) % 50 == 0:  # Save every 50 rows
-                    import_job.save()
-                    
+                        # Create new record
+                        record = self._create_record(module, transformed, tenant)
+                        if record:
+                            created_ids.append(str(record.id))
+                            success += 1
+                        else:
+                            failed += 1
+                            errors.append(f'Row {row_num}: Failed to create record')
+
+                    # Update progress
+                    import_job.processed_rows = idx + 1
+                    if (idx + 1) % 50 == 0:  # Save every 50 rows
+                        import_job.save()
+
+            except IntegrityError as e:
+                # Roll back to savepoint implicitly and record the error for this row
+                failed += 1
+                errors.append(f'Row {row_num}: {str(e)}')
+                logger.warning(f"Error importing row {row_num}: {e}")
+                continue
             except Exception as e:
                 failed += 1
                 errors.append(f'Row {row_num}: {str(e)}')
@@ -525,6 +545,99 @@ class ImportDataView(APIView):
             'total': len(data),
             'errors': errors[:50]
         }
+
+    def _normalize_grade_name(self, value):
+        if value is None:
+            return ''
+        raw = re.sub(r'\s+', ' ', str(value)).strip()
+        if not raw:
+            return ''
+
+        lower = raw.lower()
+        lower = re.sub(r'^(class|grade|std|standard|year)\s+', '', lower)
+        lower = lower.replace('-', ' ')
+        lower = re.sub(r'\s+', ' ', lower).strip()
+
+        roman_map = {
+            'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5',
+            'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10',
+            'xi': '11', 'xii': '12'
+        }
+        if lower in roman_map:
+            lower = roman_map[lower]
+
+        return lower
+
+    def _canonical_grade_fields(self, value):
+        raw = re.sub(r'\s+', ' ', str(value or '')).strip()
+        if not raw:
+            return '', ''
+
+        normalized = self._normalize_grade_name(raw)
+        if normalized.isdigit():
+            return f"Class {normalized}", normalized
+
+        if normalized in {'kg', 'lkg', 'ukg'}:
+            name = normalized.upper()
+            return name, name
+
+        short_name = re.sub(r'^(Class|Grade|Std|Standard)\s+', '', raw, flags=re.IGNORECASE)
+        short_name = short_name.strip() if short_name else raw
+        return raw, short_name
+
+    def _find_grade_level(self, tenant, class_name):
+        if not class_name:
+            return None
+
+        raw = re.sub(r'\s+', ' ', str(class_name)).strip()
+        normalized = self._normalize_grade_name(raw)
+
+        q = Q(name__iexact=raw)
+        if normalized:
+            q |= Q(name__iexact=normalized) | Q(short_name__iexact=normalized)
+            if normalized.isdigit():
+                q |= Q(name__iexact=f"Class {normalized}") | Q(name__iexact=f"Grade {normalized}") | Q(name__iexact=f"Std {normalized}")
+            if normalized in {'kg', 'lkg', 'ukg'}:
+                q |= Q(name__iexact=normalized.upper()) | Q(short_name__iexact=normalized.upper())
+
+        return GradeLevel.objects.filter(
+            tenant=tenant,
+            is_deleted=False
+        ).filter(q).first()
+
+    def _normalize_section_name(self, value):
+        if value is None:
+            return ''
+        raw = re.sub(r'\s+', ' ', str(value)).strip()
+        if not raw:
+            return ''
+
+        lower = raw.lower()
+        lower = re.sub(r'^(section|sec)\s+', '', lower)
+        lower = lower.replace('-', ' ')
+        lower = re.sub(r'\s+', ' ', lower).strip()
+
+        if len(lower) == 1:
+            return lower.upper()
+
+        return lower.title()
+
+    def _find_section(self, tenant, grade_level, section_name):
+        if not section_name or not grade_level:
+            return None
+
+        raw = re.sub(r'\s+', ' ', str(section_name)).strip()
+        normalized = self._normalize_section_name(raw)
+
+        q = Q(name__iexact=raw)
+        if normalized:
+            q |= Q(name__iexact=normalized)
+
+        return Section.objects.filter(
+            tenant=tenant,
+            grade_level=grade_level,
+            is_deleted=False
+        ).filter(q).first()
     
     def _get_transformer(self, module):
         """Get data transformer for module"""
@@ -628,29 +741,31 @@ class ImportDataView(APIView):
         
         if class_name:
             self._create_student_enrollment(student, class_name, section_name, data, tenant)
+
+        # Ensure parent portal accounts exist/linked for this student
+        try:
+            self._ensure_parent_accounts(student)
+        except Exception as e:
+            logger.warning(f"Failed to ensure parent accounts for student {student.id}: {e}")
         
         return student
     
     def _create_student_enrollment(self, student, class_name, section_name, data, tenant):
         """Create student enrollment in class/section"""
         try:
-            grade_level = GradeLevel.objects.filter(
-                tenant=tenant, 
-                name__iexact=class_name.strip(),
-                is_deleted=False
-            ).first()
+            grade_level = self._find_grade_level(tenant, class_name)
             
             if not grade_level:
+                logger.warning(f"Grade level not found for value '{class_name}' (student {student.id})")
                 return None
             
             section = None
             if section_name:
-                section = Section.objects.filter(
-                    tenant=tenant,
-                    grade_level=grade_level,
-                    name__iexact=section_name.strip(),
-                    is_deleted=False
-                ).first()
+                section = self._find_section(tenant, grade_level, section_name)
+                if not section:
+                    logger.warning(
+                        f"Section not found for value '{section_name}' in grade '{grade_level.name}' (student {student.id})"
+                    )
             
             if not section:
                 # Get first section of the grade if not specified
@@ -666,7 +781,31 @@ class ImportDataView(APIView):
                     is_active=True,
                     is_deleted=False
                 ).first()
-                
+
+                if not academic_year:
+                    academic_year = AcademicYear.objects.filter(
+                        tenant=tenant,
+                        is_deleted=False
+                    ).order_by('-start_date').first()
+
+                if not academic_year:
+                    from datetime import timedelta
+                    today = date.today()
+                    try:
+                        academic_year = AcademicYear.objects.create(
+                            tenant=tenant,
+                            name=f"{today.year}-{today.year + 1}",
+                            start_date=today,
+                            end_date=today + timedelta(days=365),
+                            is_active=True,
+                            is_enrollment_open=False,
+                            is_locked=False,
+                            description='Auto-created academic year during import'
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to create fallback academic year: {e}")
+                        return None
+
                 if academic_year:
                     enrollment, created = StudentEnrollment.objects.get_or_create(
                         tenant=tenant,
@@ -679,11 +818,114 @@ class ImportDataView(APIView):
                             'enrollment_date': data.get('admission_date', date.today())
                         }
                     )
+
+                    # If enrollment already existed, update its section/roll/enrollment_date if provided
+                    if not created:
+                        updated = False
+                        if section and enrollment.section != section:
+                            enrollment.section = section
+                            updated = True
+                        roll = data.get('roll_number')
+                        if roll and str(enrollment.roll_number) != str(roll):
+                            enrollment.roll_number = roll
+                            updated = True
+                        enroll_date = data.get('admission_date')
+                        if enroll_date and enrollment.enrollment_date != enroll_date:
+                            enrollment.enrollment_date = enroll_date
+                            updated = True
+                        if updated:
+                            enrollment.save()
+
                     return enrollment
         except Exception as e:
             logger.warning(f"Failed to create enrollment: {e}")
         
         return None
+
+    def _ensure_parent_accounts(self, student):
+        """Create or link parent portal accounts for a student based on parent fields."""
+        from users.models import User
+        from students.models import ParentUser
+
+        # Ensure family_id exists for linking siblings
+        if not student.family_id:
+            student.family_id = f"FAM-{uuid.uuid4().hex[:8].upper()}"
+            student.save(update_fields=['family_id'])
+
+        # Link existing parent accounts by family_id if present
+        existing_parents = ParentUser.objects.filter(
+            tenant=student.tenant,
+            students__family_id=student.family_id
+        ).distinct()
+        if existing_parents.exists():
+            for parent in existing_parents:
+                parent.students.add(student)
+            return
+
+        def _create_or_link(relation_type, name, phone, email):
+            clean_phone = PhoneValidator.clean(phone) if phone else ''
+            clean_email = EmailValidator.clean(email) if email else ''
+
+            if not clean_phone and not clean_email:
+                return
+
+            user = None
+            if clean_phone:
+                user = User.objects.filter(tenant=student.tenant, phone_number=clean_phone).first()
+            if not user and clean_email:
+                user = User.objects.filter(email__iexact=clean_email).first()
+
+            if user:
+                parent_profile = ParentUser.objects.filter(user=user).first()
+                if not parent_profile:
+                    parent_profile = ParentUser.objects.create(
+                        user=user,
+                        tenant=student.tenant,
+                        relation_type=relation_type,
+                        portal_access_enabled=True
+                    )
+                parent_profile.students.add(student)
+                return
+
+            # Create new parent user
+            import random
+            import string
+            temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            base_email = clean_email or (f"{clean_phone}@parent.local" if clean_phone else f"{student.id}@parent.local")
+
+            # Ensure email uniqueness (email is globally unique)
+            if User.objects.filter(email__iexact=base_email).exists():
+                base_email = f"{base_email.split('@')[0]}.{student.tenant_id}@parent.local"
+
+            # Name split
+            first_name = 'Parent'
+            last_name = ''
+            if name:
+                parts = str(name).strip().split()
+                if parts:
+                    first_name = parts[0]
+                    last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
+
+            user = User.objects.create_user(
+                tenant=student.tenant,
+                email=base_email,
+                phone_number=clean_phone,
+                first_name=first_name,
+                last_name=last_name,
+                password=temp_password
+            )
+
+            parent_profile = ParentUser.objects.create(
+                user=user,
+                tenant=student.tenant,
+                relation_type=relation_type,
+                portal_access_enabled=True
+            )
+            parent_profile.students.add(student)
+
+        _create_or_link('FATHER', student.father_name, student.father_phone, student.father_email)
+        _create_or_link('MOTHER', student.mother_name, student.mother_phone, student.mother_email)
+        _create_or_link('GUARDIAN', student.guardian_name, student.guardian_phone, None)
     
     def _update_student(self, student, data, tenant):
         """Update existing student record"""
@@ -701,6 +943,23 @@ class ImportDataView(APIView):
                 setattr(student, field, data[field])
         
         student.save()
+
+        # Update enrollment/class-section if provided in import data
+        class_name = data.get('class_name') or data.get('grade') or data.get('grade_level')
+        section_name = data.get('section_name') or data.get('section')
+        if class_name:
+            try:
+                # This will create or update the student's enrollment for the active academic year
+                self._create_student_enrollment(student, class_name, section_name, data, tenant)
+            except Exception as e:
+                logger.warning(f"Failed to update enrollment for student {student.id}: {e}")
+
+        # Ensure parent portal accounts exist/linked for this student
+        try:
+            self._ensure_parent_accounts(student)
+        except Exception as e:
+            logger.warning(f"Failed to ensure parent accounts for student {student.id}: {e}")
+
         return student
     
     def _create_staff(self, data, tenant):
@@ -747,12 +1006,17 @@ class ImportDataView(APIView):
         
         # Link to department if provided
         if data.get('department'):
-            dept = Department.objects.filter(
-                tenant=tenant,
-                name__iexact=data['department'].strip(),
-                is_deleted=False
-            ).first()
-            if dept:
+            dept_name = (data.get('department') or '').strip()
+            if dept_name:
+                # Normalize and get or create department to avoid duplicate errors
+                dept, _ = Department.objects.get_or_create(
+                    tenant=tenant,
+                    name__iexact=dept_name,
+                    defaults={
+                        'name': dept_name,
+                        'is_active': True
+                    }
+                )
                 staff.department = dept
                 staff.save()
         
@@ -777,20 +1041,29 @@ class ImportDataView(APIView):
     
     def _create_class_section(self, data, tenant):
         """Create class and section"""
-        class_name = data.get('class_name', '').strip()
-        section_name = data.get('section_name', '').strip()
+        raw_class = data.get('class_name', '')
+        raw_section = data.get('section_name', '')
+        class_name, short_name = self._canonical_grade_fields(raw_class)
+        section_name = self._normalize_section_name(raw_section) or str(raw_section).strip()
         
         if not class_name or not section_name:
             return None
         
-        # Get or create grade level
+        # Get or create grade level. Compute a safe display_order to avoid unique constraint collisions
+        try:
+            max_order = GradeLevel.objects.filter(tenant=tenant, is_deleted=False).aggregate(max_order=Max('display_order'))['max_order']
+        except Exception:
+            max_order = None
+
+        next_order = (max_order or 0) + 1
+
         grade_level, created = GradeLevel.objects.get_or_create(
             tenant=tenant,
             name__iexact=class_name,
             defaults={
                 'name': class_name,
-                'short_name': class_name.replace('Class ', '').replace('Grade ', ''),
-                'display_order': 0,
+                'short_name': short_name,
+                'display_order': next_order,
                 'is_active': True
             }
         )
@@ -812,11 +1085,29 @@ class ImportDataView(APIView):
     
     def _create_subject(self, data, tenant):
         """Create subject"""
+        raw_name = (data.get('subject_name') or '').strip()
+        if not raw_name:
+            return None
+
+        # Normalize name (collapse whitespace)
+        norm_name = ' '.join(raw_name.split())
+
+        # Use case-insensitive lookup to avoid duplicates, create if missing
+        subject = Subject.objects.filter(
+            tenant=tenant,
+            name__iexact=norm_name,
+            is_deleted=False
+        ).first()
+
+        if subject:
+            return subject
+
+        # Create new subject with provided metadata
         subject = Subject.objects.create(
             tenant=tenant,
-            name=data.get('subject_name', ''),
-            code=data.get('subject_code', ''),
-            description=data.get('description', ''),
+            name=norm_name,
+            code=(data.get('subject_code') or '').strip(),
+            description=(data.get('description') or '').strip(),
             is_active=True
         )
         return subject
@@ -837,29 +1128,56 @@ class ImportDataView(APIView):
             }
         )
         
-        # Get academic year
+        # Get academic year: prefer active, else latest; if none, create a default one
         academic_year = AcademicYear.objects.filter(
             tenant=tenant,
             is_active=True,
             is_deleted=False
         ).first()
-        
+
         if not academic_year:
-            raise ValueError("No active academic year found")
+            academic_year = AcademicYear.objects.filter(
+                tenant=tenant,
+                is_deleted=False
+            ).order_by('-start_date').first()
+
+        if not academic_year:
+            # Create a fallback academic year spanning today -> today+1year
+            from datetime import timedelta
+            today = date.today()
+            try:
+                new_name = f"{today.year}-{today.year + 1}"
+                academic_year = AcademicYear.objects.create(
+                    tenant=tenant,
+                    name=new_name,
+                    start_date=today,
+                    end_date=today + timedelta(days=365),
+                    is_active=True,
+                    is_enrollment_open=False,
+                    is_locked=False,
+                    description='Auto-created academic year during import'
+                )
+            except Exception as e:
+                raise ValueError(f"No active academic year found and failed to create fallback: {e}")
         
-        # Create fee structure
-        fee_structure = FeeStructure.objects.create(
+        # Create or get fee structure to avoid duplicates
+        fs_defaults = {
+            'amount': data.get('amount', 0),
+            'frequency': data.get('frequency', 'MONTHLY'),
+            'due_day': data.get('due_day', 10),
+            'is_mandatory': data.get('is_mandatory', 'true').lower() == 'true' if isinstance(data.get('is_mandatory'), str) else True,
+            'is_active': True
+        }
+
+        fee_structure, created = FeeStructure.objects.get_or_create(
             tenant=tenant,
             academic_year=academic_year,
             category=category,
             class_level=class_name,
-            amount=data.get('amount', 0),
-            frequency=data.get('frequency', 'MONTHLY'),
-            due_day=data.get('due_day', 10),
-            is_mandatory=data.get('is_mandatory', 'true').lower() == 'true' if isinstance(data.get('is_mandatory'), str) else True,
-            is_active=True
+            defaults=fs_defaults
         )
-        
+
+        # If existing but different values, optionally update - keep existing values for now
         return fee_structure
     
     def _create_enrollment(self, data, tenant):

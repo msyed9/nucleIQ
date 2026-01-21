@@ -156,6 +156,7 @@ import SystemSettings from './pages/settings/SystemSettings';
 import PermissionsMatrixPage from './pages/settings/PermissionsMatrix';
 import RolesPermissions from './pages/settings/RolesPermissions';
 import TenantBranding from './pages/settings/TenantBranding';
+import DataMigration from './pages/settings/DataMigration';
 
 // Phase 11 - Search & Dashboard
 import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
@@ -317,6 +318,7 @@ function App() {
                                                     <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
                                                     <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
                                                     <Route path="/settings/data-management" element={<Layout><DataManagement /></Layout>} />
+                                                    <Route path="/settings/data-migration" element={<Layout><DataMigration /></Layout>} />
                                                     <Route path="/settings" element={<Layout><Settings /></Layout>} />
                                                     {/* User routes - specific routes before general */}
                                                     <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
