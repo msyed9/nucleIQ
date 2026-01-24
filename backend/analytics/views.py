@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from tenants.models import Tenant
 from .models import TenantMetric, UsageLog, TenantHealthAlert, ChurnPrediction
+from .services import TenantHealthService
 from users.models import User
 
 
@@ -26,6 +27,15 @@ def platform_analytics_dashboard(request):
     last_7_days = today - timedelta(days=7)
     last_30_days = today - timedelta(days=30)
     
+    # Ensure today's metrics exist for active tenants (on-demand fallback)
+    for tenant in Tenant.objects.filter(is_active=True):
+        if not TenantMetric.objects.filter(tenant=tenant, date=today).exists():
+            try:
+                TenantHealthService(tenant).calculate_health_score(today)
+            except Exception:
+                # Non-fatal; continue
+                pass
+
     # ============================================
     # OVERVIEW METRICS
     # ============================================
@@ -176,8 +186,8 @@ def platform_analytics_dashboard(request):
     # ============================================
     module_usage = UsageLog.objects.filter(
         created_at__gte=last_7_days,
-        action_type='MODULE_ACCESS'
-    ).values('module').annotate(
+        action_type='API_CALL'
+    ).exclude(module='').values('module').annotate(
         access_count=Count('id')
     ).order_by('-access_count')[:10]
     

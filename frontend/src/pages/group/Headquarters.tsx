@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -68,6 +69,7 @@ const Headquarters: React.FC = () => {
                             <th className="p-4">Students</th>
                             <th className="p-4">Staff</th>
                             <th className="p-4">Performance</th>
+                            <th className="p-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
@@ -79,6 +81,14 @@ const Headquarters: React.FC = () => {
                                 <td className="p-4">{school.staff_count}</td>
                                 <td className="p-4">
                                     <span className="bg-green-900 text-green-300 px-2 py-1 rounded text-xs">Excellent</span>
+                                </td>
+                                <td className="p-4">
+                                    <Link
+                                        to={`/settings/10-year-migration/${school.id}`}
+                                        className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium"
+                                    >
+                                        <span>Migrate Data</span>
+                                    </Link>
                                 </td>
                             </tr>
                         ))}

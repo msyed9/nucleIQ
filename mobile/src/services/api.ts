@@ -74,7 +74,30 @@ api.interceptors.response.use(
 
 // Auth API endpoints
 export const authAPI = {
-    login: async (credentials: { email: string; password: string }) => {
+    /**
+     * Unified login endpoint that handles all user types:
+     * - Platform Administrators
+     * - Tenant Administrators
+     * - Staff (Teachers, Accountants, etc.)
+     * - Parents
+     * 
+     * Supports login via email OR phone number.
+     * Returns user_type and redirect_url based on user role.
+     */
+    login: async (credentials: { email: string; password: string } | { username: string; password: string }) => {
+        // Convert email-based credentials to username format for unified endpoint
+        const loginData = 'email' in credentials
+            ? { username: credentials.email, password: credentials.password }
+            : credentials;
+
+        const response = await api.post('/auth/unified-login/', loginData);
+        return response.data;
+    },
+
+    /**
+     * Legacy login endpoint (kept for backward compatibility)
+     */
+    legacyLogin: async (credentials: { email: string; password: string }) => {
         const response = await api.post('/auth/login/', credentials);
         return response.data;
     },
@@ -89,6 +112,7 @@ export const authAPI = {
         return response.data;
     },
 };
+
 
 // User API endpoints
 export const userAPI = {

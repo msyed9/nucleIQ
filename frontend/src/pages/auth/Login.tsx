@@ -1,12 +1,20 @@
 /**
- * Login Page - Redesigned with NucleiQ Design System
- * Modern, accessible login with social auth and language toggle
+ * Unified Login Page - Redesigned with NucleiQ Design System
+ * 
+ * This is the SINGLE login page for ALL user types:
+ * - Platform Administrators
+ * - Tenant Administrators
+ * - Staff (Teachers, Accountants, etc.)
+ * - Parents
+ * 
+ * Supports login via email OR phone number.
+ * Automatically redirects to appropriate portal based on user type.
  */
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Globe, LogIn } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Globe, LogIn } from 'lucide-react';
 import axios from 'axios';
 import { Button, Input, Card } from '@/design-system';
 import './Login.css';
@@ -14,7 +22,7 @@ import './Login.css';
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState(''); // Can be email OR phone number
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -34,39 +42,33 @@ const Login: React.FC = () => {
         setError('');
 
         try {
-            const response = await fetch('/api/auth/login/', {
+            // Use the unified login endpoint that handles all user types
+            const response = await fetch('/api/auth/unified-login/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
 
             if (response.ok) {
                 const data = await response.json();
 
-                // Prevent parent users from logging in via admin portal
-                if (data.user && data.user.is_parent) {
-                    setError(t('auth.parent_login_error', { defaultValue: 'Please use the Parent Portal to log in' }));
-                    setLoading(false);
-                    return;
-                }
-
                 // Store tokens and user info
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);
                 localStorage.setItem('auth_tokens', JSON.stringify({ access: data.access, refresh: data.refresh }));
-                // store user
                 localStorage.setItem('user', JSON.stringify(data.user));
+                localStorage.setItem('user_type', data.user_type);
 
-                // Persist current tenant id (prefer top-level `tenant` from backend)
+                // Persist current tenant id
                 const tenantId = data.tenant ?? data.user?.tenant;
                 if (tenantId) {
                     localStorage.setItem('current_tenant', String(tenantId));
                 }
 
-                // Persist platform-admin flag and set axios defaults accordingly
-                const isPlatformAdmin = data.is_platform_admin ?? data.user?.is_platform_admin ?? false;
+                // Persist platform-admin flag
+                const isPlatformAdmin = data.user?.is_platform_admin ?? false;
                 localStorage.setItem('is_platform_admin', String(Boolean(isPlatformAdmin)));
 
                 // Set axios default Authorization header
@@ -79,6 +81,16 @@ const Login: React.FC = () => {
                     delete axios.defaults.headers.common['X-Tenant-Id'];
                 }
 
+                // Store parent-specific data if user is a parent
+                if (data.user_type === 'parent') {
+                    if (data.user.parent_id) {
+                        localStorage.setItem('parent_id', String(data.user.parent_id));
+                    }
+                    if (data.user.students) {
+                        localStorage.setItem('students', JSON.stringify(data.user.students));
+                    }
+                }
+
                 // Legacy keys for compatibility
                 try {
                     localStorage.setItem('token', data.access);
@@ -87,11 +99,17 @@ const Login: React.FC = () => {
                     // ignore
                 }
 
-                // Navigate to dashboard
-                navigate('/dashboard', { replace: true });
+                // Navigate to the appropriate portal based on user type
+                // The backend provides the redirect_url based on user_type
+                const redirectUrl = data.redirect_url || '/dashboard';
+                navigate(redirectUrl, { replace: true });
             } else {
                 const data = await response.json();
-                setError(data.detail || t('auth.invalid_credentials', { defaultValue: 'Invalid email or password' }));
+                // Handle error response
+                const errorMessage = data.detail ||
+                    (data.non_field_errors && data.non_field_errors[0]) ||
+                    t('auth.invalid_credentials', { defaultValue: 'Invalid email/phone or password' });
+                setError(errorMessage);
             }
         } catch (err) {
             setError(t('auth.connection_error', { defaultValue: 'Connection error. Please check if the backend is running.' }));
@@ -166,13 +184,13 @@ const Login: React.FC = () => {
 
                         <div style={{ marginBottom: '1.5rem' }}>
                             <Input
-                                id="email"
-                                type="email"
-                                label={t('auth.email', { defaultValue: 'Email Address' })}
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="admin@nucleiq.com"
-                                iconLeft={Mail}
+                                id="username"
+                                type="text"
+                                label={t('auth.email_or_phone', { defaultValue: 'Email or Mobile Number' })}
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder={t('auth.email_phone_placeholder', { defaultValue: 'Enter email or mobile number' })}
+                                iconLeft={User}
                                 required
                                 fullWidth
                                 size="lg"

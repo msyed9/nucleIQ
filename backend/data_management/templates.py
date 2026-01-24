@@ -724,16 +724,28 @@ CLASS_SECTION_TEMPLATE = ModuleTemplate(
             sample_value='40',
             aliases=['max_students', 'seats']
         ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2024-25). Defaults to current if empty',
+            sample_value='2024-25',
+            validation_hint='Format: YYYY-YY',
+            aliases=['year', 'session']
+        ),
     ],
     instructions=[
         '📋 CLASS & SECTION IMPORT',
         '',
         '• Each row creates a class and its section',
         '• Same class with multiple sections should be in separate rows',
+        '• Academic year format: YYYY-YY (e.g., 2024-25)',
+        '• If academic_year is empty, current year will be used',
         '• Example:',
-        '  Class 10, A',
-        '  Class 10, B',
-        '  Class 10, C',
+        '  Class 10, A, 2024-25',
+        '  Class 10, B, 2024-25',
+        '  Class 10, C, 2024-25',
     ]
 )
 
@@ -809,6 +821,16 @@ FEE_STRUCTURE_TEMPLATE = ModuleTemplate(
             description='Additional description',
             sample_value='Monthly tuition fee',
         ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2024-25). Defaults to current if empty',
+            sample_value='2024-25',
+            validation_hint='Format: YYYY-YY',
+            aliases=['year', 'session']
+        ),
     ],
     instructions=[
         '📋 FEE STRUCTURE IMPORT',
@@ -820,6 +842,10 @@ FEE_STRUCTURE_TEMPLATE = ModuleTemplate(
         '   QUARTERLY - Every 3 months',
         '   HALF_YEARLY - Every 6 months',
         '   YEARLY - Once a year',
+        '',
+        '📅 ACADEMIC YEAR:',
+        '   Format: YYYY-YY (e.g., 2024-25)',
+        '   If empty, current academic year will be used',
         '',
         '⚠️ Class must exist before importing fee structures',
     ]
@@ -952,14 +978,28 @@ STUDENT_ENROLLMENT_TEMPLATE = ModuleTemplate(
             description='Date of enrollment (defaults to today)',
             sample_value='01-04-2024',
         ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2024-25). Defaults to current if empty',
+            sample_value='2024-25',
+            validation_hint='Format: YYYY-YY',
+            aliases=['year', 'session']
+        ),
     ],
     instructions=[
         '📋 STUDENT ENROLLMENT IMPORT',
         '',
         '• Students must exist before enrollment import',
         '• Classes and sections must exist',
-        '• This creates enrollment for current academic year',
-        '• Existing active enrollments will be updated',
+        '',
+        '📅 ACADEMIC YEAR:',
+        '   Format: YYYY-YY (e.g., 2024-25)',
+        '   If empty, current academic year will be used',
+        '',
+        '• Existing active enrollments for the same year will be updated',
     ]
 )
 
@@ -1104,6 +1144,235 @@ PARENT_TEMPLATE = ModuleTemplate(
 
 
 # ============================================================================
+# FEE INVOICE IMPORT TEMPLATE
+# ============================================================================
+FEE_INVOICE_TEMPLATE = ModuleTemplate(
+    name='fee_invoices',
+    display_name='Fee Invoices',
+    description='Import historical fee invoices/dues',
+    model_name='fees.FeeInvoice',
+    unique_field='invoice_number',
+    fields=[
+        FieldSpec(
+            name='invoice_number',
+            display_name='Invoice Number',
+            field_type=FieldType.STRING,
+            required=True,
+            max_length=50,
+            description='Unique invoice number',
+            sample_value='INV/2023/001',
+            validation_hint='Must be unique',
+            aliases=['invoice_no', 'bill_no']
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            description='Student admission number',
+            sample_value='STU2024001',
+            aliases=['student_id']
+        ),
+        FieldSpec(
+            name='fee_type',
+            display_name='Fee Type',
+            field_type=FieldType.STRING,
+            required=True,
+            description='Fee category (e.g., Tuition Fee)',
+            sample_value='Tuition Fee',
+            aliases=['category']
+        ),
+        FieldSpec(
+            name='amount',
+            display_name='Invoice Amount',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            description='Total amount on invoice',
+            sample_value='5000',
+        ),
+        FieldSpec(
+            name='due_date',
+            display_name='Due Date',
+            field_type=FieldType.DATE,
+            required=True,
+            description='Payment due date',
+            sample_value='15-04-2023',
+        ),
+        FieldSpec(
+            name='invoice_date',
+            display_name='Invoice Date',
+            field_type=FieldType.DATE,
+            description='Date of invoice generation',
+            sample_value='01-04-2023',
+        ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2023-24)',
+            sample_value='2023-24',
+        ),
+    ],
+    instructions=[
+        '📋 FEE INVOICE IMPORT',
+        '',
+        '• Use for importing historical dues/invoices',
+        '• Invoice number must be unique',
+        '• Student must exist',
+    ]
+)
+
+
+# ============================================================================
+# FEE PAYMENT IMPORT TEMPLATE
+# ============================================================================
+FEE_PAYMENT_TEMPLATE = ModuleTemplate(
+    name='fee_payments',
+    display_name='Fee Payments',
+    description='Import historical fee payment/receipt records',
+    model_name='fees.FeeTransaction',
+    unique_field='receipt_number',
+    fields=[
+        FieldSpec(
+            name='receipt_number',
+            display_name='Receipt Number',
+            field_type=FieldType.STRING,
+            required=True,
+            max_length=50,
+            description='Unique receipt number',
+            sample_value='RCP/2023/001',
+            validation_hint='Must be unique',
+            aliases=['receipt_no', 'transaction_id']
+        ),
+        FieldSpec(
+            name='invoice_number',
+            display_name='Invoice Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            description='Related invoice number (must exist)',
+            sample_value='INV/2023/001',
+            aliases=['invoice_no']
+        ),
+        FieldSpec(
+            name='amount_paid',
+            display_name='Amount Paid',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            description='Amount paid in this transaction',
+            sample_value='5000',
+            aliases=['amount', 'paid_amount']
+        ),
+        FieldSpec(
+            name='payment_date',
+            display_name='Payment Date',
+            field_type=FieldType.DATE,
+            required=True,
+            description='Date of payment',
+            sample_value='10-04-2023',
+            aliases=['date', 'transaction_date']
+        ),
+        FieldSpec(
+            name='payment_mode',
+            display_name='Payment Mode',
+            field_type=FieldType.CHOICE,
+            required=True,
+            choices=['CASH', 'CHEQUE', 'ONLINE', 'BANK_TRANSFER', 'UPI', 'OTHER'],
+            description='Mode of payment',
+            sample_value='CASH',
+            aliases=['mode']
+        ),
+        FieldSpec(
+            name='remarks',
+            display_name='Remarks',
+            field_type=FieldType.STRING,
+            description='Transaction notes',
+            sample_value='Paid in full',
+        ),
+    ],
+    instructions=[
+        '📋 FEE PAYMENT IMPORT',
+        '',
+        '• Use for importing historical payment records',
+        '• Receipt number must be unique',
+        '• Related Invoice must exist in the system first',
+    ]
+)
+
+
+# ============================================================================
+# USER ACCOUNT IMPORT TEMPLATE
+# ============================================================================
+USER_ACCOUNT_TEMPLATE = ModuleTemplate(
+    name='user_accounts',
+    display_name='User Accounts (Logins)',
+    description='Import or create login profiles for parents, staff or students',
+    model_name='users.User',
+    unique_field='email',
+    fields=[
+        FieldSpec(
+            name='email',
+            display_name='Email / Username',
+            field_type=FieldType.EMAIL,
+            required=True,
+            description='Login email address',
+            sample_value='parent@example.com',
+            validation_hint='Must be unique',
+        ),
+        FieldSpec(
+            name='password',
+            display_name='Password',
+            field_type=FieldType.STRING,
+            description='Initial password. If empty, a random one will be generated',
+            sample_value='password123',
+        ),
+        FieldSpec(
+            name='first_name',
+            display_name='First Name',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='John',
+        ),
+        FieldSpec(
+            name='last_name',
+            display_name='Last Name',
+            field_type=FieldType.STRING,
+            sample_value='Doe',
+        ),
+        FieldSpec(
+            name='role',
+            display_name='Role',
+            field_type=FieldType.CHOICE,
+            required=True,
+            choices=['PARENT', 'STAFF', 'TEACHER', 'STUDENT'],
+            sample_value='PARENT',
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.STRING,
+            description='For parents/students: link to student record',
+            sample_value='STU2024001',
+        ),
+        FieldSpec(
+            name='employee_id',
+            display_name='Employee ID',
+            field_type=FieldType.STRING,
+            description='For staff: link to staff record',
+            sample_value='EMP001',
+        ),
+    ],
+    instructions=[
+        '📋 USER ACCOUNT IMPORT',
+        '',
+        '• Use to bulk create login credentials',
+        '• For Parents: specify Role=PARENT and Admission Number to link',
+        '• For Staff: specify Role=TEACHER/STAFF and Employee ID to link',
+    ]
+)
+
+
+# ============================================================================
 # ATTENDANCE IMPORT TEMPLATE
 # ============================================================================
 ATTENDANCE_TEMPLATE = ModuleTemplate(
@@ -1158,6 +1427,1243 @@ ATTENDANCE_TEMPLATE = ModuleTemplate(
 
 
 # ============================================================================
+# FEE ALLOCATION TEMPLATE
+# ============================================================================
+FEE_ALLOCATION_TEMPLATE = ModuleTemplate(
+    name='fee_allocations',
+    display_name='Fee Allocations',
+    description='Allocate fee structures to students or classes',
+    model_name='fees.FeeAllocation',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            description='Student admission number',
+            sample_value='STU2024001',
+            aliases=['student_id']
+        ),
+        FieldSpec(
+            name='fee_type',
+            display_name='Fee Type',
+            field_type=FieldType.STRING,
+            required=True,
+            description='Fee category (e.g., Tuition Fee)',
+            sample_value='Tuition Fee',
+            aliases=['fee_category', 'category']
+        ),
+        FieldSpec(
+            name='amount',
+            display_name='Amount',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            description='Allocated amount',
+            sample_value='5000'
+        ),
+        FieldSpec(
+            name='frequency',
+            display_name='Frequency',
+            field_type=FieldType.CHOICE,
+            choices=['ONE_TIME', 'MONTHLY', 'TERM', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY'],
+            description='Fee collection frequency',
+            sample_value='MONTHLY'
+        ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2024-25)',
+            sample_value='2024-25',
+            aliases=['year', 'session']
+        ),
+    ],
+    instructions=[
+        '📋 FEE ALLOCATION IMPORT',
+        '',
+        '• Student must exist before allocation',
+        '• Fee type should match existing fee categories',
+        '• Academic year format: YYYY-YY (e.g., 2024-25)'
+    ]
+)
+
+
+# ============================================================================
+# STUDENT PHOTO TEMPLATE
+# ============================================================================
+STUDENT_PHOTO_TEMPLATE = ModuleTemplate(
+    name='student_photos',
+    display_name='Student Photos',
+    description='Map student admission numbers to photo files or URLs',
+    model_name='students.Student',
+    unique_field='admission_number',
+    fields=[
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            description='Student admission number',
+            sample_value='STU2024001',
+            aliases=['student_id']
+        ),
+        FieldSpec(
+            name='photo_filename',
+            display_name='Photo Filename',
+            field_type=FieldType.STRING,
+            required=True,
+            description='Filename inside the uploaded ZIP',
+            sample_value='STU2024001.jpg',
+            aliases=['file', 'filename']
+        ),
+        FieldSpec(
+            name='photo_url',
+            display_name='Photo URL',
+            field_type=FieldType.STRING,
+            description='Optional external URL to photo',
+            sample_value='https://example.com/photos/STU2024001.jpg'
+        ),
+    ],
+    instructions=[
+        '📋 STUDENT PHOTO IMPORT',
+        '',
+        '• Upload a ZIP of photos OR provide photo URLs',
+        '• Filenames must match the photo_filename column',
+        '• Admission number must exist'
+    ]
+)
+
+
+# ============================================================================
+# EXAM RESULT TEMPLATE
+# ============================================================================
+EXAM_RESULT_TEMPLATE = ModuleTemplate(
+    name='exam_results',
+    display_name='Exam Results',
+    description='Import historical exam results and marks',
+    model_name='exams.ExamResult',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            description='Student admission number',
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='exam_name',
+            display_name='Exam Name',
+            field_type=FieldType.STRING,
+            required=True,
+            description='Exam name (e.g., Midterm)',
+            sample_value='Midterm'
+        ),
+        FieldSpec(
+            name='subject_code',
+            display_name='Subject Code',
+            field_type=FieldType.STRING,
+            required=True,
+            description='Subject code',
+            sample_value='MATH10'
+        ),
+        FieldSpec(
+            name='max_marks',
+            display_name='Max Marks',
+            field_type=FieldType.INTEGER,
+            required=True,
+            description='Maximum marks',
+            sample_value='100'
+        ),
+        FieldSpec(
+            name='marks_obtained',
+            display_name='Marks Obtained',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            description='Marks obtained',
+            sample_value='85'
+        ),
+        FieldSpec(
+            name='grade',
+            display_name='Grade',
+            field_type=FieldType.STRING,
+            description='Grade/letter',
+            sample_value='A'
+        ),
+        FieldSpec(
+            name='exam_date',
+            display_name='Exam Date',
+            field_type=FieldType.DATE,
+            description='Exam date',
+            sample_value='10-09-2024'
+        ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            max_length=20,
+            description='Academic year (e.g., 2024-25)',
+            sample_value='2024-25'
+        ),
+    ],
+    instructions=[
+        '📋 EXAM RESULT IMPORT',
+        '',
+        '• Student and subject must exist',
+        '• Use one row per student per subject per exam',
+        '• Academic year format: YYYY-YY'
+    ]
+)
+
+
+# ============================================================================
+# EXAM SCHEDULE TEMPLATE
+# ============================================================================
+EXAM_SCHEDULE_TEMPLATE = ModuleTemplate(
+    name='exam_schedule',
+    display_name='Exam Schedule',
+    description='Import exam schedules and timetables',
+    model_name='exams.ExamSchedule',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='exam_name',
+            display_name='Exam Name',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Midterm'
+        ),
+        FieldSpec(
+            name='class_name',
+            display_name='Class',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Class 10'
+        ),
+        FieldSpec(
+            name='subject_code',
+            display_name='Subject Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='MATH10'
+        ),
+        FieldSpec(
+            name='exam_date',
+            display_name='Exam Date',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='10-09-2024'
+        ),
+        FieldSpec(
+            name='start_time',
+            display_name='Start Time',
+            field_type=FieldType.STRING,
+            description='HH:MM',
+            sample_value='09:00'
+        ),
+        FieldSpec(
+            name='end_time',
+            display_name='End Time',
+            field_type=FieldType.STRING,
+            description='HH:MM',
+            sample_value='12:00'
+        ),
+        FieldSpec(
+            name='max_marks',
+            display_name='Max Marks',
+            field_type=FieldType.INTEGER,
+            sample_value='100'
+        ),
+    ],
+    instructions=[
+        '📋 EXAM SCHEDULE IMPORT',
+        '',
+        '• Class and subject must exist',
+        '• Use HH:MM for times'
+    ]
+)
+
+
+# ============================================================================
+# TIMETABLE TEMPLATE
+# ============================================================================
+TIMETABLE_TEMPLATE = ModuleTemplate(
+    name='timetable',
+    display_name='Class Timetable',
+    description='Import class-wise timetable/periods',
+    model_name='timetable.TimetableEntry',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='class_name',
+            display_name='Class',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Class 10'
+        ),
+        FieldSpec(
+            name='section_name',
+            display_name='Section',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='A'
+        ),
+        FieldSpec(
+            name='academic_year',
+            display_name='Academic Year',
+            field_type=FieldType.STRING,
+            description='Academic year (e.g., 2024-25). Defaults to current if empty',
+            sample_value='2024-25'
+        ),
+        FieldSpec(
+            name='day_of_week',
+            display_name='Day of Week',
+            field_type=FieldType.CHOICE,
+            required=True,
+            choices=['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+            sample_value='MON'
+        ),
+        FieldSpec(
+            name='start_time',
+            display_name='Start Time',
+            field_type=FieldType.STRING,
+            required=True,
+            description='HH:MM (24h format)',
+            sample_value='09:00'
+        ),
+        FieldSpec(
+            name='end_time',
+            display_name='End Time',
+            field_type=FieldType.STRING,
+            required=True,
+            description='HH:MM (24h format)',
+            sample_value='09:45'
+        ),
+        FieldSpec(
+            name='period_number',
+            display_name='Period Number',
+            field_type=FieldType.INTEGER,
+            required=True,
+            sample_value='1'
+        ),
+        FieldSpec(
+            name='subject_code',
+            display_name='Subject Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='MATH10'
+        ),
+        FieldSpec(
+            name='teacher_employee_id',
+            display_name='Teacher Employee ID',
+            field_type=FieldType.STRING,
+            description='Optional teacher assignment',
+            sample_value='EMP001'
+        ),
+        FieldSpec(
+            name='room_number',
+            display_name='Room Number',
+            field_type=FieldType.STRING,
+            sample_value='101'
+        ),
+    ],
+    instructions=[
+        '📋 TIMETABLE IMPORT',
+        '',
+        '• Use one row per period per day',
+        '• Day values: MON, TUE, WED, THU, FRI, SAT, SUN',
+        '• Time format: HH:MM (24h)'
+    ]
+)
+
+
+# ============================================================================
+# LIBRARY BOOKS TEMPLATE
+# ============================================================================
+LIBRARY_BOOK_TEMPLATE = ModuleTemplate(
+    name='library_books',
+    display_name='Library Books',
+    description='Import library book catalog',
+    model_name='library.Book',
+    unique_field='isbn',
+    fields=[
+        FieldSpec(
+            name='isbn',
+            display_name='ISBN',
+            field_type=FieldType.STRING,
+            required=True,
+            max_length=20,
+            sample_value='9789389620001'
+        ),
+        FieldSpec(
+            name='title',
+            display_name='Title',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Mathematics Grade 10'
+        ),
+        FieldSpec(
+            name='author',
+            display_name='Author',
+            field_type=FieldType.STRING,
+            sample_value='NCERT'
+        ),
+        FieldSpec(
+            name='publisher',
+            display_name='Publisher',
+            field_type=FieldType.STRING,
+            sample_value='NCERT'
+        ),
+        FieldSpec(
+            name='category',
+            display_name='Category',
+            field_type=FieldType.STRING,
+            sample_value='Textbook'
+        ),
+        FieldSpec(
+            name='copies_total',
+            display_name='Copies Total',
+            field_type=FieldType.INTEGER,
+            sample_value='20'
+        ),
+        FieldSpec(
+            name='location',
+            display_name='Location',
+            field_type=FieldType.STRING,
+            sample_value='Rack A1'
+        ),
+        FieldSpec(
+            name='published_year',
+            display_name='Published Year',
+            field_type=FieldType.INTEGER,
+            sample_value='2022'
+        ),
+    ],
+    instructions=[
+        '📋 LIBRARY BOOK IMPORT',
+        '',
+        '• ISBN must be unique if provided',
+        '• Use one row per book title'
+    ]
+)
+
+
+# ============================================================================
+# LIBRARY TRANSACTIONS TEMPLATE
+# ============================================================================
+LIBRARY_TRANSACTION_TEMPLATE = ModuleTemplate(
+    name='library_transactions',
+    display_name='Library Transactions',
+    description='Import library issue/return history',
+    model_name='library.BookIssue',
+    unique_field='transaction_id',
+    fields=[
+        FieldSpec(
+            name='transaction_id',
+            display_name='Transaction ID',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='LIBTXN001'
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='isbn',
+            display_name='ISBN',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='9789389620001'
+        ),
+        FieldSpec(
+            name='issue_date',
+            display_name='Issue Date',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='01-07-2024'
+        ),
+        FieldSpec(
+            name='due_date',
+            display_name='Due Date',
+            field_type=FieldType.DATE,
+            sample_value='15-07-2024'
+        ),
+        FieldSpec(
+            name='return_date',
+            display_name='Return Date',
+            field_type=FieldType.DATE,
+            sample_value='10-07-2024'
+        ),
+        FieldSpec(
+            name='fine_amount',
+            display_name='Fine Amount',
+            field_type=FieldType.DECIMAL,
+            sample_value='0'
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['ISSUED', 'RETURNED', 'OVERDUE'],
+            sample_value='RETURNED'
+        ),
+    ],
+    instructions=[
+        '📋 LIBRARY TRANSACTION IMPORT',
+        '',
+        '• Student and book must exist',
+        '• Use status: ISSUED, RETURNED, OVERDUE'
+    ]
+)
+
+
+# ============================================================================
+# PAYROLL PAYMENT TEMPLATE
+# ============================================================================
+PAYROLL_PAYMENT_TEMPLATE = ModuleTemplate(
+    name='payroll_payments',
+    display_name='Payroll Payments',
+    description='Import salary payments or payslips',
+    model_name='payroll.PayrollPayment',
+    unique_field='payment_reference',
+    fields=[
+        FieldSpec(
+            name='payment_reference',
+            display_name='Payment Reference',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='SAL/2024/001'
+        ),
+        FieldSpec(
+            name='employee_id',
+            display_name='Employee ID',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            sample_value='EMP001'
+        ),
+        FieldSpec(
+            name='period_start',
+            display_name='Period Start',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='01-04-2024'
+        ),
+        FieldSpec(
+            name='period_end',
+            display_name='Period End',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='30-04-2024'
+        ),
+        FieldSpec(
+            name='gross_amount',
+            display_name='Gross Amount',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            sample_value='50000'
+        ),
+        FieldSpec(
+            name='deductions',
+            display_name='Deductions',
+            field_type=FieldType.DECIMAL,
+            sample_value='2000'
+        ),
+        FieldSpec(
+            name='net_amount',
+            display_name='Net Amount',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            sample_value='48000'
+        ),
+        FieldSpec(
+            name='payment_date',
+            display_name='Payment Date',
+            field_type=FieldType.DATE,
+            sample_value='01-05-2024'
+        ),
+        FieldSpec(
+            name='payment_mode',
+            display_name='Payment Mode',
+            field_type=FieldType.CHOICE,
+            choices=['CASH', 'BANK_TRANSFER', 'CHEQUE', 'UPI', 'OTHER'],
+            sample_value='BANK_TRANSFER'
+        ),
+        FieldSpec(
+            name='remarks',
+            display_name='Remarks',
+            field_type=FieldType.STRING,
+            sample_value='April salary'
+        ),
+    ],
+    instructions=[
+        '📋 PAYROLL PAYMENT IMPORT',
+        '',
+        '• Employee must exist',
+        '• Use one row per payment'
+    ]
+)
+
+
+# ============================================================================
+# HOSTEL ALLOCATION TEMPLATE
+# ============================================================================
+HOSTEL_ALLOCATION_TEMPLATE = ModuleTemplate(
+    name='hostel_allocations',
+    display_name='Hostel Allocations',
+    description='Import hostel room allocations',
+    model_name='hostel.HostelAllocation',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='hostel_name',
+            display_name='Hostel Name',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Boys Hostel'
+        ),
+        FieldSpec(
+            name='room_number',
+            display_name='Room Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='101'
+        ),
+        FieldSpec(
+            name='bed_number',
+            display_name='Bed Number',
+            field_type=FieldType.STRING,
+            sample_value='A'
+        ),
+        FieldSpec(
+            name='start_date',
+            display_name='Start Date',
+            field_type=FieldType.DATE,
+            sample_value='01-06-2024'
+        ),
+        FieldSpec(
+            name='end_date',
+            display_name='End Date',
+            field_type=FieldType.DATE,
+            sample_value=''
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['ACTIVE', 'INACTIVE'],
+            sample_value='ACTIVE'
+        ),
+    ],
+    instructions=[
+        '📋 HOSTEL ALLOCATION IMPORT',
+        '',
+        '• Student must exist',
+        '• Use status: ACTIVE or INACTIVE'
+    ]
+)
+
+
+# ============================================================================
+# INVENTORY ITEM TEMPLATE
+# ============================================================================
+INVENTORY_ITEM_TEMPLATE = ModuleTemplate(
+    name='inventory_items',
+    display_name='Inventory Items',
+    description='Import inventory and asset items',
+    model_name='inventory.InventoryItem',
+    unique_field='item_code',
+    fields=[
+        FieldSpec(
+            name='item_code',
+            display_name='Item Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='ASSET001'
+        ),
+        FieldSpec(
+            name='item_name',
+            display_name='Item Name',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Projector'
+        ),
+        FieldSpec(
+            name='category',
+            display_name='Category',
+            field_type=FieldType.STRING,
+            sample_value='Electronics'
+        ),
+        FieldSpec(
+            name='quantity',
+            display_name='Quantity',
+            field_type=FieldType.INTEGER,
+            sample_value='5'
+        ),
+        FieldSpec(
+            name='unit_cost',
+            display_name='Unit Cost',
+            field_type=FieldType.DECIMAL,
+            sample_value='25000'
+        ),
+        FieldSpec(
+            name='purchase_date',
+            display_name='Purchase Date',
+            field_type=FieldType.DATE,
+            sample_value='15-03-2023'
+        ),
+        FieldSpec(
+            name='vendor',
+            display_name='Vendor',
+            field_type=FieldType.STRING,
+            sample_value='ABC Suppliers'
+        ),
+        FieldSpec(
+            name='location',
+            display_name='Location',
+            field_type=FieldType.STRING,
+            sample_value='Lab 1'
+        ),
+        FieldSpec(
+            name='condition',
+            display_name='Condition',
+            field_type=FieldType.CHOICE,
+            choices=['NEW', 'GOOD', 'FAIR', 'DAMAGED'],
+            sample_value='GOOD'
+        ),
+    ],
+    instructions=[
+        '📋 INVENTORY ITEM IMPORT',
+        '',
+        '• Item code must be unique'
+    ]
+)
+
+
+# ============================================================================
+# CERTIFICATE ISSUED TEMPLATE
+# ============================================================================
+CERTIFICATE_ISSUED_TEMPLATE = ModuleTemplate(
+    name='certificates_issued',
+    display_name='Certificates Issued',
+    description='Import issued certificates history',
+    model_name='certificates.Certificate',
+    unique_field='certificate_number',
+    fields=[
+        FieldSpec(
+            name='certificate_number',
+            display_name='Certificate Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='CERT/2024/001'
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='certificate_type',
+            display_name='Certificate Type',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Transfer Certificate'
+        ),
+        FieldSpec(
+            name='issue_date',
+            display_name='Issue Date',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='01-05-2024'
+        ),
+        FieldSpec(
+            name='expiry_date',
+            display_name='Expiry Date',
+            field_type=FieldType.DATE,
+            sample_value=''
+        ),
+        FieldSpec(
+            name='remarks',
+            display_name='Remarks',
+            field_type=FieldType.STRING,
+            sample_value=''
+        ),
+    ],
+    instructions=[
+        '📋 CERTIFICATE IMPORT',
+        '',
+        '• Student must exist',
+        '• Certificate number must be unique'
+    ]
+)
+
+
+# ============================================================================
+# FINANCE JOURNAL ENTRY TEMPLATE
+# ============================================================================
+FINANCE_JOURNAL_TEMPLATE = ModuleTemplate(
+    name='finance_journal_entries',
+    display_name='Finance Journal Entries',
+    description='Import financial journal entries',
+    model_name='finance.JournalEntry',
+    unique_field='entry_number',
+    fields=[
+        FieldSpec(
+            name='entry_number',
+            display_name='Entry Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='JE/2024/001'
+        ),
+        FieldSpec(
+            name='entry_date',
+            display_name='Entry Date',
+            field_type=FieldType.DATE,
+            required=True,
+            sample_value='01-04-2024'
+        ),
+        FieldSpec(
+            name='account_code',
+            display_name='Account Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='4001'
+        ),
+        FieldSpec(
+            name='account_name',
+            display_name='Account Name',
+            field_type=FieldType.STRING,
+            sample_value='Tuition Revenue'
+        ),
+        FieldSpec(
+            name='debit',
+            display_name='Debit',
+            field_type=FieldType.DECIMAL,
+            sample_value='0'
+        ),
+        FieldSpec(
+            name='credit',
+            display_name='Credit',
+            field_type=FieldType.DECIMAL,
+            sample_value='5000'
+        ),
+        FieldSpec(
+            name='narration',
+            display_name='Narration',
+            field_type=FieldType.STRING,
+            sample_value='Invoice posting'
+        ),
+        FieldSpec(
+            name='reference',
+            display_name='Reference',
+            field_type=FieldType.STRING,
+            sample_value='INV/2024/001'
+        ),
+    ],
+    instructions=[
+        '📋 JOURNAL ENTRY IMPORT',
+        '',
+        '• Entry number must be unique',
+        '• Debit/Credit should be numeric',
+        '• Account code should match chart of accounts'
+    ]
+)
+
+
+# ============================================================================
+# FEE DISCOUNT TEMPLATE
+# ============================================================================
+FEE_DISCOUNT_TEMPLATE = ModuleTemplate(
+    name='fee_discounts',
+    display_name='Fee Discounts / Scholarships',
+    description='Import fee discount or scholarship data',
+    model_name='fees.FeeDiscount',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.FOREIGN_KEY,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='discount_code',
+            display_name='Discount Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='SCHOLAR50'
+        ),
+        FieldSpec(
+            name='discount_type',
+            display_name='Discount Type',
+            field_type=FieldType.CHOICE,
+            required=True,
+            choices=['PERCENT', 'AMOUNT'],
+            sample_value='PERCENT'
+        ),
+        FieldSpec(
+            name='value',
+            display_name='Value',
+            field_type=FieldType.DECIMAL,
+            required=True,
+            sample_value='50'
+        ),
+        FieldSpec(
+            name='start_date',
+            display_name='Start Date',
+            field_type=FieldType.DATE,
+            sample_value='01-04-2024'
+        ),
+        FieldSpec(
+            name='end_date',
+            display_name='End Date',
+            field_type=FieldType.DATE,
+            sample_value='31-03-2025'
+        ),
+        FieldSpec(
+            name='reason',
+            display_name='Reason',
+            field_type=FieldType.STRING,
+            sample_value='Merit Scholarship'
+        ),
+    ],
+    instructions=[
+        '📋 FEE DISCOUNT IMPORT',
+        '',
+        '• Student must exist',
+        '• Discount type: PERCENT or AMOUNT'
+    ]
+)
+
+
+# ============================================================================
+# HELPDESK TICKET TEMPLATE
+# ============================================================================
+HELPDESK_TICKET_TEMPLATE = ModuleTemplate(
+    name='helpdesk_tickets',
+    display_name='Helpdesk Tickets',
+    description='Import historical helpdesk tickets',
+    model_name='helpdesk.Ticket',
+    unique_field='ticket_number',
+    fields=[
+        FieldSpec(
+            name='ticket_number',
+            display_name='Ticket Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='TCK/2024/001'
+        ),
+        FieldSpec(
+            name='requester_type',
+            display_name='Requester Type',
+            field_type=FieldType.CHOICE,
+            required=True,
+            choices=['STUDENT', 'PARENT', 'STAFF'],
+            sample_value='STUDENT'
+        ),
+        FieldSpec(
+            name='requester_id',
+            display_name='Requester ID',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='subject',
+            display_name='Subject',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Portal access issue'
+        ),
+        FieldSpec(
+            name='description',
+            display_name='Description',
+            field_type=FieldType.STRING,
+            sample_value='Unable to login to portal'
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'],
+            sample_value='RESOLVED'
+        ),
+        FieldSpec(
+            name='priority',
+            display_name='Priority',
+            field_type=FieldType.CHOICE,
+            choices=['LOW', 'MEDIUM', 'HIGH'],
+            sample_value='MEDIUM'
+        ),
+        FieldSpec(
+            name='created_at',
+            display_name='Created At',
+            field_type=FieldType.DATETIME,
+            sample_value='2024-04-01 10:30:00'
+        ),
+        FieldSpec(
+            name='resolved_at',
+            display_name='Resolved At',
+            field_type=FieldType.DATETIME,
+            sample_value='2024-04-02 15:00:00'
+        ),
+    ],
+    instructions=[
+        '📋 HELPDESK TICKET IMPORT',
+        '',
+        '• Ticket number must be unique',
+        '• Status: OPEN, IN_PROGRESS, RESOLVED, CLOSED'
+    ]
+)
+
+
+# ============================================================================
+# LMS COURSE TEMPLATE
+# ============================================================================
+LMS_COURSE_TEMPLATE = ModuleTemplate(
+    name='lms_courses',
+    display_name='LMS Courses',
+    description='Import LMS course catalog',
+    model_name='lms.Course',
+    unique_field='course_code',
+    fields=[
+        FieldSpec(
+            name='course_code',
+            display_name='Course Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='MATH10-2024'
+        ),
+        FieldSpec(
+            name='class_name',
+            display_name='Class',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Class 10'
+        ),
+        FieldSpec(
+            name='subject_code',
+            display_name='Subject Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='MATH10'
+        ),
+        FieldSpec(
+            name='course_name',
+            display_name='Course Name',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='Mathematics Grade 10'
+        ),
+        FieldSpec(
+            name='description',
+            display_name='Description',
+            field_type=FieldType.STRING,
+            sample_value='Course description'
+        ),
+        FieldSpec(
+            name='teacher_employee_id',
+            display_name='Teacher Employee ID',
+            field_type=FieldType.STRING,
+            sample_value='EMP001'
+        ),
+        FieldSpec(
+            name='start_time',
+            display_name='Start Time',
+            field_type=FieldType.DATETIME,
+            description='Start datetime (YYYY-MM-DD HH:MM:SS)',
+            sample_value='2024-04-01 09:00:00'
+        ),
+        FieldSpec(
+            name='duration_minutes',
+            display_name='Duration (Minutes)',
+            field_type=FieldType.INTEGER,
+            sample_value='45'
+        ),
+        FieldSpec(
+            name='meeting_link',
+            display_name='Meeting Link',
+            field_type=FieldType.STRING,
+            sample_value='https://meet.google.com/xyz-abc'
+        ),
+        FieldSpec(
+            name='start_date',
+            display_name='Start Date',
+            field_type=FieldType.DATE,
+            sample_value='01-04-2024'
+        ),
+        FieldSpec(
+            name='end_date',
+            display_name='End Date',
+            field_type=FieldType.DATE,
+            sample_value='31-03-2025'
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['ACTIVE', 'INACTIVE'],
+            sample_value='ACTIVE'
+        ),
+    ],
+    instructions=[
+        '📋 LMS COURSE IMPORT',
+        '',
+        '• Course code must be unique'
+    ]
+)
+
+
+# ============================================================================
+# LMS ENROLLMENT TEMPLATE
+# ============================================================================
+LMS_ENROLLMENT_TEMPLATE = ModuleTemplate(
+    name='lms_enrollments',
+    display_name='LMS Enrollments',
+    description='Import LMS course enrollments',
+    model_name='lms.CourseEnrollment',
+    unique_field=None,
+    fields=[
+        FieldSpec(
+            name='course_code',
+            display_name='Course Code',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='MATH10-2024'
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='role',
+            display_name='Role',
+            field_type=FieldType.CHOICE,
+            choices=['STUDENT', 'TEACHER'],
+            sample_value='STUDENT'
+        ),
+        FieldSpec(
+            name='enrollment_date',
+            display_name='Enrollment Date',
+            field_type=FieldType.DATE,
+            sample_value='05-04-2024'
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['ACTIVE', 'INACTIVE'],
+            sample_value='ACTIVE'
+        ),
+    ],
+    instructions=[
+        '📋 LMS ENROLLMENT IMPORT',
+        '',
+        '• Course must exist',
+        '• Role: STUDENT or TEACHER'
+    ]
+)
+
+
+# ============================================================================
+# ID CARD TEMPLATE
+# ============================================================================
+IDCARD_TEMPLATE = ModuleTemplate(
+    name='idcards',
+    display_name='ID Cards',
+    description='Import ID card issue data',
+    model_name='idcards.IDCard',
+    unique_field='card_number',
+    fields=[
+        FieldSpec(
+            name='card_number',
+            display_name='Card Number',
+            field_type=FieldType.STRING,
+            required=True,
+            sample_value='ID/2024/001'
+        ),
+        FieldSpec(
+            name='admission_number',
+            display_name='Admission Number',
+            field_type=FieldType.STRING,
+            description='Student admission number',
+            sample_value='STU2024001'
+        ),
+        FieldSpec(
+            name='employee_id',
+            display_name='Employee ID',
+            field_type=FieldType.STRING,
+            description='Staff employee id',
+            sample_value='EMP001'
+        ),
+        FieldSpec(
+            name='template_code',
+            display_name='Template Code',
+            field_type=FieldType.STRING,
+            sample_value='STD_DEFAULT'
+        ),
+        FieldSpec(
+            name='file_url',
+            display_name='File URL',
+            field_type=FieldType.STRING,
+            description='Optional file URL for generated card',
+            sample_value='https://example.com/idcards/ID-2024-001.pdf'
+        ),
+        FieldSpec(
+            name='issued_date',
+            display_name='Issued Date',
+            field_type=FieldType.DATE,
+            sample_value='01-06-2024'
+        ),
+        FieldSpec(
+            name='expiry_date',
+            display_name='Expiry Date',
+            field_type=FieldType.DATE,
+            sample_value='31-03-2025'
+        ),
+        FieldSpec(
+            name='status',
+            display_name='Status',
+            field_type=FieldType.CHOICE,
+            choices=['ACTIVE', 'INACTIVE'],
+            sample_value='ACTIVE'
+        ),
+        FieldSpec(
+            name='qr_code',
+            display_name='QR Code',
+            field_type=FieldType.STRING,
+            sample_value='QR123456'
+        ),
+    ],
+    instructions=[
+        '📋 ID CARD IMPORT',
+        '',
+        '• Card number must be unique',
+        '• Provide admission_number or employee_id'
+    ]
+)
+
+
+# ============================================================================
 # MASTER TEMPLATE REGISTRY
 # ============================================================================
 TEMPLATE_REGISTRY = {
@@ -1166,10 +2672,30 @@ TEMPLATE_REGISTRY = {
     'classes': CLASS_SECTION_TEMPLATE,
     'subjects': SUBJECT_TEMPLATE,
     'fee_structures': FEE_STRUCTURE_TEMPLATE,
+    'fee_invoices': FEE_INVOICE_TEMPLATE,
+    'fee_payments': FEE_PAYMENT_TEMPLATE,
+    'fee_allocations': FEE_ALLOCATION_TEMPLATE,
     'student_enrollments': STUDENT_ENROLLMENT_TEMPLATE,
     'transport': TRANSPORT_TEMPLATE,
     'parents': PARENT_TEMPLATE,
+    'user_accounts': USER_ACCOUNT_TEMPLATE,
     'attendance': ATTENDANCE_TEMPLATE,
+    'student_photos': STUDENT_PHOTO_TEMPLATE,
+    'exam_results': EXAM_RESULT_TEMPLATE,
+    'exam_schedule': EXAM_SCHEDULE_TEMPLATE,
+    'timetable': TIMETABLE_TEMPLATE,
+    'library_books': LIBRARY_BOOK_TEMPLATE,
+    'library_transactions': LIBRARY_TRANSACTION_TEMPLATE,
+    'payroll_payments': PAYROLL_PAYMENT_TEMPLATE,
+    'hostel_allocations': HOSTEL_ALLOCATION_TEMPLATE,
+    'inventory_items': INVENTORY_ITEM_TEMPLATE,
+    'certificates_issued': CERTIFICATE_ISSUED_TEMPLATE,
+    'finance_journal_entries': FINANCE_JOURNAL_TEMPLATE,
+    'fee_discounts': FEE_DISCOUNT_TEMPLATE,
+    'helpdesk_tickets': HELPDESK_TICKET_TEMPLATE,
+    'lms_courses': LMS_COURSE_TEMPLATE,
+    'lms_enrollments': LMS_ENROLLMENT_TEMPLATE,
+    'idcards': IDCARD_TEMPLATE,
 }
 
 

@@ -81,6 +81,24 @@
     transition: color 0.2s ease;
 }
 
+.preview-icon-wrap {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 220ms ease, opacity 200ms ease;
+}
+
+.icon-set-card:hover .preview-icon-wrap {
+    transform: translateY(-4px) rotate(-6deg);
+    opacity: 0.95;
+}
+
+.icon-set-card.selected .preview-icon-wrap {
+    transform: translateY(-6px) rotate(-8deg) scale(1.06);
+}
+
 .icon-set-card:hover .icon-preview-item,
 .icon-set-card.selected .icon-preview-item {
     color: var(--icon-primary, #6366F1);

@@ -1,0 +1,6 @@
+item_code,item_name,category,quantity,unit_cost,purchase_date,vendor,location,condition
+ASSET001,Projector,Electronics,5,25000,15-03-2023,ABC Suppliers,Lab 1,GOOD
+ASSET002,Desktop Computer,Electronics,20,35000,10-02-2023,Tech World,Computer Lab,GOOD
+ASSET003,Library Table,Furniture,15,8000,05-01-2022,FurniCo,Library,GOOD
+ASSET004,Sports Kit,Sports,10,3000,20-06-2023,SportsHub,Sports Room,NEW
+ASSET005,Lab Microscope,Lab,8,12000,18-08-2023,Lab Equip,Science Lab,GOOD

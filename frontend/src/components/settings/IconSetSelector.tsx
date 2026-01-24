@@ -14,7 +14,8 @@ interface IconSetSelectorProps {
     onSelect: (iconSet: IconSetType) => void;
 }
 
-const previewIconKeys = ['dashboard', 'users', 'settings', 'bell'] as const;
+// Use a richer set of preview keys to show varied glyph styles
+const previewIconKeys = ['dashboard', 'bookOpen', 'calendar', 'dollarSign', 'bell'] as const;
 
 const IconSetSelector: React.FC<IconSetSelectorProps> = ({ selectedIconSet, onSelect }) => {
     const iconSets = Object.values(iconSetInfo);
@@ -49,7 +50,9 @@ const IconSetSelector: React.FC<IconSetSelectorProps> = ({ selectedIconSet, onSe
                                     const IconComponent = getIcon(iconKey, setInfo.id);
                                     return (
                                         <div key={iconKey} className="icon-preview-item">
-                                            <IconComponent size={24} className="preview-icon" />
+                                            <div className="preview-icon-wrap">
+                                                <IconComponent size={24} className="preview-icon" />
+                                            </div>
                                         </div>
                                     );
                                 })}

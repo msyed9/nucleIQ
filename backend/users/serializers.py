@@ -15,7 +15,10 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
+        from datetime import timedelta
+        
         token = super().get_token(user)
+        
         # Add custom claims
         try:
             if getattr(user, 'tenant_id', None):
@@ -23,9 +26,41 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             else:
                 token['tenant_id'] = None
             token['is_platform_admin'] = bool(getattr(user, 'is_platform_admin', False))
+            
+            # Override token expiration with tenant-specific settings
+            if hasattr(user, 'tenant') and user.tenant:
+                # Set access token lifetime based on tenant settings
+                session_timeout_minutes = getattr(user.tenant, 'session_timeout_minutes', 60)
+                token.set_exp(lifetime=timedelta(minutes=session_timeout_minutes))
+                
         except Exception:
             pass
         return token
+    
+    def validate(self, attrs):
+        """Override to set custom refresh token lifetime based on tenant."""
+        from datetime import timedelta
+        from rest_framework_simplejwt.settings import api_settings
+        
+        data = super().validate(attrs)
+        
+        # Get the user and set custom refresh token lifetime
+        user = self.user
+        if hasattr(user, 'tenant') and user.tenant:
+            # Create a new refresh token with tenant-specific lifetime
+            refresh_timeout_days = getattr(user.tenant, 'refresh_timeout_days', 7)
+            refresh = self.get_token(user)
+            
+            # Manually set the refresh token expiration
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh_token = RefreshToken.for_user(user)
+            refresh_token.set_exp(lifetime=timedelta(days=refresh_timeout_days))
+            
+            # Update data with custom tokens
+            data['refresh'] = str(refresh_token)
+            data['access'] = str(refresh_token.access_token)
+        
+        return data
 
 
 class UserPreferenceSerializer(serializers.ModelSerializer):
@@ -606,3 +641,239 @@ class BulkRolePermissionUpdateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(f"Permission {perm_id} not found.")
         
         return value
+
+
+class UnifiedLoginSerializer(serializers.Serializer):
+    """
+    Unified login serializer that handles all user types:
+    - Platform Admin
+    - Tenant Admin
+    - Staff (Teacher, Accountant, etc.)
+    - Parent
+    
+    Supports login via email OR phone number.
+    Returns appropriate redirect URL based on user type.
+    """
+    
+    username = serializers.CharField(
+        help_text="Email or mobile number"
+    )
+    password = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    
+    def validate(self, attrs):
+        from django.db.models import Q
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from django.utils import timezone
+        from students.models import ParentUser
+        
+        username = attrs.get('username', '').strip()
+        password = attrs.get('password', '')
+        
+        if not username or not password:
+            raise serializers.ValidationError(
+                "Both username and password are required."
+            )
+        
+        # Find user by email or phone number
+        user = User.objects.filter(
+            Q(email__iexact=username) | Q(phone_number=username)
+        ).first()
+        
+        if not user:
+            raise serializers.ValidationError({
+                "detail": "No account found with this email or mobile number."
+            })
+        
+        # Check password
+        if not user.check_password(password):
+            raise serializers.ValidationError({
+                "detail": "Invalid password."
+            })
+        
+        if not user.is_active:
+            raise serializers.ValidationError({
+                "detail": "This account is inactive. Please contact administrator."
+            })
+        
+        # Generate tokens with tenant-specific timeouts
+        from datetime import timedelta
+        
+        # Create refresh token with custom lifetime
+        refresh = RefreshToken.for_user(user)
+        
+        # Apply tenant-specific timeouts if tenant exists
+        if hasattr(user, 'tenant') and user.tenant:
+            # Set refresh token lifetime
+            refresh_timeout_days = getattr(user.tenant, 'refresh_timeout_days', 7)
+            refresh.set_exp(lifetime=timedelta(days=refresh_timeout_days))
+            
+            # The access token is generated from the refresh token, 
+            # but we need to customize it separately
+            access_token = refresh.access_token
+            session_timeout_minutes = getattr(user.tenant, 'session_timeout_minutes', 60)
+            access_token.set_exp(lifetime=timedelta(minutes=session_timeout_minutes))
+        
+        # Determine user type and redirect URL
+        user_type = self._determine_user_type(user)
+        redirect_url = self._get_redirect_url(user_type)
+        
+        # Build response data
+        data = {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_type': user_type,
+            'redirect_url': redirect_url,
+            'user': self._build_user_data(user, user_type)
+        }
+        
+        # Add tenant info for non-platform-admin users
+        if user.tenant:
+            data['tenant'] = str(user.tenant.id)
+            data['tenant_name'] = user.tenant.name
+        else:
+            data['tenant'] = None
+            data['tenant_name'] = None
+        
+        # Add parent-specific data if applicable
+        if user_type == 'parent':
+            parent_data = self._get_parent_data(user)
+            if parent_data:
+                data['user'].update(parent_data)
+        
+        # Store user for later use (e.g., updating last login)
+        self._user = user
+        
+        return data
+    
+    def _determine_user_type(self, user):
+        """
+        Determine user type based on attributes and relationships.
+        
+        Priority:
+        1. Platform Admin (is_platform_admin=True)
+        2. Parent (has ParentUser profile with portal_access_enabled)
+        3. Tenant Admin (has admin role)
+        4. Teacher (has teacher role)
+        5. Staff (default for tenant users)
+        """
+        from students.models import ParentUser
+        
+        # Check platform admin first
+        if user.is_platform_admin or user.is_superuser:
+            return 'platform_admin'
+        
+        # Check if user is a parent with portal access
+        try:
+            parent_profile = ParentUser.objects.get(
+                user=user,
+                portal_access_enabled=True
+            )
+            return 'parent'
+        except ParentUser.DoesNotExist:
+            pass
+        
+        # Check roles for tenant users
+        role_codes = list(user.roles.filter(is_active=True).values_list('code', flat=True))
+        
+        if 'tenant_admin' in role_codes or 'admin' in role_codes or 'principal' in role_codes:
+            return 'tenant_admin'
+        elif 'teacher' in role_codes:
+            return 'teacher'
+        else:
+            return 'staff'
+    
+    def _get_redirect_url(self, user_type):
+        """Get the appropriate redirect URL based on user type."""
+        redirect_map = {
+            'platform_admin': '/dashboard',
+            'tenant_admin': '/dashboard',
+            'teacher': '/dashboard',
+            'staff': '/dashboard',
+            'parent': '/parent/portal'
+        }
+        return redirect_map.get(user_type, '/dashboard')
+    
+    def _build_user_data(self, user, user_type):
+        """Build user data for the response."""
+        from students.models import ParentUser
+        
+        # Get roles
+        roles = list(user.roles.filter(is_active=True).values('id', 'name', 'code'))
+        
+        # Get permissions
+        if user.is_platform_admin or user.is_superuser:
+            permissions = ['*']  # All permissions
+        else:
+            permissions = list(
+                Permission.objects.filter(
+                    role_permissions__role__users=user,
+                    role_permissions__role__is_active=True
+                ).distinct().values_list('code', flat=True)
+            )
+        
+        # Check if user is also a parent
+        is_parent = ParentUser.objects.filter(
+            user=user,
+            portal_access_enabled=True
+        ).exists()
+        
+        return {
+            'id': str(user.id),
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'full_name': user.get_full_name(),
+            'phone_number': user.phone_number or '',
+            'avatar_url': user.avatar_url or '',
+            'is_active': user.is_active,
+            'is_platform_admin': user.is_platform_admin,
+            'is_parent': is_parent,
+            'tenant': str(user.tenant.id) if user.tenant else None,
+            'roles': [{'id': str(r['id']), 'name': r['name'], 'code': r['code']} for r in roles],
+            'permissions': permissions,
+            'user_type': user_type
+        }
+    
+    def _get_parent_data(self, user):
+        """Get parent-specific data including accessible students."""
+        from students.models import ParentUser
+        from django.utils import timezone
+        
+        try:
+            parent_profile = ParentUser.objects.get(
+                user=user,
+                portal_access_enabled=True
+            )
+            
+            # Update last login for parent
+            parent_profile.last_login_at = timezone.now()
+            parent_profile.save(update_fields=['last_login_at'])
+            
+            # Get accessible students
+            students = parent_profile.students.filter(is_active=True)
+            students_data = []
+            
+            for student in students:
+                enrollment = student.get_current_enrollment()
+                students_data.append({
+                    'id': str(student.id),
+                    'admission_number': student.admission_number,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name,
+                    'full_name': student.get_full_name(),
+                    'class': enrollment.section.grade_level.name if enrollment else 'N/A',
+                    'section': enrollment.section.name if enrollment else 'N/A',
+                    'photo_url': student.photo.url if student.photo else None,
+                })
+            
+            return {
+                'parent_id': parent_profile.id,
+                'relation_type': parent_profile.relation_type,
+                'students': students_data,
+                'students_count': len(students_data)
+            }
+        except ParentUser.DoesNotExist:
+            return None

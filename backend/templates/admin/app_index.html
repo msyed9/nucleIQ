@@ -1,0 +1,234 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .app-index-container {
+        animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .app-header {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .app-header h1 {
+        font-size: 2rem;
+        margin: 0 0 12px 0;
+    }
+
+    .app-header p {
+        color: #a0aec0;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .model-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+
+    .model-card {
+        background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    .model-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+
+    .model-card-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .model-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .model-card-header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .model-card-header h2 a {
+        color: white;
+        text-decoration: none;
+    }
+
+    .model-card-header h2 a:hover {
+        color: #667eea;
+    }
+
+    .model-card-actions {
+        padding: 16px 24px;
+        display: flex;
+        gap: 12px;
+    }
+
+    .model-card-actions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .model-card-actions .addlink {
+        background: rgba(72, 187, 120, 0.15);
+        color: #48bb78;
+        border: 1px solid rgba(72, 187, 120, 0.3);
+    }
+
+    .model-card-actions .addlink:hover {
+        background: rgba(72, 187, 120, 0.25);
+    }
+
+    .model-card-actions .changelink,
+    .model-card-actions .viewlink {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+
+    .model-card-actions .changelink:hover,
+    .model-card-actions .viewlink:hover {
+        background: rgba(102, 126, 234, 0.25);
+    }
+
+    /* View-only badge */
+    .view-only-badge {
+        font-size: 0.65rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 3px 8px;
+        border-radius: 4px;
+        color: #718096;
+        margin-left: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Empty state */
+    .empty-app {
+        text-align: center;
+        padding: 60px 24px;
+        color: #718096;
+        background: rgba(26, 26, 46, 0.5);
+        border-radius: 16px;
+    }
+
+    .empty-app .icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+    }
+
+    .empty-app p {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="app-index-container">
+    <div class="app-header">
+        <h1>{{ title }}</h1>
+        <p>{% blocktranslate with name=app_label %}Manage all models in the {{ name }} application{% endblocktranslate %}</p>
+    </div>
+
+    {% if app_list %}
+    {% for app in app_list %}
+    <div class="model-cards">
+        {% for model in app.models %}
+        <div class="model-card">
+            <div class="model-card-header">
+                <div class="model-icon">ðŸ“‹</div>
+                <h2>
+                    {% if model.admin_url %}
+                    <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                    {% else %}
+                    {{ model.name }}
+                    {% endif %}
+                    {% if model.view_only %}
+                    <span class="view-only-badge">View only</span>
+                    {% endif %}
+                </h2>
+            </div>
+            <div class="model-card-actions">
+                {% if model.add_url %}
+                <a href="{{ model.add_url }}" class="addlink">
+                    <span>âž•</span>
+                    {% translate 'Add' %}
+                </a>
+                {% endif %}
+                {% if model.admin_url %}
+                {% if model.view_only %}
+                <a href="{{ model.admin_url }}" class="viewlink">
+                    <span>ðŸ‘ï¸</span>
+                    {% translate 'View' %}
+                </a>
+                {% else %}
+                <a href="{{ model.admin_url }}" class="changelink">
+                    <span>âœï¸</span>
+                    {% translate 'Change' %}
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-app">
+        <div class="icon">ðŸ“­</div>
+        <p>{% translate 'No models available in this application.' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -503,8 +503,71 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
                 is_valid_scan=True
             )
             
-            # TODO: Link with main attendance system
-            # Create or update attendance record in attendance app
+            # Link with main attendance system: create/update AttendanceRecord
+            try:
+                from attendance.models import AttendanceRecord
+
+                record_date = attendance.scan_timestamp.date()
+                record_kwargs = {
+                    'tenant': tenant,
+                    'date': record_date,
+                    'method': 'QR_CODE',
+                }
+
+                if student:
+                    record_kwargs['record_type'] = 'STUDENT'
+                    record_kwargs['student'] = student
+                    # try to obtain academic year from enrollment
+                    enrollment = student.get_current_enrollment()
+                    if enrollment and getattr(enrollment, 'academic_year', None):
+                        record_kwargs['academic_year'] = enrollment.academic_year
+                else:
+                    record_kwargs['record_type'] = 'STAFF'
+                    record_kwargs['staff'] = staff
+                    # staff academic_year left unset
+
+                # map QR attendance status to AttendanceRecord status choices
+                status_map = {
+                    'present': 'PRESENT',
+                    'late': 'LATE',
+                    'absent': 'ABSENT'
+                }
+                mapped_status = status_map.get(attendance.attendance_status.lower(), 'PRESENT')
+
+                # Try to find existing record for the same date and student/staff
+                existing = None
+                if record_kwargs.get('student'):
+                    existing = AttendanceRecord.objects.filter(
+                        tenant=tenant,
+                        student=student,
+                        date=record_date
+                    ).first()
+                else:
+                    existing = AttendanceRecord.objects.filter(
+                        tenant=tenant,
+                        staff=staff,
+                        date=record_date
+                    ).first()
+
+                if existing:
+                    # Update existing record if needed
+                    existing.status = mapped_status
+                    existing.method = 'QR_CODE'
+                    existing.check_in_time = attendance.scan_timestamp.time()
+                    existing.marked_by = request.user if hasattr(request, 'user') else None
+                    existing.save()
+                else:
+                    # Create new attendance record
+                    AttendanceRecord.objects.create(
+                        **record_kwargs,
+                        status=mapped_status,
+                        check_in_time=attendance.scan_timestamp.time(),
+                        marked_by=request.user if hasattr(request, 'user') else None
+                    )
+            except Exception:
+                # Never fail QR scan due to attendance linkage errors
+                import logging
+                logging.exception('Failed to link QR attendance to AttendanceRecord')
             
             return Response({
                 'success': True,

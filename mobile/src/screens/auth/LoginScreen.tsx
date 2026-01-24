@@ -20,20 +20,21 @@ const LoginScreen: React.FC = () => {
     const theme = useTheme();
     const { login } = useAuth();
 
-    const [email, setEmail] = useState('');
+    // Using 'username' to support both email and phone number
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+    const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
 
     const validateForm = () => {
-        const newErrors: { email?: string; password?: string } = {};
+        const newErrors: { username?: string; password?: string } = {};
 
-        if (!email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            newErrors.email = 'Please enter a valid email';
+        if (!username.trim()) {
+            newErrors.username = 'Email or phone number is required';
         }
+        // Allow both email format and phone number format
+        // No strict email validation since phone numbers are also valid
 
         if (!password) {
             newErrors.password = 'Password is required';
@@ -50,14 +51,17 @@ const LoginScreen: React.FC = () => {
 
         setIsLoading(true);
         try {
-            await login({ email: email.trim(), password });
+            // Use unified login with username (email or phone)
+            await login({ email: username.trim(), password });
             Toast.show({
                 type: 'success',
                 text1: 'Welcome back!',
                 text2: 'Login successful',
             });
         } catch (error: any) {
-            const message = error.response?.data?.detail || 'Login failed. Please check your credentials.';
+            const message = error.response?.data?.detail ||
+                error.response?.data?.non_field_errors?.[0] ||
+                'Login failed. Please check your credentials.';
             Toast.show({
                 type: 'error',
                 text1: 'Login Failed',
@@ -100,24 +104,25 @@ const LoginScreen: React.FC = () => {
 
                         <View style={styles.inputContainer}>
                             <TextInput
-                                label="Email Address"
-                                value={email}
+                                label="Email or Mobile Number"
+                                value={username}
                                 onChangeText={(text) => {
-                                    setEmail(text);
-                                    if (errors.email) setErrors({ ...errors, email: undefined });
+                                    setUsername(text);
+                                    if (errors.username) setErrors({ ...errors, username: undefined });
                                 }}
                                 mode="outlined"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 autoComplete="email"
-                                left={<TextInput.Icon icon="email" />}
-                                error={!!errors.email}
+                                left={<TextInput.Icon icon="account" />}
+                                error={!!errors.username}
                                 style={styles.input}
                                 outlineStyle={styles.inputOutline}
+                                placeholder="Enter email or phone number"
                             />
-                            {errors.email && (
-                                <HelperText type="error" visible={!!errors.email}>
-                                    {errors.email}
+                            {errors.username && (
+                                <HelperText type="error" visible={!!errors.username}>
+                                    {errors.username}
                                 </HelperText>
                             )}
 
@@ -173,6 +178,7 @@ const LoginScreen: React.FC = () => {
         </LinearGradient>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

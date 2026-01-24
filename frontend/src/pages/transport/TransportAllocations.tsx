@@ -25,7 +25,7 @@ const TransportAllocations: React.FC = () => {
   const [total, setTotal] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
 
-  useEffect(() => { fetchAllocations(); /* eslint-disable-next-line */ }, [page, search]);
+  useEffect(() => { fetchAllocations(); }, [page, search]);
 
   const fetchAllocations = async () => {
     setLoading(true);

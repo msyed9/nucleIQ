@@ -48,6 +48,7 @@ export const Dashboard: React.FC = () => {
     const [editMode, setEditMode] = useState(false);
     const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [layoutVersion, setLayoutVersion] = useState(0);
 
     useEffect(() => {
         fetchDashboardStats();
@@ -79,6 +80,10 @@ export const Dashboard: React.FC = () => {
         setLoading(true);
         fetchDashboardStats();
         api.post('/dashboard/analytics/invalidate_cache/').catch(console.error);
+    };
+
+    const handleWidgetAdded = () => {
+        setLayoutVersion((prev) => prev + 1);
     };
 
     const recentActivities: Activity[] = [
@@ -377,11 +382,14 @@ export const Dashboard: React.FC = () => {
             </Card>
 
             {/* Dashboard Grid (Existing Widgets) */}
-            {editMode && <DashboardGrid editMode={editMode} />}
+            {editMode && <DashboardGrid editMode={editMode} refreshKey={layoutVersion} />}
 
             {/* Widget Library Modal */}
             {showWidgetLibrary && (
-                <WidgetLibrary onClose={() => setShowWidgetLibrary(false)} />
+                <WidgetLibrary
+                    onClose={() => setShowWidgetLibrary(false)}
+                    onWidgetAdded={handleWidgetAdded}
+                />
             )}
         </div>
     );

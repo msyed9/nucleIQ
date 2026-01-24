@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Download, Upload } from 'lucide-react';
 import { AccountTree } from '../../components/finance/AccountTree';
 import { AccountForm } from '../../components/finance/AccountForm';
@@ -28,6 +29,7 @@ const ChartOfAccounts: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+    const [accountTransactions, setAccountTransactions] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL');
@@ -124,9 +126,19 @@ const ChartOfAccounts: React.FC = () => {
         }
     };
 
+    const navigate = useNavigate();
+
     const handleViewDetails = async (account: Account) => {
         setSelectedAccount(account);
         setShowDetails(true);
+
+        try {
+            const resp = await api.get(`/api/finance/accounts/${account.id}/transactions/`);
+            setAccountTransactions(resp.data.results || resp.data || []);
+        } catch (err) {
+            console.error('Failed to fetch transactions for account', account.id, err);
+            setAccountTransactions([]);
+        }
     };
 
     const handleSubmitForm = async (data: any) => {
@@ -299,11 +311,11 @@ const ChartOfAccounts: React.FC = () => {
             {showDetails && selectedAccount && (
                 <AccountDetails
                     account={selectedAccount as any}
-                    transactions={[]} // TODO: Fetch transactions
+                    transactions={accountTransactions}
                     onClose={() => setShowDetails(false)}
                     onViewLedger={() => {
-                        // TODO: Navigate to ledger report
-                        toast('Ledger view coming soon', { icon: 'ℹ️' });
+                        // Navigate to ledger / finance report for this account
+                        navigate(`/finance/ledger?account=${selectedAccount?.id}`);
                     }}
                 />
             )}

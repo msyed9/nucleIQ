@@ -29,7 +29,8 @@ import {
     Loader2,
     FileText,
     Archive,
-    X
+    X,
+    Database
 } from 'lucide-react';
 import { Button, Card, Input, Select, Badge } from '@/design-system';
 import api from '@/services/api';
@@ -155,6 +156,10 @@ const DataMigration: React.FC = () => {
     // Field info expansion
     const [showFieldInfo, setShowFieldInfo] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
+
+    // Backup state
+    const [backupProgress, setBackupProgress] = useState<number>(0);
+    const [creatingBackup, setCreatingBackup] = useState(false);
 
     // Load modules on mount
     useEffect(() => {
@@ -491,13 +496,23 @@ const DataMigration: React.FC = () => {
         }
     };
 
-    // Download full backup
+    // Download full backup with progress
     const downloadBackup = async () => {
+        setCreatingBackup(true);
+        setBackupProgress(0);
+
         try {
-            setLoading(true);
+            // Simulate progress for better UX
+            const progressInterval = setInterval(() => {
+                setBackupProgress(prev => Math.min(prev + 10, 90));
+            }, 500);
+
             const response = await api.get('/data-management/backup/', {
                 responseType: 'blob'
             });
+
+            clearInterval(progressInterval);
+            setBackupProgress(100);
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
@@ -510,7 +525,8 @@ const DataMigration: React.FC = () => {
         } catch (err: any) {
             setError('Failed to create backup');
         } finally {
-            setLoading(false);
+            setCreatingBackup(false);
+            setBackupProgress(0);
         }
     };
 
@@ -573,17 +589,28 @@ const DataMigration: React.FC = () => {
         <div className="data-migration-page">
             <div className="page-header">
                 <div className="header-content">
-                    <h1><FileSpreadsheet size={28} /> Data Migration</h1>
-                    <p>Import, export, and migrate school data between systems</p>
+                    <h1><Database size={28} /> Data Management</h1>
+                    <p>Import, export, and backup your school data</p>
                 </div>
                 <div className="header-actions">
+                    {creatingBackup && (
+                        <div className="backup-progress-inline">
+                            <div className="progress-bar-mini">
+                                <div className="progress-fill" style={{ width: `${backupProgress}%` }} />
+                            </div>
+                            <span>{backupProgress}%</span>
+                        </div>
+                    )}
                     <Button
                         variant="outline"
                         onClick={downloadBackup}
-                        disabled={loading}
+                        disabled={loading || creatingBackup}
                     >
-                        <Archive size={18} />
-                        Full Backup
+                        {creatingBackup ? (
+                            <><RefreshCw size={18} className="animate-spin" /> Creating...</>
+                        ) : (
+                            <><Archive size={18} /> Full Backup</>
+                        )}
                     </Button>
                 </div>
             </div>

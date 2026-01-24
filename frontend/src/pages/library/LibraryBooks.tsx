@@ -27,7 +27,7 @@ const LibraryBooks: React.FC = () => {
   const [total, setTotal] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
 
-  useEffect(() => { fetchBooks(); /* eslint-disable-next-line */ }, [page, search]);
+  useEffect(() => { fetchBooks(); }, [page, search]);
 
   const fetchBooks = async () => {
     setLoading(true); setError(null);

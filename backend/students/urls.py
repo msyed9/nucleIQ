@@ -9,7 +9,8 @@ from .views import (
     StudentRemarkViewSet,
     StudentDocumentViewSet,
     StudentHealthRecordViewSet,
-    StudentEnrollmentViewSet
+    StudentEnrollmentViewSet,
+    ParentCredentialsViewSet
 )
 from .idcard_views import IDCardTemplateViewSet
 
@@ -20,6 +21,7 @@ router.register(r'remarks', StudentRemarkViewSet, basename='student-remark')
 router.register(r'documents', StudentDocumentViewSet, basename='student-document')
 router.register(r'health-records', StudentHealthRecordViewSet, basename='health-record')
 router.register(r'enrollments', StudentEnrollmentViewSet, basename='student-enrollment')
+router.register(r'parent-credentials', ParentCredentialsViewSet, basename='parent-credentials')
 
 # ID Cards router - separate to mount at /api/idcards/
 idcard_router = DefaultRouter()

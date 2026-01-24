@@ -73,7 +73,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Student.objects.filter(tenant=self.request.user.tenant)
         
-        # Filter by grade_level (class) if provided
+        # Filter by grade_level ID if provided
         grade_level = self.request.query_params.get('grade_level')
         if grade_level:
             # Get students enrolled in any section of this grade level
@@ -84,15 +84,34 @@ class StudentViewSet(viewsets.ModelViewSet):
             ).values_list('student_id', flat=True)
             queryset = queryset.filter(id__in=student_ids)
         
-        # Filter by section if provided
-        section = self.request.query_params.get('section')
-        if section:
-            # Get students enrolled in the specified section
+        # Filter by class_name (grade level name) if provided - used by attendance module
+        class_name = self.request.query_params.get('class_name')
+        if class_name:
             from .models import StudentEnrollment
             student_ids = StudentEnrollment.objects.filter(
-                section_id=section,
+                section__grade_level__name__iexact=class_name,
                 status='ACTIVE'
             ).values_list('student_id', flat=True)
+            queryset = queryset.filter(id__in=student_ids)
+        
+        # Filter by section if provided (supports both ID and name)
+        section = self.request.query_params.get('section')
+        if section:
+            from .models import StudentEnrollment
+            # Try to filter by ID first, then by name
+            try:
+                import uuid
+                uuid.UUID(section)  # Check if it's a valid UUID
+                student_ids = StudentEnrollment.objects.filter(
+                    section_id=section,
+                    status='ACTIVE'
+                ).values_list('student_id', flat=True)
+            except (ValueError, AttributeError):
+                # Filter by section name instead
+                student_ids = StudentEnrollment.objects.filter(
+                    section__name__iexact=section,
+                    status='ACTIVE'
+                ).values_list('student_id', flat=True)
             queryset = queryset.filter(id__in=student_ids)
         
         # Default to active students unless specified otherwise
@@ -386,7 +405,7 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
             portal_access_enabled=True
         ).select_related('user').prefetch_related('students')
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='reset-password')
     def reset_password(self, request, pk=None):
         parent_profile = self.get_object()
         user = parent_profile.user
@@ -404,6 +423,30 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
             'password': temp_password
         })
     
+    @action(detail=True, methods=['patch'], url_path='toggle-access')
+    def toggle_access(self, request, pk=None):
+        """Enable or disable portal access for a parent account."""
+        parent_profile = self.get_object()
+        
+        # Get the new value from request data or toggle current value
+        new_value = request.data.get('portal_access_enabled')
+        if new_value is None:
+            new_value = not parent_profile.portal_access_enabled
+        
+        parent_profile.portal_access_enabled = new_value
+        parent_profile.save(update_fields=['portal_access_enabled', 'updated_at'])
+        
+        # Also update the user's is_active status
+        parent_profile.user.is_active = new_value
+        parent_profile.user.save(update_fields=['is_active'])
+        
+        return Response({
+            'parent_id': str(parent_profile.id),
+            'portal_access_enabled': parent_profile.portal_access_enabled,
+            'user_name': parent_profile.user.get_full_name(),
+            'message': f"Portal access {'enabled' if new_value else 'disabled'} for {parent_profile.user.get_full_name()}"
+        })
+
     @action(detail=True, methods=['get'])
     def siblings(self, request, pk=None):
         """Get student's siblings."""

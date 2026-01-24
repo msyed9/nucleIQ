@@ -58,6 +58,37 @@
     color: #1A237E;
 }
 
+.ds-card__header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ds-card__header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ds-card__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.ds-card__subtitle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #546E7A;
+}
+
+.ds-card__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .ds-card__footer {
     padding: 1.5rem;
     border-top: 1px solid #E0E0E0;
@@ -144,6 +175,11 @@ html.dark .ds-card__header {
     color: #FFFFFF;
 }
 
+.dark .ds-card__subtitle,
+html.dark .ds-card__subtitle {
+    color: #B0BEC5;
+}
+
 .dark .ds-card__footer,
 html.dark .ds-card__footer {
     border-top-color: #424242;
@@ -176,6 +212,10 @@ html.dark .ds-card--hoverable:hover {
     :root:not(.light) .ds-card__header {
         border-bottom-color: #424242;
         color: #FFFFFF;
+    }
+
+    :root:not(.light) .ds-card__subtitle {
+        color: #B0BEC5;
     }
 
     :root:not(.light) .ds-card__footer {

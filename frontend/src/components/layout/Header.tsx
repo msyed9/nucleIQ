@@ -4,12 +4,16 @@ import { getInitials } from '../../utils/helpers';
 import { useTranslation } from 'react-i18next';
 import GlobalSearch from '../search/GlobalSearch';
 import './Layout.css';
+import { useTheme } from '../../contexts/ThemeContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSun, faMoon, faDesktop } from '@fortawesome/free-solid-svg-icons';
 
 const Header: React.FC = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const user = getUser();
     const { t } = useTranslation();
+    const { theme, themeMode, setThemeMode } = useTheme();
 
     // Handle Ctrl+K / Cmd+K keyboard shortcut
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -61,6 +65,29 @@ const Header: React.FC = () => {
                         {/* Notifications */}
                         <button className="header-icon-btn" title="Notifications">
                             🔔
+                        </button>
+
+                        {/* Theme toggle */}
+                        <button
+                            className="header-icon-btn theme-toggle"
+                            title={
+                                themeMode === 'dark'
+                                    ? 'Switch to system theme'
+                                    : themeMode === 'system'
+                                    ? 'Switch to light theme'
+                                    : 'Switch to dark theme'
+                            }
+                            aria-label="Toggle theme"
+                            onClick={() => {
+                                // Cycle: light -> dark -> system -> light
+                                const next = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light';
+                                setThemeMode(next);
+                            }}
+                        >
+                            {themeMode === 'dark' && <FontAwesomeIcon icon={faMoon} style={{ fontSize: 16 }} />}
+                            {themeMode === 'system' && <FontAwesomeIcon icon={faDesktop} style={{ fontSize: 16 }} />}
+                            {themeMode === 'light' && <FontAwesomeIcon icon={faSun} style={{ fontSize: 16 }} />}
+                            <span className="theme-label">{themeMode === 'system' ? 'System' : themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}</span>
                         </button>
 
                         {/* User Menu */}

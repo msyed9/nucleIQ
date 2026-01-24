@@ -77,8 +77,10 @@
         "academic_setup": "Academic Setup",
         "leaderboard": "Leaderboard",
         "dashboard_settings": "Dashboard Settings",
+        "parent_portal": "Parent Portal",
         "platform_analytics": "Platform Analytics",
-        "data_migration": "Data Migration"
+        "data_migration": "Data Migration",
+        "ten_year_migration": "10-Year Migration"
     },
     "navigation": {
         "dashboard": "Dashboard",
@@ -148,11 +150,22 @@
         "login": "Login",
         "logout": "Logout",
         "email": "Email",
+        "email_or_phone": "Email or Mobile Number",
+        "email_phone_placeholder": "Enter email or mobile number",
         "password": "Password",
+        "enter_password": "Enter your password",
         "forgotPassword": "Forgot Password?",
+        "forgot_password": "Forgot Password?",
         "rememberMe": "Remember Me",
+        "remember_me": "Remember me",
+        "sign_in": "Sign In",
+        "welcome": "Welcome to",
+        "subtitle": "School Management Made Simple",
+        "toggle_language": "Toggle language",
         "loginSuccess": "Login successful!",
         "loginFailed": "Invalid email or password",
+        "invalid_credentials": "Invalid email/phone or password",
+        "connection_error": "Connection error. Please check if the backend is running.",
         "logoutSuccess": "Logged out successfully"
     },
     "finance": {

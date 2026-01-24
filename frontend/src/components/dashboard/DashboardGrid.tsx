@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import GridLayout from 'react-grid-layout';
-import axios from 'axios';
+import api from '../../services/api';
 import { FeeTrendChart } from './widgets/FeeTrendChart';
 import { StatCard } from './widgets/StatCard';
 import { AbsenteeList } from './widgets/AbsenteeList';
@@ -27,17 +27,17 @@ interface DashboardLayoutResponse {
     layout: WidgetConfig[];
 }
 
-export const DashboardGrid: React.FC<{ editMode: boolean }> = ({ editMode }) => {
+export const DashboardGrid: React.FC<{ editMode: boolean; refreshKey?: number }> = ({ editMode, refreshKey }) => {
     const [layout, setLayout] = useState<WidgetConfig[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchLayout();
-    }, []);
+    }, [refreshKey]);
 
     const fetchLayout = async () => {
         try {
-            const response = await axios.get<DashboardLayoutResponse>('/api/dashboard/layout/current/');
+            const response = await api.get<DashboardLayoutResponse>('/dashboard/layout/current/');
             setLayout(response.data.layout || getDefaultLayout());
         } catch (error) {
             console.error('Failed to fetch layout:', error);
@@ -77,11 +77,28 @@ export const DashboardGrid: React.FC<{ editMode: boolean }> = ({ editMode }) => 
 
         // Save to backend
         try {
-            await axios.post('/api/dashboard/layout/update_layout/', {
+            await api.post('/dashboard/layout/update_layout/', {
                 layout: updatedLayout,
             });
         } catch (error) {
             console.error('Failed to save layout:', error);
+        }
+    };
+
+    const handleRemoveWidget = async (widgetId: string) => {
+        if (!editMode) return;
+
+        try {
+            const response = await api.post<DashboardLayoutResponse>('/dashboard/layout/remove_widget/', {
+                widget_id: widgetId,
+            });
+            if (response.data?.layout) {
+                setLayout(response.data.layout);
+            } else {
+                setLayout((prev) => prev.filter((item) => item.i !== widgetId));
+            }
+        } catch (error) {
+            console.error('Failed to remove widget:', error);
         }
     };
 
@@ -130,7 +147,11 @@ export const DashboardGrid: React.FC<{ editMode: boolean }> = ({ editMode }) => 
                         </div>
                         {editMode && (
                             <div className="widget-controls">
-                                <button className="widget-remove" title="Remove widget">
+                                <button
+                                    className="widget-remove"
+                                    title="Remove widget"
+                                    onClick={() => handleRemoveWidget(item.i)}
+                                >
                                     ✕
                                 </button>
                             </div>

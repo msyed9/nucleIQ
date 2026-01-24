@@ -97,6 +97,9 @@ const MarkAttendance: React.FC = () => {
             let url = '/students/students/';
             const params: string[] = [];
 
+            // Request all students for attendance marking (override default pagination)
+            params.push('page_size=1000');
+
             if (classFilter) {
                 params.push(`class_name=${classFilter}`);
             }

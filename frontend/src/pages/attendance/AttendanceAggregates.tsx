@@ -26,7 +26,6 @@ const AttendanceAggregates: React.FC = () => {
 
   useEffect(() => {
     fetchAggregates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
 
   const fetchAggregates = async () => {

@@ -19,13 +19,19 @@ interface TenantBranding {
     icon_set: string;
     gallery_images: string[];
     custom_css: string;
+    enabled_modules: string[];
 }
+
+// Basic modules that are always enabled
+const BASIC_MODULES = ['dashboard', 'settings', 'users', 'students'];
 
 interface TenantBrandingContextType {
     branding: TenantBranding | null;
     loading: boolean;
     error: string | null;
     refreshBranding: () => Promise<void>;
+    isModuleEnabled: (moduleKey: string) => boolean;
+    enabledModules: string[];
 }
 
 const TenantBrandingContext = createContext<TenantBrandingContextType | undefined>(undefined);
@@ -65,7 +71,8 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
                 icon_theme: 'modern_gradient',
                 icon_set: 'lucide',
                 gallery_images: [],
-                custom_css: ''
+                custom_css: '',
+                enabled_modules: BASIC_MODULES
             };
             setBranding(defaultBranding);
             applyBrandingToDOM(defaultBranding);
@@ -89,6 +96,8 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
 
         if (brandingData.sidebar_color) {
             root.style.setProperty('--sidebar-bg', brandingData.sidebar_color);
+            // Keep layout CSS variable in sync so components using --color-bg-primary update correctly
+            root.style.setProperty('--color-bg-primary', brandingData.sidebar_color);
         }
 
         if (brandingData.font_family) {
@@ -132,8 +141,25 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
         await fetchBranding();
     };
 
+    // Check if a module is enabled for the current tenant
+    const isModuleEnabled = (moduleKey: string): boolean => {
+        if (!moduleKey) return true; // Items without a moduleKey are always visible
+        const modules = branding?.enabled_modules || BASIC_MODULES;
+        return modules.includes(moduleKey);
+    };
+
+    // Get the list of enabled modules
+    const enabledModules = branding?.enabled_modules || BASIC_MODULES;
+
     return (
-        <TenantBrandingContext.Provider value={{ branding, loading, error, refreshBranding }}>
+        <TenantBrandingContext.Provider value={{
+            branding,
+            loading,
+            error,
+            refreshBranding,
+            isModuleEnabled,
+            enabledModules
+        }}>
             {children}
         </TenantBrandingContext.Provider>
     );

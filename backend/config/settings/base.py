@@ -88,6 +88,8 @@ MIDDLEWARE = [
     
     # Custom middleware - MUST be after authentication
     'core.middleware.TenantMiddleware',
+    'analytics.middleware.UsageLoggingMiddleware',
+    'users.middleware_session.AdminSessionTimeoutMiddleware',  # Must be after TenantMiddleware
     'users.middleware.PermissionMiddleware',
     'users.middleware.RoleCheckMiddleware',
     'billing.middleware.SubscriptionEnforcementMiddleware',

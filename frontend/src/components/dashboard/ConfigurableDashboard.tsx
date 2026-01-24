@@ -7,7 +7,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
-import GridLayout, { Layout, WidthProvider } from 'react-grid-layout';
+import GridLayout from 'react-grid-layout';
+import WidthProvider from 'react-grid-layout/lib/WidthProvider';
 import {
     Settings,
     Plus,
@@ -41,6 +42,14 @@ interface WidgetConfig {
     maxH?: number;
     config?: Record<string, any>;
 }
+
+type GridLayoutItem = {
+    i: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+};
 
 interface WidgetDefinition {
     widget_id: string;
@@ -144,7 +153,7 @@ export const ConfigurableDashboard: React.FC<ConfigurableDashboardProps> = ({
         ];
     };
 
-    const handleLayoutChange = useCallback((newLayout: Layout[]) => {
+    const handleLayoutChange = useCallback((newLayout: GridLayoutItem[]) => {
         if (!editMode) return;
 
         const updatedLayout: WidgetConfig[] = newLayout.map(item => {

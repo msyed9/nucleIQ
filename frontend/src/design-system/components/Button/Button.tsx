@@ -12,7 +12,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
 
     /** Button size */
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg' | 'small';
 
     /** Full width button */
     fullWidth?: boolean;
@@ -52,10 +52,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ) => {
         const isDisabled = disabled || loading;
 
+        const resolvedSize = size === 'small' ? 'sm' : size;
+
         const classes = [
             'ds-button',
             `ds-button--${variant}`,
-            `ds-button--${size}`,
+            `ds-button--${resolvedSize}`,
             fullWidth && 'ds-button--full-width',
             loading && 'ds-button--loading',
             IconOnly && 'ds-button--icon-only',
@@ -65,7 +67,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             .join(' ');
 
         // Icon size based on button size
-        const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
+        const iconSize = resolvedSize === 'sm' ? 16 : resolvedSize === 'lg' ? 24 : 20;
 
         return (
             <button

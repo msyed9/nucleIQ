@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     Box,
     Container,
@@ -156,6 +157,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const ParentPortal: React.FC = () => {
+    const location = useLocation();
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
     const [tabValue, setTabValue] = useState(0);
@@ -165,6 +167,24 @@ const ParentPortal: React.FC = () => {
     const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Map URL paths to tab indices
+    const pathToTabMap: { [key: string]: number } = {
+        '/parent/portal': 0,      // Overview/Dashboard
+        '/parent/students': 0,    // My Children - shows Overview
+        '/parent/attendance': 0,  // Uses the 360 data which has attendance
+        '/parent/fees': 0,        // Uses the 360 data which has fees
+        '/parent/academics': 0,   // Uses the 360 data which has exams
+        '/parent/messages': 1,    // Remarks tab
+    };
+
+    // Sync tab with URL path
+    useEffect(() => {
+        const tabFromPath = pathToTabMap[location.pathname];
+        if (tabFromPath !== undefined && tabFromPath !== tabValue) {
+            setTabValue(tabFromPath);
+        }
+    }, [location.pathname]);
 
     useEffect(() => {
         fetchStudents();
@@ -187,8 +207,14 @@ const ParentPortal: React.FC = () => {
             setLoading(true);
             setError(null);
             const response = await api.get('/parent/students/');
-            // Ensure response.data is an array
-            const studentsData = Array.isArray(response.data) ? response.data : [];
+            // Handle both paginated response {results: [...]} and raw array [...]
+            let studentsData: Student[] = [];
+            if (Array.isArray(response.data)) {
+                studentsData = response.data;
+            } else if (response.data && Array.isArray(response.data.results)) {
+                // DRF pagination returns {count, next, previous, results: [...]}
+                studentsData = response.data.results;
+            }
             console.log('📚 Fetched students:', studentsData);
             setStudents(studentsData);
             if (studentsData.length > 0) {
@@ -205,9 +231,10 @@ const ParentPortal: React.FC = () => {
         }
     };
 
+
     const fetch360Data = async () => {
         if (!selectedStudent) return;
-        
+
         try {
             setLoading(true);
             setError(null);
@@ -261,7 +288,7 @@ const ParentPortal: React.FC = () => {
     };
 
     const currentStudent = Array.isArray(students) ? students.find((s) => s.id === selectedStudent) : undefined;
-    const fullName = currentStudent 
+    const fullName = currentStudent
         ? `${currentStudent.first_name} ${currentStudent.last_name}`.trim()
         : '';
 
@@ -291,10 +318,28 @@ const ParentPortal: React.FC = () => {
         );
     }
 
+    // Get page title based on route
+    const getPageTitle = () => {
+        switch (location.pathname) {
+            case '/parent/students':
+                return '👨‍👩‍👧‍👦 My Children';
+            case '/parent/attendance':
+                return '📅 Attendance';
+            case '/parent/fees':
+                return '💰 Fee Payments';
+            case '/parent/academics':
+                return '📚 Academic Reports';
+            case '/parent/messages':
+                return '💬 Messages & Remarks';
+            default:
+                return '🏠 Parent Portal Dashboard';
+        }
+    };
+
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-                👨‍👩‍👧‍👦 Parent Portal
+                {getPageTitle()}
             </Typography>
 
             {/* Student Selection */}
@@ -316,8 +361,8 @@ const ParentPortal: React.FC = () => {
                         >
                             <CardContent>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Avatar 
-                                        src={student.photo_url} 
+                                    <Avatar
+                                        src={student.photo_url}
                                         sx={{ width: 64, height: 64 }}
                                     >
                                         <PersonIcon />
@@ -340,131 +385,143 @@ const ParentPortal: React.FC = () => {
                 ))}
             </Grid>
 
-            {/* 360° Summary Cards */}
+            {/* 360° Summary Cards - Show based on route */}
             {student360Data && currentStudent && (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    {/* Attendance Card */}
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ height: '100%' }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                    <SchoolIcon color="primary" />
-                                    <Typography variant="h6">Attendance</Typography>
-                                </Box>
-                                <Typography variant="h3" color="primary" gutterBottom>
-                                    {student360Data.attendance.attendance_percentage.toFixed(1)}%
-                                </Typography>
-                                <Divider sx={{ my: 1 }} />
-                                <Box sx={{ mt: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Present</Typography>
-                                        <Typography variant="body2" color="success.main">
-                                            {student360Data.attendance.present_days}/{student360Data.attendance.total_days}
+                    {/* Attendance Card - Show on dashboard, attendance, or students route */}
+                    {(location.pathname === '/parent/portal' ||
+                        location.pathname === '/parent/attendance' ||
+                        location.pathname === '/parent/students') && (
+                            <Grid item xs={12} md={location.pathname === '/parent/attendance' ? 12 : 4}>
+                                <Card sx={{ height: '100%' }}>
+                                    <CardContent>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                            <SchoolIcon color="primary" />
+                                            <Typography variant="h6">Attendance</Typography>
+                                        </Box>
+                                        <Typography variant="h3" color="primary" gutterBottom>
+                                            {student360Data.attendance.attendance_percentage.toFixed(1)}%
                                         </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Absent</Typography>
-                                        <Typography variant="body2" color="error.main">
-                                            {student360Data.attendance.absent_days}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <Typography variant="body2">Late</Typography>
-                                        <Typography variant="body2" color="warning.main">
-                                            {student360Data.attendance.late_days}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ mt: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Present</Typography>
+                                                <Typography variant="body2" color="success.main">
+                                                    {student360Data.attendance.present_days}/{student360Data.attendance.total_days}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Absent</Typography>
+                                                <Typography variant="body2" color="error.main">
+                                                    {student360Data.attendance.absent_days}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2">Late</Typography>
+                                                <Typography variant="body2" color="warning.main">
+                                                    {student360Data.attendance.late_days}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        )}
 
-                    {/* Fees Card */}
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ height: '100%' }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                    <MoneyIcon color="primary" />
-                                    <Typography variant="h6">Fees</Typography>
-                                </Box>
-                                <Typography variant="h3" color={student360Data.fees.balance > 0 ? 'error' : 'success'} gutterBottom>
-                                    ₹{student360Data.fees.balance.toLocaleString()}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Balance Due
-                                </Typography>
-                                <Divider sx={{ my: 1 }} />
-                                <Box sx={{ mt: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Total</Typography>
-                                        <Typography variant="body2">
-                                            ₹{student360Data.fees.total_amount.toLocaleString()}
+                    {/* Fees Card - Show on dashboard, fees, or students route */}
+                    {(location.pathname === '/parent/portal' ||
+                        location.pathname === '/parent/fees' ||
+                        location.pathname === '/parent/students') && (
+                            <Grid item xs={12} md={location.pathname === '/parent/fees' ? 12 : 4}>
+                                <Card sx={{ height: '100%' }}>
+                                    <CardContent>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                            <MoneyIcon color="primary" />
+                                            <Typography variant="h6">Fees</Typography>
+                                        </Box>
+                                        <Typography variant="h3" color={student360Data.fees.balance > 0 ? 'error' : 'success'} gutterBottom>
+                                            ₹{student360Data.fees.balance.toLocaleString()}
                                         </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Paid</Typography>
-                                        <Typography variant="body2" color="success.main">
-                                            ₹{student360Data.fees.paid_amount.toLocaleString()}
+                                        <Typography variant="caption" color="text.secondary">
+                                            Balance Due
                                         </Typography>
-                                    </Box>
-                                    {student360Data.fees.overdue_count > 0 && (
-                                        <Alert severity="warning" sx={{ mt: 1 }}>
-                                            {student360Data.fees.overdue_count} overdue invoice(s)
-                                        </Alert>
-                                    )}
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ mt: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Total</Typography>
+                                                <Typography variant="body2">
+                                                    ₹{student360Data.fees.total_amount.toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Paid</Typography>
+                                                <Typography variant="body2" color="success.main">
+                                                    ₹{student360Data.fees.paid_amount.toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                            {student360Data.fees.overdue_count > 0 && (
+                                                <Alert severity="warning" sx={{ mt: 1 }}>
+                                                    {student360Data.fees.overdue_count} overdue invoice(s)
+                                                </Alert>
+                                            )}
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        )}
 
-                    {/* Exams Card */}
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ height: '100%' }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                    <AssignmentIcon color="primary" />
-                                    <Typography variant="h6">Academic Performance</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
-                                    <Typography variant="h3" color="primary">
-                                        {student360Data.exams.average_percentage.toFixed(1)}%
-                                    </Typography>
-                                    <Chip 
-                                        label={student360Data.exams.grade} 
-                                        color="primary" 
-                                        size="small"
-                                    />
-                                </Box>
-                                <Typography variant="caption" color="text.secondary">
-                                    Average across {student360Data.exams.total_exams} exams
-                                </Typography>
-                                <Divider sx={{ my: 1 }} />
-                                <Box sx={{ mt: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Highest</Typography>
-                                        <Typography variant="body2" color="success.main">
-                                            {student360Data.exams.highest_percentage}%
+                    {/* Exams Card - Show on dashboard, academics, or students route */}
+                    {(location.pathname === '/parent/portal' ||
+                        location.pathname === '/parent/academics' ||
+                        location.pathname === '/parent/students') && (
+                            <Grid item xs={12} md={location.pathname === '/parent/academics' ? 12 : 4}>
+                                <Card sx={{ height: '100%' }}>
+                                    <CardContent>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                            <AssignmentIcon color="primary" />
+                                            <Typography variant="h6">Academic Performance</Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
+                                            <Typography variant="h3" color="primary">
+                                                {student360Data.exams.average_percentage.toFixed(1)}%
+                                            </Typography>
+                                            <Chip
+                                                label={student360Data.exams.grade}
+                                                color="primary"
+                                                size="small"
+                                            />
+                                        </Box>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Average across {student360Data.exams.total_exams} exams
                                         </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <Typography variant="body2">Lowest</Typography>
-                                        <Typography variant="body2" color="error.main">
-                                            {student360Data.exams.lowest_percentage}%
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ mt: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Highest</Typography>
+                                                <Typography variant="body2" color="success.main">
+                                                    {student360Data.exams.highest_percentage}%
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2">Lowest</Typography>
+                                                <Typography variant="body2" color="error.main">
+                                                    {student360Data.exams.lowest_percentage}%
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        )}
                 </Grid>
             )}
 
             {/* Tabs for detailed information */}
             {currentStudent && (
                 <Paper>
-                    <Tabs 
-                        value={tabValue} 
-                        onChange={(_, newValue) => setTabValue(newValue)} 
+                    <Tabs
+                        value={tabValue}
+                        onChange={(_, newValue) => setTabValue(newValue)}
                         variant="scrollable"
                         scrollButtons="auto"
                     >
@@ -585,18 +642,18 @@ const ParentPortal: React.FC = () => {
                                                         label={doc.verification_status}
                                                         size="small"
                                                         color={
-                                                            doc.verification_status === 'VERIFIED' 
-                                                                ? 'success' 
+                                                            doc.verification_status === 'VERIFIED'
+                                                                ? 'success'
                                                                 : doc.verification_status === 'REJECTED'
-                                                                ? 'error'
-                                                                : 'warning'
+                                                                    ? 'error'
+                                                                    : 'warning'
                                                         }
                                                         icon={
-                                                            doc.verification_status === 'VERIFIED' 
-                                                                ? <CheckIcon /> 
+                                                            doc.verification_status === 'VERIFIED'
+                                                                ? <CheckIcon />
                                                                 : doc.verification_status === 'REJECTED'
-                                                                ? <CancelIcon />
-                                                                : <ScheduleIcon />
+                                                                    ? <CancelIcon />
+                                                                    : <ScheduleIcon />
                                                         }
                                                     />
                                                 </TableCell>
@@ -641,7 +698,7 @@ const ParentPortal: React.FC = () => {
                                                         {new Date(record.record_date).toLocaleDateString()}
                                                     </Typography>
                                                 </Box>
-                                                
+
                                                 <Grid container spacing={2}>
                                                     {record.height && (
                                                         <Grid item xs={6} sm={3}>

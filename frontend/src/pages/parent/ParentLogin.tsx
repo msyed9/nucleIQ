@@ -1,14 +1,14 @@
 /**
  * Parent Login Page
  * 
- * Dedicated login page for parents with:
- * - Custom branding for parent portal
- * - Email or Mobile number authentication
- * - JWT token storage
- * - Redirect to parent portal on success
+ * Parent-branded login page that uses the unified login API.
+ * Keeps the parent-specific branding but uses the same backend endpoint.
+ * 
+ * NOTE: Parents can also login via the main /login page - this page
+ * provides a parent-focused experience with dedicated branding.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -28,7 +28,7 @@ import {
     VisibilityOff,
     People as ParentsIcon,
 } from '@mui/icons-material';
-import api from '../../services/api';
+import axios from 'axios';
 
 const ParentLogin: React.FC = () => {
     const navigate = useNavigate();
@@ -39,6 +39,15 @@ const ParentLogin: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Check if already logged in
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        const userType = localStorage.getItem('user_type');
+        if (token && userType === 'parent') {
+            navigate('/parent/portal', { replace: true });
+        }
+    }, [navigate]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
@@ -60,52 +69,67 @@ const ParentLogin: React.FC = () => {
         setError(null);
 
         try {
-            const response = await api.post('/parent/auth/login/', formData);
+            // Use the unified login endpoint
+            const response = await fetch('/api/auth/unified-login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: formData.username,
+                    password: formData.password,
+                }),
+            });
 
-            // Store tokens
-            localStorage.setItem('access_token', response.data.access);
-            localStorage.setItem('refresh_token', response.data.refresh);
-            localStorage.setItem('user_type', response.data.user_type);
-            localStorage.setItem('parent_id', response.data.parent_id);
+            const data = await response.json();
 
-            // Store parent info for quick access
-            if (response.data.email) {
-                localStorage.setItem('parent_email', response.data.email);
+            if (response.ok) {
+                // Store tokens
+                localStorage.setItem('access_token', data.access);
+                localStorage.setItem('refresh_token', data.refresh);
+                localStorage.setItem('user_type', data.user_type);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                // Set axios defaults
+                axios.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
+
+                // Store parent-specific info if this is a parent
+                if (data.user_type === 'parent') {
+                    if (data.user.parent_id) {
+                        localStorage.setItem('parent_id', String(data.user.parent_id));
+                    }
+                    if (data.user.email) {
+                        localStorage.setItem('parent_email', data.user.email);
+                    }
+                    if (data.user.phone_number) {
+                        localStorage.setItem('parent_phone', data.user.phone_number);
+                    }
+                    if (data.user.full_name) {
+                        localStorage.setItem('parent_name', data.user.full_name);
+                    }
+                    if (data.user.students) {
+                        localStorage.setItem('students', JSON.stringify(data.user.students));
+                    }
+                }
+
+                // Navigate based on redirect_url from backend
+                const redirectUrl = data.redirect_url || '/parent/portal';
+                navigate(redirectUrl, { replace: true });
+            } else {
+                // Handle error
+                const errorMessage = data.detail ||
+                    (data.non_field_errors && data.non_field_errors[0]) ||
+                    'Login failed. Please check your credentials.';
+                setError(errorMessage);
             }
-            if (response.data.phone_number) {
-                localStorage.setItem('parent_phone', response.data.phone_number);
-            }
-            if (response.data.name) {
-                localStorage.setItem('parent_name', response.data.name);
-            }
-
-            // Store student info for quick access
-            localStorage.setItem('students', JSON.stringify(response.data.students));
-
-            // Show success message
-            console.log('Login successful:', response.data);
-
-            // Redirect to parent portal
-            navigate('/parent/portal');
         } catch (error: any) {
             console.error('Login error:', error);
-
-            if (error.response?.status === 403) {
-                setError(error.response.data.detail || 'Portal access is disabled. Please contact school administration.');
-            } else if (error.response?.status === 401) {
-                setError('Invalid email/mobile number or password');
-            } else if (error.response?.data?.non_field_errors) {
-                setError(error.response.data.non_field_errors[0]);
-            } else if (typeof error.response?.data === 'object') {
-                const firstError = Object.values(error.response.data)[0];
-                setError(Array.isArray(firstError) ? firstError[0] : String(firstError));
-            } else {
-                setError(error.response?.data?.detail || 'Login failed. Please try again.');
-            }
+            setError('Connection error. Please try again later.');
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <Box

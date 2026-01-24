@@ -10,7 +10,8 @@ from .views import (
     CustomTokenObtainPairView, UserViewSet, RoleViewSet,
     PermissionViewSet, ChangePasswordView, ResetPasswordView,
     ResetPasswordConfirmView, LogoutView, ImpersonationViewSet,
-    PermissionsMatrixViewSet, UserPermissionsView, CheckPermissionView
+    PermissionsMatrixViewSet, UserPermissionsView, CheckPermissionView,
+    UnifiedLoginView
 )
 
 # Create router
@@ -24,8 +25,11 @@ router.register(r'permissions-matrix', PermissionsMatrixViewSet, basename='permi
 app_name = 'users'
 
 urlpatterns = [
-    # JWT Authentication
+    # JWT Authentication - Unified Login (new - handles all user types)
+    path('auth/unified-login/', UnifiedLoginView.as_view(), name='unified_login'),
+    # JWT Authentication - Legacy endpoints (kept for backward compatibility)
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     

@@ -112,7 +112,6 @@ import DigitalResourcesLibrary from './pages/library/DigitalResources';
 import IDCardTemplateManager from './pages/idcards/TemplateManager';
 import BulkGeneration from './pages/idcards/BulkGeneration';
 import QRScanner from './pages/idcards/QRScanner';
-import DataManagement from './pages/admin/DataManagement';
 import LibraryReports from './pages/library/LibraryReports';
 import LibrarySettings from './pages/library/LibrarySettings';
 import HostelFees from './pages/hostel/HostelFees';
@@ -157,6 +156,7 @@ import PermissionsMatrixPage from './pages/settings/PermissionsMatrix';
 import RolesPermissions from './pages/settings/RolesPermissions';
 import TenantBranding from './pages/settings/TenantBranding';
 import DataMigration from './pages/settings/DataMigration';
+import TenYearMigration from './pages/settings/TenYearMigration';
 
 // Phase 11 - Search & Dashboard
 import EnhancedDashboard from './pages/dashboard/EnhancedDashboard';
@@ -167,6 +167,7 @@ import ParentLogin from './pages/parent/ParentLogin';
 import ParentLayout from './components/layout/ParentLayout';
 import AuditLogs from './pages/admin/AuditLogs';
 import RecycleBin from './pages/admin/RecycleBin';
+import ParentPortalManagement from './pages/admin/ParentPortalManagement';
 
 // New pages added
 import TransportAllocations from './pages/transport/TransportAllocations';
@@ -213,6 +214,9 @@ import './styles/theme.css';
 
 // Import Protected Route
 import { ProtectedRoute } from './components/auth/SimpleProtectedRoute';
+
+// Import ModuleGuard for route protection
+import ModuleGuard from './components/auth/ModuleGuard';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -276,35 +280,35 @@ function App() {
                                                     <Route path="/staff/my-appraisal" element={<Layout><MyAppraisal /></Layout>} />
                                                     <Route path="/staff/:id" element={<Layout><StaffProfile /></Layout>} />
                                                     <Route path="/staff" element={<Layout><StaffList /></Layout>} />
-                                                    {/* Fees routes - specific routes before general */}
-                                                    <Route path="/fees/configure" element={<Layout><FeeConfiguration /></Layout>} />
-                                                    <Route path="/fees/collect" element={<Layout><CollectFees /></Layout>} />
-                                                    <Route path="/fees/defaulters" element={<Layout><FeeDefaulters /></Layout>} />
-                                                    <Route path="/fees/history" element={<Layout><FeePaymentHistory /></Layout>} />
-                                                    <Route path="/fees/advances" element={<Layout><AdvancePayments /></Layout>} />
-                                                    <Route path="/fees/refunds" element={<Layout><FeeRefunds /></Layout>} />
-                                                    <Route path="/fees/payment-history" element={<Layout><PaymentHistory /></Layout>} />
-                                                    <Route path="/fees/reports/category" element={<Layout><CategoryWiseReport /></Layout>} />
-                                                    <Route path="/fees/ledger" element={<Layout><StudentLedger /></Layout>} />
+                                                    {/* Fees routes - protected by ModuleGuard */}
+                                                    <Route path="/fees/configure" element={<ModuleGuard moduleKey="fees"><Layout><FeeConfiguration /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/collect" element={<ModuleGuard moduleKey="fees"><Layout><CollectFees /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/defaulters" element={<ModuleGuard moduleKey="fees"><Layout><FeeDefaulters /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/history" element={<ModuleGuard moduleKey="fees"><Layout><FeePaymentHistory /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/advances" element={<ModuleGuard moduleKey="fees"><Layout><AdvancePayments /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/refunds" element={<ModuleGuard moduleKey="fees"><Layout><FeeRefunds /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/payment-history" element={<ModuleGuard moduleKey="fees"><Layout><PaymentHistory /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/reports/category" element={<ModuleGuard moduleKey="fees"><Layout><CategoryWiseReport /></Layout></ModuleGuard>} />
+                                                    <Route path="/fees/ledger" element={<ModuleGuard moduleKey="fees"><Layout><StudentLedger /></Layout></ModuleGuard>} />
                                                     {/* Other routes */}
                                                     <Route path="/attendance" element={<Layout><MarkAttendance /></Layout>} />
                                                     <Route path="/attendance/aggregates" element={<Layout><AttendanceAggregates /></Layout>} />
                                                     <Route path="/attendance/mobile-capture" element={<Layout><MobileCapture /></Layout>} />
                                                     <Route path="/attendance/reports" element={<Layout><AttendanceReports /></Layout>} />
                                                     <Route path="/attendance/face-enrollment" element={<Layout><FaceEnrollment /></Layout>} />
-                                                    {/* Finance Routes - Phase 3 */}
-                                                    <Route path="/finance/dashboard" element={<Layout><FinanceDashboard /></Layout>} />
-                                                    <Route path="/finance/chart-of-accounts" element={<Layout><ChartOfAccounts /></Layout>} />
-                                                    <Route path="/finance/journal-entries" element={<Layout><JournalEntries /></Layout>} />
-                                                    <Route path="/finance/vendors" element={<Layout><VendorMaster /></Layout>} />
-                                                    <Route path="/finance/vendor-payments" element={<Layout><VendorPayments /></Layout>} />
-                                                    <Route path="/finance/salary-payments" element={<Layout><SalaryPayments /></Layout>} />
-                                                    <Route path="/finance/budgets" element={<Layout><BudgetManagement /></Layout>} />
-                                                    <Route path="/finance/bank-reconciliation" element={<Layout><BankReconciliation /></Layout>} />
-                                                    <Route path="/finance/reconciliation" element={<Layout><BankReconciliation /></Layout>} /> {/* Sidebar Alias */}
-                                                    <Route path="/finance/reports" element={<Layout><FinancialReports /></Layout>} />
-                                                    <Route path="/finance/petty-cash" element={<Layout><PettyCash /></Layout>} />
-                                                    <Route path="/finance" element={<Layout><ExpenseManager /></Layout>} />
+                                                    {/* Finance Routes - protected by ModuleGuard */}
+                                                    <Route path="/finance/dashboard" element={<ModuleGuard moduleKey="finance"><Layout><FinanceDashboard /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/chart-of-accounts" element={<ModuleGuard moduleKey="finance"><Layout><ChartOfAccounts /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/journal-entries" element={<ModuleGuard moduleKey="finance"><Layout><JournalEntries /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/vendors" element={<ModuleGuard moduleKey="finance"><Layout><VendorMaster /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/vendor-payments" element={<ModuleGuard moduleKey="finance"><Layout><VendorPayments /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/salary-payments" element={<ModuleGuard moduleKey="finance"><Layout><SalaryPayments /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/budgets" element={<ModuleGuard moduleKey="finance"><Layout><BudgetManagement /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/bank-reconciliation" element={<ModuleGuard moduleKey="finance"><Layout><BankReconciliation /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/reconciliation" element={<ModuleGuard moduleKey="finance"><Layout><BankReconciliation /></Layout></ModuleGuard>} /> {/* Sidebar Alias */}
+                                                    <Route path="/finance/reports" element={<ModuleGuard moduleKey="finance"><Layout><FinancialReports /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance/petty-cash" element={<ModuleGuard moduleKey="finance"><Layout><PettyCash /></Layout></ModuleGuard>} />
+                                                    <Route path="/finance" element={<ModuleGuard moduleKey="finance"><Layout><ExpenseManager /></Layout></ModuleGuard>} />
 
                                                     {/* Phase 7 - Reports & Analytics */}
                                                     <Route path="/reports/builder" element={<Layout><ReportBuilder /></Layout>} />
@@ -317,8 +321,10 @@ function App() {
                                                     <Route path="/settings/system" element={<Layout><SystemSettings /></Layout>} />
                                                     <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
                                                     <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
-                                                    <Route path="/settings/data-management" element={<Layout><DataManagement /></Layout>} />
-                                                    <Route path="/settings/data-migration" element={<Layout><DataMigration /></Layout>} />
+                                                    <Route path="/settings/data-management" element={<Layout><DataMigration /></Layout>} />
+                                                    <Route path="/settings/data-migration" element={<Layout><DataMigration /></Layout>} /> {/* Legacy alias */}
+                                                    <Route path="/settings/10-year-migration" element={<Layout><TenYearMigration /></Layout>} />
+                                                    <Route path="/settings/10-year-migration/:tenantId" element={<Layout><TenYearMigration /></Layout>} />
                                                     <Route path="/settings" element={<Layout><Settings /></Layout>} />
                                                     {/* User routes - specific routes before general */}
                                                     <Route path="/users/manage" element={<Layout><UserManagement /></Layout>} />
@@ -333,6 +339,7 @@ function App() {
                                                     <Route path="/parent/messages" element={<ParentLayout><ParentPortal /></ParentLayout>} />
                                                     <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
                                                     <Route path="/admin/recycle-bin" element={<Layout><RecycleBin /></Layout>} />
+                                                    <Route path="/admin/parent-portal" element={<Layout><ParentPortalManagement /></Layout>} />
                                                     {/* Timetable routes */}
                                                     <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
                                                     <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />

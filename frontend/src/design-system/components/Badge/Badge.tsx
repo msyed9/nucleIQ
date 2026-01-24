@@ -9,7 +9,7 @@ import './Badge.css';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
     /** Badge variant */
-    variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
+    variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'danger' | 'info' | 'neutral' | 'outline';
 
     /** Badge size */
     size?: 'sm' | 'md' | 'lg';

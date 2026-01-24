@@ -109,8 +109,10 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
     """
     Serializer for TenantBranding model.
     Allows tenants to customize their branding.
+    Includes enabled_modules from the parent Tenant model for frontend access control.
     """
     tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    enabled_modules = serializers.SerializerMethodField()
     
     class Meta:
         model = TenantBranding
@@ -132,8 +134,16 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
             'receipt_copies', 'receipt_footer_text',
             # Custom CSS
             'custom_css',
+            # Module Access Control
+            'enabled_modules',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at', 'enabled_modules']
+    
+    def get_enabled_modules(self, obj):
+        """Get enabled modules from the tenant."""
+        if obj.tenant:
+            return obj.tenant.get_all_enabled_modules()
+        return ['dashboard', 'settings', 'users', 'students']  # Default basic modules
 
 

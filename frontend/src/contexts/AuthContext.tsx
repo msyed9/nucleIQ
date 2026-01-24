@@ -52,6 +52,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         const freshUser = await userAPI.getProfile();
                         setUser(freshUser);
                         localStorage.setItem('user', JSON.stringify(freshUser));
+                        // Update platform admin status
+                        localStorage.setItem('is_platform_admin', String(freshUser.is_platform_admin ?? false));
                     } catch (error) {
                         console.error('Failed to fetch user profile:', error);
                     }
@@ -87,6 +89,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (response.user.tenant) {
                 localStorage.setItem('current_tenant', response.user.tenant);
             }
+
+            // Store platform admin status for API interceptor and sidebar filtering
+            localStorage.setItem('is_platform_admin', String(response.user.is_platform_admin ?? false));
         } catch (error) {
             console.error('Login failed:', error);
             throw error;
@@ -106,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.removeItem('auth_tokens');
             localStorage.removeItem('user');
             localStorage.removeItem('current_tenant');
+            localStorage.removeItem('is_platform_admin');
         }
     }, [tokens]);
 

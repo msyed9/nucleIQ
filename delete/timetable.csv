@@ -1,0 +1,6 @@
+class_name,section_name,academic_year,day_of_week,start_time,end_time,period_number,subject_code,teacher_employee_id,room_number
+Class 10,A,2024-25,MON,09:00,09:45,1,MATH10,EMP001,101
+Class 10,A,2024-25,MON,09:50,10:35,2,SCI10,EMP002,101
+Class 10,A,2024-25,TUE,09:00,09:45,1,ENG10,EMP003,101
+Class 10,A,2024-25,TUE,09:50,10:35,2,MATH10,EMP001,101
+Class 10,A,2024-25,WED,09:00,09:45,1,SCI10,EMP002,101

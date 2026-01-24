@@ -132,6 +132,9 @@ class TenantHealthService:
         total_requests = self._get_total_requests(metric.date)
         if total_requests > 0:
             metric.error_rate = (metric.error_count / total_requests) * 100
+
+        metric.api_calls = total_requests
+        metric.avg_response_time_ms = self._get_avg_response_time(metric.date)
         
         metric.save()
     
@@ -168,6 +171,15 @@ class TenantHealthService:
             action_type='API_CALL',
             created_at__date=for_date
         ).count()
+
+    def _get_avg_response_time(self, for_date):
+        """Get average API response time for date."""
+        return UsageLog.objects.filter(
+            tenant=self.tenant,
+            action_type='API_CALL',
+            created_at__date=for_date,
+            response_time_ms__isnull=False
+        ).aggregate(avg=Avg('response_time_ms'))['avg'] or 0
     
     def _check_health_alerts(self, metric):
         """Check if alerts should be created."""

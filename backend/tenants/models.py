@@ -95,12 +95,92 @@ class Tenant(BaseModel):
         help_text="Maximum number of staff members allowed"
     )
     
+    # Session Configuration
+    session_timeout_minutes = models.PositiveIntegerField(
+        default=60,
+        help_text="Session timeout in minutes (JWT access token lifetime). Minimum: 5, Maximum: 1440 (24 hours)"
+    )
+    refresh_timeout_days = models.PositiveIntegerField(
+        default=7,
+        help_text="Refresh token lifetime in days (how long users stay logged in). Minimum: 1, Maximum: 30"
+    )
+    admin_session_timeout_minutes = models.PositiveIntegerField(
+        default=120,
+        help_text="Django admin session timeout in minutes. Minimum: 5, Maximum: 1440 (24 hours)"
+    )
+    
     # Metadata
     metadata = models.JSONField(
         default=dict,
         blank=True,
         help_text="Additional tenant metadata"
     )
+    
+    # Module Access Control
+    # List of available modules that can be enabled for tenants
+    AVAILABLE_MODULES = [
+        ('dashboard', 'Dashboard (Basic)'),
+        ('settings', 'Settings (Basic)'),
+        ('users', 'User Management (Basic)'),
+        ('students', 'Students (Basic)'),
+        ('staff', 'Staff Management'),
+        ('attendance', 'Attendance'),
+        ('fees', 'Fee Collection'),
+        ('finance', 'Finance & Accounting'),
+        ('academics', 'Academics & LMS'),
+        ('exams', 'Examinations'),
+        ('timetable', 'Timetable'),
+        ('calendar', 'Calendar & Events'),
+        ('communication', 'Communication'),
+        ('notifications', 'Notifications'),
+        ('reports', 'Reports & Analytics'),
+        ('idcards', 'ID Cards'),
+        ('library', 'Library'),
+        ('inventory', 'Inventory'),
+        ('transport', 'Transport'),
+        ('hostel', 'Hostel'),
+        ('hr', 'HR & Payroll'),
+        ('crm', 'CRM & Leads'),
+        ('alumni', 'Alumni Management'),
+        ('placement', 'Placement'),
+        ('cms', 'Website Builder'),
+        ('security', 'Security & Visitors'),
+        ('helpdesk', 'Helpdesk'),
+        ('wellbeing', 'Wellbeing & Trackers'),
+        ('admin', 'Admin Tools'),
+    ]
+    
+    # Basic modules that are always included
+    BASIC_MODULES = ['dashboard', 'settings', 'users', 'students']
+    
+    enabled_modules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of enabled module keys for this tenant. Basic modules: dashboard, settings, users, students"
+    )
+    
+    def save(self, *args, **kwargs):
+        """Ensure basic modules are always included."""
+        if not self.enabled_modules:
+            self.enabled_modules = self.BASIC_MODULES.copy()
+        else:
+            # Ensure basic modules are always present
+            for module in self.BASIC_MODULES:
+                if module not in self.enabled_modules:
+                    self.enabled_modules.append(module)
+        super().save(*args, **kwargs)
+    
+    def get_all_enabled_modules(self):
+        """Get all enabled modules including basic ones."""
+        modules = list(self.enabled_modules) if self.enabled_modules else []
+        for module in self.BASIC_MODULES:
+            if module not in modules:
+                modules.append(module)
+        return modules
+    
+    def is_module_enabled(self, module_key):
+        """Check if a specific module is enabled for this tenant."""
+        return module_key in self.get_all_enabled_modules()
     
     class Meta:
         db_table = 'tenants'
@@ -129,6 +209,40 @@ class Tenant(BaseModel):
         if not self.subscription_ends_at:
             return False
         return timezone.now() < self.subscription_ends_at
+    
+    def clean(self):
+        """Validate tenant constraints."""
+        from django.core.exceptions import ValidationError
+        
+        # Validate session timeout (5 minutes to 24 hours)
+        if self.session_timeout_minutes < 5:
+            raise ValidationError({
+                'session_timeout_minutes': 'Session timeout must be at least 5 minutes'
+            })
+        if self.session_timeout_minutes > 1440:
+            raise ValidationError({
+                'session_timeout_minutes': 'Session timeout cannot exceed 1440 minutes (24 hours)'
+            })
+        
+        # Validate refresh timeout (1 to 30 days)
+        if self.refresh_timeout_days < 1:
+            raise ValidationError({
+                'refresh_timeout_days': 'Refresh timeout must be at least 1 day'
+            })
+        if self.refresh_timeout_days > 30:
+            raise ValidationError({
+                'refresh_timeout_days': 'Refresh timeout cannot exceed 30 days'
+            })
+        
+        # Validate admin session timeout (5 minutes to 24 hours)
+        if self.admin_session_timeout_minutes < 5:
+            raise ValidationError({
+                'admin_session_timeout_minutes': 'Admin session timeout must be at least 5 minutes'
+            })
+        if self.admin_session_timeout_minutes > 1440:
+            raise ValidationError({
+                'admin_session_timeout_minutes': 'Admin session timeout cannot exceed 1440 minutes (24 hours)'
+            })
 
 
 class TenantBranding(BaseModel):
@@ -161,6 +275,27 @@ class TenantBranding(BaseModel):
         ('phosphor_fill', 'Phosphor Fill'),
         ('tabler', 'Tabler Icons'),
         ('material_outlined', 'Material Outlined'),
+        # Additional icon sets supported via react-icons mappings and legacy keys
+        ('bootstrap', 'Bootstrap Icons'),
+        ('remix', 'Remix Icons'),
+        ('boxicons_react', 'Boxicons (React)'),
+        ('boxicons', 'Boxicons'),
+        ('fontawesome_react', 'Font Awesome (React)'),
+        ('fontawesome_solid', 'Font Awesome (Solid)'),
+        ('fontawesome_regular', 'Font Awesome (Regular)'),
+        ('game_icons', 'Game Icons'),
+        ('ionicons_react', 'Ionicons (React)'),
+        ('ionicons', 'Ionicons'),
+        ('simple_icons_react', 'Simple Icons (React)'),
+        ('simple_icons', 'Simple Icons'),
+        ('ant_design', 'Ant Design'),
+        ('feather', 'Feather Icons'),
+        ('eva_icons', 'Eva Icons'),
+        # Fun / colorful sets
+        ('fun_neon', 'Fun Neon'),
+        ('fun_pastel', 'Playful Pastel'),
+        ('fun_cartoon', 'Cartoonish'),
+        ('fun_emoji', 'Emoji Style'),
     ]
     
     tenant = models.OneToOneField(

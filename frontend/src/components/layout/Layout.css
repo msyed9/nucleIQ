@@ -316,6 +316,29 @@
     background: var(--color-bg-secondary, #F5F5F5);
 }
 
+/* Theme toggle small animation */
+.theme-toggle {
+    transition: transform 160ms ease, background 160ms ease;
+}
+.theme-toggle:active {
+    transform: scale(0.95) rotate(12deg);
+}
+
+/* Small label next to theme icon */
+.theme-toggle .theme-label {
+    margin-left: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary, #546E7A);
+    font-weight: 600;
+    display: inline-block;
+}
+
+@media (max-width: 768px) {
+    .theme-toggle .theme-label {
+        display: none;
+    }
+}
+
 .header-right {
     display: flex;
     align-items: center;

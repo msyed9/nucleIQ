@@ -6,7 +6,7 @@
 import React, { forwardRef } from 'react';
 import './Card.css';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
     /** Card variant */
     variant?: 'default' | 'outlined' | 'elevated';
 
@@ -21,6 +21,15 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
     /** Card header content */
     header?: React.ReactNode;
+
+    /** Card title */
+    title?: React.ReactNode;
+
+    /** Card subtitle */
+    subtitle?: React.ReactNode;
+
+    /** Card header actions */
+    actions?: React.ReactNode;
 
     /** Card footer content */
     footer?: React.ReactNode;
@@ -37,6 +46,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             hoverable = false,
             clickable = false,
             header,
+            title,
+            subtitle,
+            actions,
             footer,
             className = '',
             children,
@@ -55,6 +67,19 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             .filter(Boolean)
             .join(' ');
 
+        const showHeader = Boolean(header || title || subtitle || actions);
+        const headerContent = header ?? (
+            <div className="ds-card__header-content">
+                {(title || subtitle) && (
+                    <div className="ds-card__header-text">
+                        {title && <div className="ds-card__title">{title}</div>}
+                        {subtitle && <div className="ds-card__subtitle">{subtitle}</div>}
+                    </div>
+                )}
+                {actions && <div className="ds-card__header-actions">{actions}</div>}
+            </div>
+        );
+
         return (
             <div
                 ref={ref}
@@ -63,7 +88,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
                 tabIndex={clickable ? 0 : undefined}
                 {...props}
             >
-                {header && <div className="ds-card__header">{header}</div>}
+                {showHeader && <div className="ds-card__header">{headerContent}</div>}
 
                 <div className="ds-card__body">{children}</div>
 

@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('NucleiQ Admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}?v=2.0">
+<style>
+    /* Additional inline overrides for better control */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Ensure the font loads properly */
+    body,
+    input,
+    select,
+    textarea,
+    button {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    }
+
+    /* Fix for Django admin default styles */
+    #header a:link,
+    #header a:visited {
+        color: inherit;
+    }
+
+    /* Enhanced branding */
+    #branding h1 a::before {
+        content: "🧬 ";
+        font-style: normal;
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">{{ site_header|default:_('NucleiQ Administration') }}</a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block welcome-msg %}
+<div class="user-info">
+    <span class="welcome">👋 Welcome, <strong>{{ user.get_short_name|default:user.get_username }}</strong></span>
+</div>
+{% endblock %}
+
+{% block userlinks %}
+<a href="#" id="theme-toggle" title="Toggle Light/Dark Mode" class="theme-toggle-btn">
+    <i class="fas fa-sun"></i>
+</a>
+<a href="{% url 'admin:password_change' %}" title="Change password">🔑 Password</a>
+{% if site_url %}
+<a href="{{ site_url }}" title="View site">🌐 View Site</a>
+{% endif %}
+{% if user.is_active and user.is_staff %}
+<a href="{% url 'admin:logout' %}">🚪 Logout</a>
+{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0f23">
+<link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+<script src="{% static 'admin/js/theme_toggle.js' %}"></script>
+{% endblock %}
+
+{% block footer %}
+<div id="footer">
+    <p style="text-align: center; color: #718096; padding: 20px; font-size: 0.8rem;">
+        &copy; {% now "Y" %} <strong>NucleiQ Platform</strong> | Powered by Advanced School Management Technology
+    </p>
+</div>
+{% endblock %}

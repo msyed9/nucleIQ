@@ -1,0 +1,501 @@
+subject_name,subject_code,class_name,credit_hours,is_elective,max_marks
+Mathematics 1,SUB0001,Grade 1,2,true,100
+Science 2,SUB0002,Grade 2,3,false,100
+English 3,SUB0003,Grade 3,4,false,100
+History 1,SUB0004,Grade 4,5,false,100
+Geography 2,SUB0005,Grade 5,2,false,100
+Computer 3,SUB0006,Grade 6,3,true,100
+Art 1,SUB0007,Grade 7,4,false,100
+Music 2,SUB0008,Grade 8,5,false,100
+Physical Education 3,SUB0009,Grade 9,2,false,100
+Economics 1,SUB0010,Grade 10,3,false,100
+Mathematics 2,SUB0011,Grade 11,4,true,100
+Science 3,SUB0012,Grade 12,5,false,100
+English 1,SUB0013,Grade 1,2,false,100
+History 2,SUB0014,Grade 2,3,false,100
+Geography 3,SUB0015,Grade 3,4,false,100
+Computer 1,SUB0016,Grade 4,5,true,100
+Art 2,SUB0017,Grade 5,2,false,100
+Music 3,SUB0018,Grade 6,3,false,100
+Physical Education 1,SUB0019,Grade 7,4,false,100
+Economics 2,SUB0020,Grade 8,5,false,100
+Mathematics 3,SUB0021,Grade 9,2,true,100
+Science 1,SUB0022,Grade 10,3,false,100
+English 2,SUB0023,Grade 11,4,false,100
+History 3,SUB0024,Grade 12,5,false,100
+Geography 1,SUB0025,Grade 1,2,false,100
+Computer 2,SUB0026,Grade 2,3,true,100
+Art 3,SUB0027,Grade 3,4,false,100
+Music 1,SUB0028,Grade 4,5,false,100
+Physical Education 2,SUB0029,Grade 5,2,false,100
+Economics 3,SUB0030,Grade 6,3,false,100
+Mathematics 1,SUB0031,Grade 7,4,true,100
+Science 2,SUB0032,Grade 8,5,false,100
+English 3,SUB0033,Grade 9,2,false,100
+History 1,SUB0034,Grade 10,3,false,100
+Geography 2,SUB0035,Grade 11,4,false,100
+Computer 3,SUB0036,Grade 12,5,true,100
+Art 1,SUB0037,Grade 1,2,false,100
+Music 2,SUB0038,Grade 2,3,false,100
+Physical Education 3,SUB0039,Grade 3,4,false,100
+Economics 1,SUB0040,Grade 4,5,false,100
+Mathematics 2,SUB0041,Grade 5,2,true,100
+Science 3,SUB0042,Grade 6,3,false,100
+English 1,SUB0043,Grade 7,4,false,100
+History 2,SUB0044,Grade 8,5,false,100
+Geography 3,SUB0045,Grade 9,2,false,100
+Computer 1,SUB0046,Grade 10,3,true,100
+Art 2,SUB0047,Grade 11,4,false,100
+Music 3,SUB0048,Grade 12,5,false,100
+Physical Education 1,SUB0049,Grade 1,2,false,100
+Economics 2,SUB0050,Grade 2,3,false,100
+Mathematics 3,SUB0051,Grade 3,4,true,100
+Science 1,SUB0052,Grade 4,5,false,100
+English 2,SUB0053,Grade 5,2,false,100
+History 3,SUB0054,Grade 6,3,false,100
+Geography 1,SUB0055,Grade 7,4,false,100
+Computer 2,SUB0056,Grade 8,5,true,100
+Art 3,SUB0057,Grade 9,2,false,100
+Music 1,SUB0058,Grade 10,3,false,100
+Physical Education 2,SUB0059,Grade 11,4,false,100
+Economics 3,SUB0060,Grade 12,5,false,100
+Mathematics 1,SUB0061,Grade 1,2,true,100
+Science 2,SUB0062,Grade 2,3,false,100
+English 3,SUB0063,Grade 3,4,false,100
+History 1,SUB0064,Grade 4,5,false,100
+Geography 2,SUB0065,Grade 5,2,false,100
+Computer 3,SUB0066,Grade 6,3,true,100
+Art 1,SUB0067,Grade 7,4,false,100
+Music 2,SUB0068,Grade 8,5,false,100
+Physical Education 3,SUB0069,Grade 9,2,false,100
+Economics 1,SUB0070,Grade 10,3,false,100
+Mathematics 2,SUB0071,Grade 11,4,true,100
+Science 3,SUB0072,Grade 12,5,false,100
+English 1,SUB0073,Grade 1,2,false,100
+History 2,SUB0074,Grade 2,3,false,100
+Geography 3,SUB0075,Grade 3,4,false,100
+Computer 1,SUB0076,Grade 4,5,true,100
+Art 2,SUB0077,Grade 5,2,false,100
+Music 3,SUB0078,Grade 6,3,false,100
+Physical Education 1,SUB0079,Grade 7,4,false,100
+Economics 2,SUB0080,Grade 8,5,false,100
+Mathematics 3,SUB0081,Grade 9,2,true,100
+Science 1,SUB0082,Grade 10,3,false,100
+English 2,SUB0083,Grade 11,4,false,100
+History 3,SUB0084,Grade 12,5,false,100
+Geography 1,SUB0085,Grade 1,2,false,100
+Computer 2,SUB0086,Grade 2,3,true,100
+Art 3,SUB0087,Grade 3,4,false,100
+Music 1,SUB0088,Grade 4,5,false,100
+Physical Education 2,SUB0089,Grade 5,2,false,100
+Economics 3,SUB0090,Grade 6,3,false,100
+Mathematics 1,SUB0091,Grade 7,4,true,100
+Science 2,SUB0092,Grade 8,5,false,100
+English 3,SUB0093,Grade 9,2,false,100
+History 1,SUB0094,Grade 10,3,false,100
+Geography 2,SUB0095,Grade 11,4,false,100
+Computer 3,SUB0096,Grade 12,5,true,100
+Art 1,SUB0097,Grade 1,2,false,100
+Music 2,SUB0098,Grade 2,3,false,100
+Physical Education 3,SUB0099,Grade 3,4,false,100
+Economics 1,SUB0100,Grade 4,5,false,100
+Mathematics 2,SUB0101,Grade 5,2,true,100
+Science 3,SUB0102,Grade 6,3,false,100
+English 1,SUB0103,Grade 7,4,false,100
+History 2,SUB0104,Grade 8,5,false,100
+Geography 3,SUB0105,Grade 9,2,false,100
+Computer 1,SUB0106,Grade 10,3,true,100
+Art 2,SUB0107,Grade 11,4,false,100
+Music 3,SUB0108,Grade 12,5,false,100
+Physical Education 1,SUB0109,Grade 1,2,false,100
+Economics 2,SUB0110,Grade 2,3,false,100
+Mathematics 3,SUB0111,Grade 3,4,true,100
+Science 1,SUB0112,Grade 4,5,false,100
+English 2,SUB0113,Grade 5,2,false,100
+History 3,SUB0114,Grade 6,3,false,100
+Geography 1,SUB0115,Grade 7,4,false,100
+Computer 2,SUB0116,Grade 8,5,true,100
+Art 3,SUB0117,Grade 9,2,false,100
+Music 1,SUB0118,Grade 10,3,false,100
+Physical Education 2,SUB0119,Grade 11,4,false,100
+Economics 3,SUB0120,Grade 12,5,false,100
+Mathematics 1,SUB0121,Grade 1,2,true,100
+Science 2,SUB0122,Grade 2,3,false,100
+English 3,SUB0123,Grade 3,4,false,100
+History 1,SUB0124,Grade 4,5,false,100
+Geography 2,SUB0125,Grade 5,2,false,100
+Computer 3,SUB0126,Grade 6,3,true,100
+Art 1,SUB0127,Grade 7,4,false,100
+Music 2,SUB0128,Grade 8,5,false,100
+Physical Education 3,SUB0129,Grade 9,2,false,100
+Economics 1,SUB0130,Grade 10,3,false,100
+Mathematics 2,SUB0131,Grade 11,4,true,100
+Science 3,SUB0132,Grade 12,5,false,100
+English 1,SUB0133,Grade 1,2,false,100
+History 2,SUB0134,Grade 2,3,false,100
+Geography 3,SUB0135,Grade 3,4,false,100
+Computer 1,SUB0136,Grade 4,5,true,100
+Art 2,SUB0137,Grade 5,2,false,100
+Music 3,SUB0138,Grade 6,3,false,100
+Physical Education 1,SUB0139,Grade 7,4,false,100
+Economics 2,SUB0140,Grade 8,5,false,100
+Mathematics 3,SUB0141,Grade 9,2,true,100
+Science 1,SUB0142,Grade 10,3,false,100
+English 2,SUB0143,Grade 11,4,false,100
+History 3,SUB0144,Grade 12,5,false,100
+Geography 1,SUB0145,Grade 1,2,false,100
+Computer 2,SUB0146,Grade 2,3,true,100
+Art 3,SUB0147,Grade 3,4,false,100
+Music 1,SUB0148,Grade 4,5,false,100
+Physical Education 2,SUB0149,Grade 5,2,false,100
+Economics 3,SUB0150,Grade 6,3,false,100
+Mathematics 1,SUB0151,Grade 7,4,true,100
+Science 2,SUB0152,Grade 8,5,false,100
+English 3,SUB0153,Grade 9,2,false,100
+History 1,SUB0154,Grade 10,3,false,100
+Geography 2,SUB0155,Grade 11,4,false,100
+Computer 3,SUB0156,Grade 12,5,true,100
+Art 1,SUB0157,Grade 1,2,false,100
+Music 2,SUB0158,Grade 2,3,false,100
+Physical Education 3,SUB0159,Grade 3,4,false,100
+Economics 1,SUB0160,Grade 4,5,false,100
+Mathematics 2,SUB0161,Grade 5,2,true,100
+Science 3,SUB0162,Grade 6,3,false,100
+English 1,SUB0163,Grade 7,4,false,100
+History 2,SUB0164,Grade 8,5,false,100
+Geography 3,SUB0165,Grade 9,2,false,100
+Computer 1,SUB0166,Grade 10,3,true,100
+Art 2,SUB0167,Grade 11,4,false,100
+Music 3,SUB0168,Grade 12,5,false,100
+Physical Education 1,SUB0169,Grade 1,2,false,100
+Economics 2,SUB0170,Grade 2,3,false,100
+Mathematics 3,SUB0171,Grade 3,4,true,100
+Science 1,SUB0172,Grade 4,5,false,100
+English 2,SUB0173,Grade 5,2,false,100
+History 3,SUB0174,Grade 6,3,false,100
+Geography 1,SUB0175,Grade 7,4,false,100
+Computer 2,SUB0176,Grade 8,5,true,100
+Art 3,SUB0177,Grade 9,2,false,100
+Music 1,SUB0178,Grade 10,3,false,100
+Physical Education 2,SUB0179,Grade 11,4,false,100
+Economics 3,SUB0180,Grade 12,5,false,100
+Mathematics 1,SUB0181,Grade 1,2,true,100
+Science 2,SUB0182,Grade 2,3,false,100
+English 3,SUB0183,Grade 3,4,false,100
+History 1,SUB0184,Grade 4,5,false,100
+Geography 2,SUB0185,Grade 5,2,false,100
+Computer 3,SUB0186,Grade 6,3,true,100
+Art 1,SUB0187,Grade 7,4,false,100
+Music 2,SUB0188,Grade 8,5,false,100
+Physical Education 3,SUB0189,Grade 9,2,false,100
+Economics 1,SUB0190,Grade 10,3,false,100
+Mathematics 2,SUB0191,Grade 11,4,true,100
+Science 3,SUB0192,Grade 12,5,false,100
+English 1,SUB0193,Grade 1,2,false,100
+History 2,SUB0194,Grade 2,3,false,100
+Geography 3,SUB0195,Grade 3,4,false,100
+Computer 1,SUB0196,Grade 4,5,true,100
+Art 2,SUB0197,Grade 5,2,false,100
+Music 3,SUB0198,Grade 6,3,false,100
+Physical Education 1,SUB0199,Grade 7,4,false,100
+Economics 2,SUB0200,Grade 8,5,false,100
+Mathematics 3,SUB0201,Grade 9,2,true,100
+Science 1,SUB0202,Grade 10,3,false,100
+English 2,SUB0203,Grade 11,4,false,100
+History 3,SUB0204,Grade 12,5,false,100
+Geography 1,SUB0205,Grade 1,2,false,100
+Computer 2,SUB0206,Grade 2,3,true,100
+Art 3,SUB0207,Grade 3,4,false,100
+Music 1,SUB0208,Grade 4,5,false,100
+Physical Education 2,SUB0209,Grade 5,2,false,100
+Economics 3,SUB0210,Grade 6,3,false,100
+Mathematics 1,SUB0211,Grade 7,4,true,100
+Science 2,SUB0212,Grade 8,5,false,100
+English 3,SUB0213,Grade 9,2,false,100
+History 1,SUB0214,Grade 10,3,false,100
+Geography 2,SUB0215,Grade 11,4,false,100
+Computer 3,SUB0216,Grade 12,5,true,100
+Art 1,SUB0217,Grade 1,2,false,100
+Music 2,SUB0218,Grade 2,3,false,100
+Physical Education 3,SUB0219,Grade 3,4,false,100
+Economics 1,SUB0220,Grade 4,5,false,100
+Mathematics 2,SUB0221,Grade 5,2,true,100
+Science 3,SUB0222,Grade 6,3,false,100
+English 1,SUB0223,Grade 7,4,false,100
+History 2,SUB0224,Grade 8,5,false,100
+Geography 3,SUB0225,Grade 9,2,false,100
+Computer 1,SUB0226,Grade 10,3,true,100
+Art 2,SUB0227,Grade 11,4,false,100
+Music 3,SUB0228,Grade 12,5,false,100
+Physical Education 1,SUB0229,Grade 1,2,false,100
+Economics 2,SUB0230,Grade 2,3,false,100
+Mathematics 3,SUB0231,Grade 3,4,true,100
+Science 1,SUB0232,Grade 4,5,false,100
+English 2,SUB0233,Grade 5,2,false,100
+History 3,SUB0234,Grade 6,3,false,100
+Geography 1,SUB0235,Grade 7,4,false,100
+Computer 2,SUB0236,Grade 8,5,true,100
+Art 3,SUB0237,Grade 9,2,false,100
+Music 1,SUB0238,Grade 10,3,false,100
+Physical Education 2,SUB0239,Grade 11,4,false,100
+Economics 3,SUB0240,Grade 12,5,false,100
+Mathematics 1,SUB0241,Grade 1,2,true,100
+Science 2,SUB0242,Grade 2,3,false,100
+English 3,SUB0243,Grade 3,4,false,100
+History 1,SUB0244,Grade 4,5,false,100
+Geography 2,SUB0245,Grade 5,2,false,100
+Computer 3,SUB0246,Grade 6,3,true,100
+Art 1,SUB0247,Grade 7,4,false,100
+Music 2,SUB0248,Grade 8,5,false,100
+Physical Education 3,SUB0249,Grade 9,2,false,100
+Economics 1,SUB0250,Grade 10,3,false,100
+Mathematics 2,SUB0251,Grade 11,4,true,100
+Science 3,SUB0252,Grade 12,5,false,100
+English 1,SUB0253,Grade 1,2,false,100
+History 2,SUB0254,Grade 2,3,false,100
+Geography 3,SUB0255,Grade 3,4,false,100
+Computer 1,SUB0256,Grade 4,5,true,100
+Art 2,SUB0257,Grade 5,2,false,100
+Music 3,SUB0258,Grade 6,3,false,100
+Physical Education 1,SUB0259,Grade 7,4,false,100
+Economics 2,SUB0260,Grade 8,5,false,100
+Mathematics 3,SUB0261,Grade 9,2,true,100
+Science 1,SUB0262,Grade 10,3,false,100
+English 2,SUB0263,Grade 11,4,false,100
+History 3,SUB0264,Grade 12,5,false,100
+Geography 1,SUB0265,Grade 1,2,false,100
+Computer 2,SUB0266,Grade 2,3,true,100
+Art 3,SUB0267,Grade 3,4,false,100
+Music 1,SUB0268,Grade 4,5,false,100
+Physical Education 2,SUB0269,Grade 5,2,false,100
+Economics 3,SUB0270,Grade 6,3,false,100
+Mathematics 1,SUB0271,Grade 7,4,true,100
+Science 2,SUB0272,Grade 8,5,false,100
+English 3,SUB0273,Grade 9,2,false,100
+History 1,SUB0274,Grade 10,3,false,100
+Geography 2,SUB0275,Grade 11,4,false,100
+Computer 3,SUB0276,Grade 12,5,true,100
+Art 1,SUB0277,Grade 1,2,false,100
+Music 2,SUB0278,Grade 2,3,false,100
+Physical Education 3,SUB0279,Grade 3,4,false,100
+Economics 1,SUB0280,Grade 4,5,false,100
+Mathematics 2,SUB0281,Grade 5,2,true,100
+Science 3,SUB0282,Grade 6,3,false,100
+English 1,SUB0283,Grade 7,4,false,100
+History 2,SUB0284,Grade 8,5,false,100
+Geography 3,SUB0285,Grade 9,2,false,100
+Computer 1,SUB0286,Grade 10,3,true,100
+Art 2,SUB0287,Grade 11,4,false,100
+Music 3,SUB0288,Grade 12,5,false,100
+Physical Education 1,SUB0289,Grade 1,2,false,100
+Economics 2,SUB0290,Grade 2,3,false,100
+Mathematics 3,SUB0291,Grade 3,4,true,100
+Science 1,SUB0292,Grade 4,5,false,100
+English 2,SUB0293,Grade 5,2,false,100
+History 3,SUB0294,Grade 6,3,false,100
+Geography 1,SUB0295,Grade 7,4,false,100
+Computer 2,SUB0296,Grade 8,5,true,100
+Art 3,SUB0297,Grade 9,2,false,100
+Music 1,SUB0298,Grade 10,3,false,100
+Physical Education 2,SUB0299,Grade 11,4,false,100
+Economics 3,SUB0300,Grade 12,5,false,100
+Mathematics 1,SUB0301,Grade 1,2,true,100
+Science 2,SUB0302,Grade 2,3,false,100
+English 3,SUB0303,Grade 3,4,false,100
+History 1,SUB0304,Grade 4,5,false,100
+Geography 2,SUB0305,Grade 5,2,false,100
+Computer 3,SUB0306,Grade 6,3,true,100
+Art 1,SUB0307,Grade 7,4,false,100
+Music 2,SUB0308,Grade 8,5,false,100
+Physical Education 3,SUB0309,Grade 9,2,false,100
+Economics 1,SUB0310,Grade 10,3,false,100
+Mathematics 2,SUB0311,Grade 11,4,true,100
+Science 3,SUB0312,Grade 12,5,false,100
+English 1,SUB0313,Grade 1,2,false,100
+History 2,SUB0314,Grade 2,3,false,100
+Geography 3,SUB0315,Grade 3,4,false,100
+Computer 1,SUB0316,Grade 4,5,true,100
+Art 2,SUB0317,Grade 5,2,false,100
+Music 3,SUB0318,Grade 6,3,false,100
+Physical Education 1,SUB0319,Grade 7,4,false,100
+Economics 2,SUB0320,Grade 8,5,false,100
+Mathematics 3,SUB0321,Grade 9,2,true,100
+Science 1,SUB0322,Grade 10,3,false,100
+English 2,SUB0323,Grade 11,4,false,100
+History 3,SUB0324,Grade 12,5,false,100
+Geography 1,SUB0325,Grade 1,2,false,100
+Computer 2,SUB0326,Grade 2,3,true,100
+Art 3,SUB0327,Grade 3,4,false,100
+Music 1,SUB0328,Grade 4,5,false,100
+Physical Education 2,SUB0329,Grade 5,2,false,100
+Economics 3,SUB0330,Grade 6,3,false,100
+Mathematics 1,SUB0331,Grade 7,4,true,100
+Science 2,SUB0332,Grade 8,5,false,100
+English 3,SUB0333,Grade 9,2,false,100
+History 1,SUB0334,Grade 10,3,false,100
+Geography 2,SUB0335,Grade 11,4,false,100
+Computer 3,SUB0336,Grade 12,5,true,100
+Art 1,SUB0337,Grade 1,2,false,100
+Music 2,SUB0338,Grade 2,3,false,100
+Physical Education 3,SUB0339,Grade 3,4,false,100
+Economics 1,SUB0340,Grade 4,5,false,100
+Mathematics 2,SUB0341,Grade 5,2,true,100
+Science 3,SUB0342,Grade 6,3,false,100
+English 1,SUB0343,Grade 7,4,false,100
+History 2,SUB0344,Grade 8,5,false,100
+Geography 3,SUB0345,Grade 9,2,false,100
+Computer 1,SUB0346,Grade 10,3,true,100
+Art 2,SUB0347,Grade 11,4,false,100
+Music 3,SUB0348,Grade 12,5,false,100
+Physical Education 1,SUB0349,Grade 1,2,false,100
+Economics 2,SUB0350,Grade 2,3,false,100
+Mathematics 3,SUB0351,Grade 3,4,true,100
+Science 1,SUB0352,Grade 4,5,false,100
+English 2,SUB0353,Grade 5,2,false,100
+History 3,SUB0354,Grade 6,3,false,100
+Geography 1,SUB0355,Grade 7,4,false,100
+Computer 2,SUB0356,Grade 8,5,true,100
+Art 3,SUB0357,Grade 9,2,false,100
+Music 1,SUB0358,Grade 10,3,false,100
+Physical Education 2,SUB0359,Grade 11,4,false,100
+Economics 3,SUB0360,Grade 12,5,false,100
+Mathematics 1,SUB0361,Grade 1,2,true,100
+Science 2,SUB0362,Grade 2,3,false,100
+English 3,SUB0363,Grade 3,4,false,100
+History 1,SUB0364,Grade 4,5,false,100
+Geography 2,SUB0365,Grade 5,2,false,100
+Computer 3,SUB0366,Grade 6,3,true,100
+Art 1,SUB0367,Grade 7,4,false,100
+Music 2,SUB0368,Grade 8,5,false,100
+Physical Education 3,SUB0369,Grade 9,2,false,100
+Economics 1,SUB0370,Grade 10,3,false,100
+Mathematics 2,SUB0371,Grade 11,4,true,100
+Science 3,SUB0372,Grade 12,5,false,100
+English 1,SUB0373,Grade 1,2,false,100
+History 2,SUB0374,Grade 2,3,false,100
+Geography 3,SUB0375,Grade 3,4,false,100
+Computer 1,SUB0376,Grade 4,5,true,100
+Art 2,SUB0377,Grade 5,2,false,100
+Music 3,SUB0378,Grade 6,3,false,100
+Physical Education 1,SUB0379,Grade 7,4,false,100
+Economics 2,SUB0380,Grade 8,5,false,100
+Mathematics 3,SUB0381,Grade 9,2,true,100
+Science 1,SUB0382,Grade 10,3,false,100
+English 2,SUB0383,Grade 11,4,false,100
+History 3,SUB0384,Grade 12,5,false,100
+Geography 1,SUB0385,Grade 1,2,false,100
+Computer 2,SUB0386,Grade 2,3,true,100
+Art 3,SUB0387,Grade 3,4,false,100
+Music 1,SUB0388,Grade 4,5,false,100
+Physical Education 2,SUB0389,Grade 5,2,false,100
+Economics 3,SUB0390,Grade 6,3,false,100
+Mathematics 1,SUB0391,Grade 7,4,true,100
+Science 2,SUB0392,Grade 8,5,false,100
+English 3,SUB0393,Grade 9,2,false,100
+History 1,SUB0394,Grade 10,3,false,100
+Geography 2,SUB0395,Grade 11,4,false,100
+Computer 3,SUB0396,Grade 12,5,true,100
+Art 1,SUB0397,Grade 1,2,false,100
+Music 2,SUB0398,Grade 2,3,false,100
+Physical Education 3,SUB0399,Grade 3,4,false,100
+Economics 1,SUB0400,Grade 4,5,false,100
+Mathematics 2,SUB0401,Grade 5,2,true,100
+Science 3,SUB0402,Grade 6,3,false,100
+English 1,SUB0403,Grade 7,4,false,100
+History 2,SUB0404,Grade 8,5,false,100
+Geography 3,SUB0405,Grade 9,2,false,100
+Computer 1,SUB0406,Grade 10,3,true,100
+Art 2,SUB0407,Grade 11,4,false,100
+Music 3,SUB0408,Grade 12,5,false,100
+Physical Education 1,SUB0409,Grade 1,2,false,100
+Economics 2,SUB0410,Grade 2,3,false,100
+Mathematics 3,SUB0411,Grade 3,4,true,100
+Science 1,SUB0412,Grade 4,5,false,100
+English 2,SUB0413,Grade 5,2,false,100
+History 3,SUB0414,Grade 6,3,false,100
+Geography 1,SUB0415,Grade 7,4,false,100
+Computer 2,SUB0416,Grade 8,5,true,100
+Art 3,SUB0417,Grade 9,2,false,100
+Music 1,SUB0418,Grade 10,3,false,100
+Physical Education 2,SUB0419,Grade 11,4,false,100
+Economics 3,SUB0420,Grade 12,5,false,100
+Mathematics 1,SUB0421,Grade 1,2,true,100
+Science 2,SUB0422,Grade 2,3,false,100
+English 3,SUB0423,Grade 3,4,false,100
+History 1,SUB0424,Grade 4,5,false,100
+Geography 2,SUB0425,Grade 5,2,false,100
+Computer 3,SUB0426,Grade 6,3,true,100
+Art 1,SUB0427,Grade 7,4,false,100
+Music 2,SUB0428,Grade 8,5,false,100
+Physical Education 3,SUB0429,Grade 9,2,false,100
+Economics 1,SUB0430,Grade 10,3,false,100
+Mathematics 2,SUB0431,Grade 11,4,true,100
+Science 3,SUB0432,Grade 12,5,false,100
+English 1,SUB0433,Grade 1,2,false,100
+History 2,SUB0434,Grade 2,3,false,100
+Geography 3,SUB0435,Grade 3,4,false,100
+Computer 1,SUB0436,Grade 4,5,true,100
+Art 2,SUB0437,Grade 5,2,false,100
+Music 3,SUB0438,Grade 6,3,false,100
+Physical Education 1,SUB0439,Grade 7,4,false,100
+Economics 2,SUB0440,Grade 8,5,false,100
+Mathematics 3,SUB0441,Grade 9,2,true,100
+Science 1,SUB0442,Grade 10,3,false,100
+English 2,SUB0443,Grade 11,4,false,100
+History 3,SUB0444,Grade 12,5,false,100
+Geography 1,SUB0445,Grade 1,2,false,100
+Computer 2,SUB0446,Grade 2,3,true,100
+Art 3,SUB0447,Grade 3,4,false,100
+Music 1,SUB0448,Grade 4,5,false,100
+Physical Education 2,SUB0449,Grade 5,2,false,100
+Economics 3,SUB0450,Grade 6,3,false,100
+Mathematics 1,SUB0451,Grade 7,4,true,100
+Science 2,SUB0452,Grade 8,5,false,100
+English 3,SUB0453,Grade 9,2,false,100
+History 1,SUB0454,Grade 10,3,false,100
+Geography 2,SUB0455,Grade 11,4,false,100
+Computer 3,SUB0456,Grade 12,5,true,100
+Art 1,SUB0457,Grade 1,2,false,100
+Music 2,SUB0458,Grade 2,3,false,100
+Physical Education 3,SUB0459,Grade 3,4,false,100
+Economics 1,SUB0460,Grade 4,5,false,100
+Mathematics 2,SUB0461,Grade 5,2,true,100
+Science 3,SUB0462,Grade 6,3,false,100
+English 1,SUB0463,Grade 7,4,false,100
+History 2,SUB0464,Grade 8,5,false,100
+Geography 3,SUB0465,Grade 9,2,false,100
+Computer 1,SUB0466,Grade 10,3,true,100
+Art 2,SUB0467,Grade 11,4,false,100
+Music 3,SUB0468,Grade 12,5,false,100
+Physical Education 1,SUB0469,Grade 1,2,false,100
+Economics 2,SUB0470,Grade 2,3,false,100
+Mathematics 3,SUB0471,Grade 3,4,true,100
+Science 1,SUB0472,Grade 4,5,false,100
+English 2,SUB0473,Grade 5,2,false,100
+History 3,SUB0474,Grade 6,3,false,100
+Geography 1,SUB0475,Grade 7,4,false,100
+Computer 2,SUB0476,Grade 8,5,true,100
+Art 3,SUB0477,Grade 9,2,false,100
+Music 1,SUB0478,Grade 10,3,false,100
+Physical Education 2,SUB0479,Grade 11,4,false,100
+Economics 3,SUB0480,Grade 12,5,false,100
+Mathematics 1,SUB0481,Grade 1,2,true,100
+Science 2,SUB0482,Grade 2,3,false,100
+English 3,SUB0483,Grade 3,4,false,100
+History 1,SUB0484,Grade 4,5,false,100
+Geography 2,SUB0485,Grade 5,2,false,100
+Computer 3,SUB0486,Grade 6,3,true,100
+Art 1,SUB0487,Grade 7,4,false,100
+Music 2,SUB0488,Grade 8,5,false,100
+Physical Education 3,SUB0489,Grade 9,2,false,100
+Economics 1,SUB0490,Grade 10,3,false,100
+Mathematics 2,SUB0491,Grade 11,4,true,100
+Science 3,SUB0492,Grade 12,5,false,100
+English 1,SUB0493,Grade 1,2,false,100
+History 2,SUB0494,Grade 2,3,false,100
+Geography 3,SUB0495,Grade 3,4,false,100
+Computer 1,SUB0496,Grade 4,5,true,100
+Art 2,SUB0497,Grade 5,2,false,100
+Music 3,SUB0498,Grade 6,3,false,100
+Physical Education 1,SUB0499,Grade 7,4,false,100
+Economics 2,SUB0500,Grade 8,5,false,100

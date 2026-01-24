@@ -107,6 +107,15 @@
     background: #F44336;
 }
 
+.ds-badge--danger {
+    background: #FFEBEE;
+    color: #D32F2F;
+}
+
+.ds-badge--danger.ds-badge--dot {
+    background: #F44336;
+}
+
 .ds-badge--info {
     background: #E3F2FD;
     color: #1976D2;
@@ -123,6 +132,17 @@
 
 .ds-badge--neutral.ds-badge--dot {
     background: #9E9E9E;
+}
+
+.ds-badge--outline {
+    background: transparent;
+    color: #455A64;
+    border: 1px solid #CFD8DC;
+}
+
+.ds-badge--outline.ds-badge--dot {
+    background: #90A4AE;
+    border: none;
 }
 
 /* Icon */
@@ -157,6 +177,11 @@
         color: #EF5350;
     }
 
+    .ds-badge--danger {
+        background: rgba(244, 67, 54, 0.2);
+        color: #EF5350;
+    }
+
     .ds-badge--info {
         background: rgba(33, 150, 243, 0.2);
         color: #42A5F5;
@@ -165,5 +190,11 @@
     .ds-badge--neutral {
         background: #424242;
         color: #E0E0E0;
+    }
+
+    .ds-badge--outline {
+        background: transparent;
+        color: #CFD8DC;
+        border: 1px solid #546E7A;
     }
 }

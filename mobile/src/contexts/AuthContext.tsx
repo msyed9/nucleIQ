@@ -120,14 +120,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await AsyncStorage.setItem('access_token', response.access);
             await AsyncStorage.setItem('refresh_token', response.refresh);
 
+            // Store user type from unified login response
+            if (response.user_type) {
+                await AsyncStorage.setItem('user_type', response.user_type);
+            }
+
+            // Store tenant info
             if (response.user.tenant) {
                 await AsyncStorage.setItem('current_tenant', response.user.tenant);
+            }
+
+            // Store platform admin flag
+            if (response.user.is_platform_admin) {
+                await AsyncStorage.setItem('is_platform_admin', 'true');
+            }
+
+            // Store parent-specific data if user is a parent
+            if (response.user_type === 'parent') {
+                if (response.user.parent_id) {
+                    await AsyncStorage.setItem('parent_id', String(response.user.parent_id));
+                }
+                if (response.user.students) {
+                    await AsyncStorage.setItem('students', JSON.stringify(response.user.students));
+                }
             }
         } catch (error) {
             console.error('Login failed:', error);
             throw error;
         }
     }, []);
+
 
     const logout = useCallback(async () => {
         try {

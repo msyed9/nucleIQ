@@ -3,11 +3,12 @@
  * Modern sidebar with selectable icon libraries
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTenantBranding } from '../../contexts/TenantBrandingContext';
 import { useIconSet } from '../../contexts/IconSetContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { IconKey } from '../../config/iconSets';
 import './Layout.css';
 
@@ -16,6 +17,7 @@ interface SubMenuItem {
     iconKey: IconKey;
     labelKey: string;
     label?: string;
+    moduleKey?: string; // Maps to tenant enabled_modules
 }
 
 interface MenuItem {
@@ -24,14 +26,16 @@ interface MenuItem {
     labelKey: string;
     label?: string;
     children?: SubMenuItem[];
+    moduleKey?: string; // Maps to tenant enabled_modules
 }
 
 const menuItems: MenuItem[] = [
-    { path: '/dashboard', iconKey: 'dashboard', labelKey: 'nav.dashboard', label: 'Dashboard' },
+    { path: '/dashboard', iconKey: 'dashboard', labelKey: 'nav.dashboard', label: 'Dashboard', moduleKey: 'dashboard' },
     {
         iconKey: 'users',
         labelKey: 'nav.students',
         label: 'Students',
+        moduleKey: 'students',
         children: [
             { path: '/students', iconKey: 'list', labelKey: 'nav.student_list', label: 'Student List' },
             { path: '/students/enrollments', iconKey: 'clipboardCheck', labelKey: 'nav.enrollments', label: 'Enrollments' },
@@ -46,6 +50,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'userCheck',
         labelKey: 'nav.staff',
         label: 'Staff',
+        moduleKey: 'staff',
         children: [
             { path: '/staff/my-qr', iconKey: 'qrCode', labelKey: 'nav.my_attendance_qr', label: 'My Attendance QR' },
             { path: '/staff', iconKey: 'list', labelKey: 'nav.staff_list', label: 'Staff List' },
@@ -63,8 +68,9 @@ const menuItems: MenuItem[] = [
         iconKey: 'graduationCap',
         labelKey: 'nav.academics',
         label: 'Academics',
+        moduleKey: 'academics',
         children: [
-            { path: '/timetable/builder', iconKey: 'calendarDays', labelKey: 'nav.timetable', label: 'Timetable' },
+            { path: '/timetable/builder', iconKey: 'calendarDays', labelKey: 'nav.timetable', label: 'Timetable', moduleKey: 'timetable' },
             { path: '/subjects', iconKey: 'bookOpen', labelKey: 'nav.subjects', label: 'Subjects' },
             { path: '/syllabus', iconKey: 'list', labelKey: 'nav.syllabus', label: 'Syllabus Progress' },
             { path: '/homework', iconKey: 'penTool', labelKey: 'nav.homework', label: 'Homework' },
@@ -72,12 +78,12 @@ const menuItems: MenuItem[] = [
             { path: '/assignments/submit', iconKey: 'fileCheck', labelKey: 'nav.submit_assignment', label: 'Submit Assignment' },
             { path: '/assignments/grade', iconKey: 'clipboardCheck', labelKey: 'nav.grade_assignment', label: 'Grade Assignments' },
             { path: '/grades', iconKey: 'award', labelKey: 'nav.grades', label: 'Grades & Report Card' },
-            { path: '/exams', iconKey: 'fileText', labelKey: 'nav.exams', label: 'Exams' },
-            { path: '/exams/question-bank', iconKey: 'bookOpen', labelKey: 'nav.question_bank', label: 'Question Bank' },
-            { path: '/exams/learning-outcomes', iconKey: 'award', labelKey: 'nav.learning_outcomes', label: 'Learning Outcomes' },
-            { path: '/exams/online', iconKey: 'video', labelKey: 'nav.online_examination', label: 'Online Examination' },
-            { path: '/exams/results/entry', iconKey: 'clipboardCheck', labelKey: 'nav.result_entry', label: 'Result Entry' },
-            { path: '/exams/results/analytics', iconKey: 'barChart', labelKey: 'nav.result_analytics', label: 'Result Analytics' },
+            { path: '/exams', iconKey: 'fileText', labelKey: 'nav.exams', label: 'Exams', moduleKey: 'exams' },
+            { path: '/exams/question-bank', iconKey: 'bookOpen', labelKey: 'nav.question_bank', label: 'Question Bank', moduleKey: 'exams' },
+            { path: '/exams/learning-outcomes', iconKey: 'award', labelKey: 'nav.learning_outcomes', label: 'Learning Outcomes', moduleKey: 'exams' },
+            { path: '/exams/online', iconKey: 'video', labelKey: 'nav.online_examination', label: 'Online Examination', moduleKey: 'exams' },
+            { path: '/exams/results/entry', iconKey: 'clipboardCheck', labelKey: 'nav.result_entry', label: 'Result Entry', moduleKey: 'exams' },
+            { path: '/exams/results/analytics', iconKey: 'barChart', labelKey: 'nav.result_analytics', label: 'Result Analytics', moduleKey: 'exams' },
             { path: '/lms/classes', iconKey: 'video', labelKey: 'nav.live_classes', label: 'Live Classes' },
             { path: '/lms/digital', iconKey: 'library', labelKey: 'nav.digital_lms', label: 'Digital Library' },
             { path: '/admin/certificates', iconKey: 'award', labelKey: 'nav.certificates', label: 'Certificates' },
@@ -87,6 +93,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'calendarDays',
         labelKey: 'nav.calendar',
         label: 'Calendar',
+        moduleKey: 'calendar',
         children: [
             { path: '/calendar', iconKey: 'calendar', labelKey: 'nav.school_calendar', label: 'School Calendar' },
             { path: '/calendar/holidays', iconKey: 'sunrise', labelKey: 'nav.holidays', label: 'Holidays' },
@@ -97,6 +104,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'calendar',
         labelKey: 'nav.attendance',
         label: 'Attendance',
+        moduleKey: 'attendance',
         children: [
             { path: '/attendance', iconKey: 'clipboardCheck', labelKey: 'nav.mark_attendance', label: 'Mark Attendance' },
             { path: '/attendance/mobile-capture', iconKey: 'qrCode', labelKey: 'nav.qr_face_scanner', label: 'QR & Face Scanner' },
@@ -109,6 +117,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'heart',
         labelKey: 'nav.wellbeing',
         label: 'Wellbeing',
+        moduleKey: 'wellbeing',
         children: [
             { path: '/trackers/salah', iconKey: 'sunrise', labelKey: 'nav.salah_tracker', label: 'Salah Tracker' },
             { path: '/trackers/habits', iconKey: 'activity', labelKey: 'nav.habit_tracker', label: 'Habit Tracker' },
@@ -118,12 +127,14 @@ const menuItems: MenuItem[] = [
         path: '/cms/website-builder',
         iconKey: 'globe',
         labelKey: 'nav.website_builder',
-        label: 'Website Builder'
+        label: 'Website Builder',
+        moduleKey: 'cms'
     },
     {
         iconKey: 'creditCard',
         labelKey: 'nav.idcards',
         label: 'ID Cards',
+        moduleKey: 'idcards',
         children: [
             { path: '/idcards/templates', iconKey: 'layoutTemplate', labelKey: 'nav.id_templates', label: 'Templates' },
             { path: '/idcards/designer', iconKey: 'palette', labelKey: 'nav.id_designer', label: 'Designer' },
@@ -135,6 +146,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'dollarSign',
         labelKey: 'nav.fees',
         label: 'Fees',
+        moduleKey: 'fees',
         children: [
             { path: '/fees/collect', iconKey: 'creditCard', labelKey: 'nav.collect_fees', label: 'Collect Fees' },
             { path: '/fees/payment-history', iconKey: 'history', labelKey: 'nav.payment_history', label: 'Payment History' },
@@ -150,6 +162,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'landmark',
         labelKey: 'nav.finance',
         label: 'Finance',
+        moduleKey: 'finance',
         children: [
             { path: '/finance/dashboard', iconKey: 'pieChart', labelKey: 'nav.finance_dashboard', label: 'Dashboard' },
             { path: '/finance', iconKey: 'receipt', labelKey: 'nav.expenses', label: 'Expenses' },
@@ -169,19 +182,19 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.operations',
         label: 'Operations',
         children: [
-            { path: '/inventory/stock', iconKey: 'package', labelKey: 'nav.inventory_stock', label: 'Stock Management' },
-            { path: '/inventory/items', iconKey: 'list', labelKey: 'nav.inventory_items', label: 'Items & Products' },
-            { path: '/inventory/vendors', iconKey: 'users', labelKey: 'nav.inventory_vendors', label: 'Vendor Management' },
-            { path: '/inventory/orders', iconKey: 'fileText', labelKey: 'nav.purchase_orders', label: 'Purchase Orders' },
-            { path: '/transport', iconKey: 'truck', labelKey: 'nav.transport', label: 'Transport' },
-            { path: '/hostel/allocations', iconKey: 'home', labelKey: 'nav.hostel_allocations', label: 'Hostel Allocations' },
-            { path: '/hostel/mess', iconKey: 'utensils', labelKey: 'nav.mess_management', label: 'Mess Management' },
-            { path: '/hostel/complaints', iconKey: 'alertTriangle', labelKey: 'nav.hostel_complaints', label: 'Hostel Complaints' },
-            { path: '/library/books', iconKey: 'bookOpen', labelKey: 'nav.library_books', label: 'Library Books' },
-            { path: '/library/circulation', iconKey: 'clipboardCheck', labelKey: 'nav.library_circulation', label: 'Circulation' },
-            { path: '/library/members', iconKey: 'users', labelKey: 'nav.library_members', label: 'Library Members' },
-            { path: '/security/visitors', iconKey: 'userCheck', labelKey: 'nav.visitors', label: 'Visitor Log' },
-            { path: '/security/gate-passes', iconKey: 'ticket', labelKey: 'nav.gate_passes', label: 'Gate Passes' },
+            { path: '/inventory/stock', iconKey: 'package', labelKey: 'nav.inventory_stock', label: 'Stock Management', moduleKey: 'inventory' },
+            { path: '/inventory/items', iconKey: 'list', labelKey: 'nav.inventory_items', label: 'Items & Products', moduleKey: 'inventory' },
+            { path: '/inventory/vendors', iconKey: 'users', labelKey: 'nav.inventory_vendors', label: 'Vendor Management', moduleKey: 'inventory' },
+            { path: '/inventory/orders', iconKey: 'fileText', labelKey: 'nav.purchase_orders', label: 'Purchase Orders', moduleKey: 'inventory' },
+            { path: '/transport', iconKey: 'truck', labelKey: 'nav.transport', label: 'Transport', moduleKey: 'transport' },
+            { path: '/hostel/allocations', iconKey: 'home', labelKey: 'nav.hostel_allocations', label: 'Hostel Allocations', moduleKey: 'hostel' },
+            { path: '/hostel/mess', iconKey: 'utensils', labelKey: 'nav.mess_management', label: 'Mess Management', moduleKey: 'hostel' },
+            { path: '/hostel/complaints', iconKey: 'alertTriangle', labelKey: 'nav.hostel_complaints', label: 'Hostel Complaints', moduleKey: 'hostel' },
+            { path: '/library/books', iconKey: 'bookOpen', labelKey: 'nav.library_books', label: 'Library Books', moduleKey: 'library' },
+            { path: '/library/circulation', iconKey: 'clipboardCheck', labelKey: 'nav.library_circulation', label: 'Circulation', moduleKey: 'library' },
+            { path: '/library/members', iconKey: 'users', labelKey: 'nav.library_members', label: 'Library Members', moduleKey: 'library' },
+            { path: '/security/visitors', iconKey: 'userCheck', labelKey: 'nav.visitors', label: 'Visitor Log', moduleKey: 'security' },
+            { path: '/security/gate-passes', iconKey: 'ticket', labelKey: 'nav.gate_passes', label: 'Gate Passes', moduleKey: 'security' },
             { path: '/store', iconKey: 'shoppingCart', labelKey: 'nav.store', label: 'Store' },
         ]
     },
@@ -189,6 +202,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'briefcase',
         labelKey: 'nav.hr_payroll',
         label: 'HR & Payroll',
+        moduleKey: 'hr',
         children: [
             { path: '/hr/leaves', iconKey: 'leaf', labelKey: 'nav.leaves', label: 'Leaves' },
             { path: '/hr/leave-approval', iconKey: 'clipboardCheck', labelKey: 'nav.leave_approval', label: 'Leave Approval' },
@@ -202,27 +216,28 @@ const menuItems: MenuItem[] = [
         labelKey: 'nav.growth',
         label: 'Growth',
         children: [
-            { path: '/crm', iconKey: 'trendingUp', labelKey: 'nav.crm', label: 'Lead Board' },
-            { path: '/crm/conversion', iconKey: 'userPlus', labelKey: 'nav.lead_conversion', label: 'Lead Conversion' },
-            { path: '/crm/followups', iconKey: 'calendar', labelKey: 'nav.followups', label: 'Follow-ups' },
-            { path: '/alumni/directory', iconKey: 'users', labelKey: 'nav.alumni_directory', label: 'Alumni Directory' },
-            { path: '/alumni/jobs', iconKey: 'briefcase', labelKey: 'nav.alumni_jobs', label: 'Job Board' },
-            { path: '/alumni/events', iconKey: 'calendar', labelKey: 'nav.alumni_events', label: 'Events' },
-            { path: '/alumni/donations', iconKey: 'dollarSign', labelKey: 'nav.donations', label: 'Donations' },
-            { path: '/placement/drives', iconKey: 'building', labelKey: 'nav.placement_drives', label: 'Placement Drives' },
-            { path: '/placement/applications', iconKey: 'fileCheck', labelKey: 'nav.placement_applications', label: 'Applications' },
+            { path: '/crm', iconKey: 'trendingUp', labelKey: 'nav.crm', label: 'Lead Board', moduleKey: 'crm' },
+            { path: '/crm/conversion', iconKey: 'userPlus', labelKey: 'nav.lead_conversion', label: 'Lead Conversion', moduleKey: 'crm' },
+            { path: '/crm/followups', iconKey: 'calendar', labelKey: 'nav.followups', label: 'Follow-ups', moduleKey: 'crm' },
+            { path: '/alumni/directory', iconKey: 'users', labelKey: 'nav.alumni_directory', label: 'Alumni Directory', moduleKey: 'alumni' },
+            { path: '/alumni/jobs', iconKey: 'briefcase', labelKey: 'nav.alumni_jobs', label: 'Job Board', moduleKey: 'alumni' },
+            { path: '/alumni/events', iconKey: 'calendar', labelKey: 'nav.alumni_events', label: 'Events', moduleKey: 'alumni' },
+            { path: '/alumni/donations', iconKey: 'dollarSign', labelKey: 'nav.donations', label: 'Donations', moduleKey: 'alumni' },
+            { path: '/placement/drives', iconKey: 'building', labelKey: 'nav.placement_drives', label: 'Placement Drives', moduleKey: 'placement' },
+            { path: '/placement/applications', iconKey: 'fileCheck', labelKey: 'nav.placement_applications', label: 'Applications', moduleKey: 'placement' },
         ]
     },
     {
         iconKey: 'messageSquare',
         labelKey: 'nav.communication',
         label: 'Communication',
+        moduleKey: 'communication',
         children: [
             { path: '/communication', iconKey: 'bell', labelKey: 'nav.notices', label: 'Notices' },
             { path: '/communication/messages', iconKey: 'messageSquare', labelKey: 'nav.messages', label: 'Messages' },
-            { path: '/notifications/center', iconKey: 'bell', labelKey: 'nav.notifications', label: 'Notifications' },
-            { path: '/notifications/email', iconKey: 'messageSquare', labelKey: 'nav.email_campaigns', label: 'Email Campaigns' },
-            { path: '/notifications/sms', iconKey: 'messageSquare', labelKey: 'nav.sms_messaging', label: 'SMS Messaging' },
+            { path: '/notifications/center', iconKey: 'bell', labelKey: 'nav.notifications', label: 'Notifications', moduleKey: 'notifications' },
+            { path: '/notifications/email', iconKey: 'messageSquare', labelKey: 'nav.email_campaigns', label: 'Email Campaigns', moduleKey: 'notifications' },
+            { path: '/notifications/sms', iconKey: 'messageSquare', labelKey: 'nav.sms_messaging', label: 'SMS Messaging', moduleKey: 'notifications' },
         ]
     },
 
@@ -230,6 +245,7 @@ const menuItems: MenuItem[] = [
         iconKey: 'barChart',
         labelKey: 'nav.analytics',
         label: 'Analytics & Reports',
+        moduleKey: 'reports',
         children: [
             { path: '/analytics', iconKey: 'pieChart', labelKey: 'nav.platform_analytics', label: 'Platform Analytics' },
             { path: '/leaderboard', iconKey: 'award', labelKey: 'nav.leaderboard', label: 'Leaderboard' },
@@ -238,20 +254,12 @@ const menuItems: MenuItem[] = [
             { path: '/reports/scheduled', iconKey: 'calendar', labelKey: 'nav.scheduled_reports', label: 'Scheduled Reports' },
         ]
     },
-    { path: '/helpdesk', iconKey: 'helpCircle', labelKey: 'nav.helpdesk', label: 'Helpdesk' },
-    {
-        iconKey: 'building',
-        labelKey: 'nav.enterprise',
-        label: 'Enterprise',
-        children: [
-            { path: '/group/hq', iconKey: 'building', labelKey: 'nav.headquarters', label: 'Headquarters' },
-            { path: '/billing', iconKey: 'creditCard', labelKey: 'nav.billing', label: 'Billing & Plans' },
-        ]
-    },
+    { path: '/helpdesk', iconKey: 'helpCircle', labelKey: 'nav.helpdesk', label: 'Helpdesk', moduleKey: 'helpdesk' },
     {
         iconKey: 'settings',
         labelKey: 'nav.settings',
         label: 'Settings',
+        moduleKey: 'settings',
         children: [
             { path: '/settings', iconKey: 'settings', labelKey: 'nav.general_settings', label: 'General Settings' },
             { path: '/settings/system', iconKey: 'settingsGear', labelKey: 'nav.system_settings', label: 'System Settings' },
@@ -260,18 +268,19 @@ const menuItems: MenuItem[] = [
             { path: '/settings/roles', iconKey: 'shieldCheck', labelKey: 'nav.roles_permissions', label: 'Roles & Permissions' },
             { path: '/settings/permissions', iconKey: 'shield', labelKey: 'nav.permissions', label: 'Permissions Matrix' },
             { path: '/settings/data-management', iconKey: 'database', labelKey: 'nav.data_management', label: 'Data Management' },
-            { path: '/settings/data-migration', iconKey: 'fileSpreadsheet', labelKey: 'nav.data_migration', label: 'Data Migration' },
         ]
     },
     {
         iconKey: 'shieldCheck',
         labelKey: 'nav.admin',
         label: 'Admin',
+        moduleKey: 'admin',
         children: [
             { path: '/admin/dashboard-settings', iconKey: 'layoutTemplate', labelKey: 'nav.dashboard_settings', label: 'Dashboard Settings' },
+            { path: '/admin/parent-portal', iconKey: 'users', labelKey: 'nav.parent_portal', label: 'Parent Portal' },
             { path: '/admin/audit-logs', iconKey: 'fileText', labelKey: 'nav.audit_logs', label: 'Audit Logs' },
             { path: '/admin/recycle-bin', iconKey: 'folderOpen', labelKey: 'nav.recycle_bin', label: 'Recycle Bin' },
-            { path: '/users/manage', iconKey: 'users', labelKey: 'nav.user_management', label: 'User Management' },
+            { path: '/users/manage', iconKey: 'users', labelKey: 'nav.user_management', label: 'User Management', moduleKey: 'users' },
         ]
     },
 ];
@@ -279,9 +288,41 @@ const menuItems: MenuItem[] = [
 const Sidebar: React.FC = () => {
     const location = useLocation();
     const { t } = useTranslation();
-    const { branding } = useTenantBranding();
+    const { branding, isModuleEnabled } = useTenantBranding();
     const { getIconComponent } = useIconSet();
+    const { user } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+
+    // Filter menu items based on enabled modules
+    const filteredMenuItems = useMemo(() => {
+        return menuItems.filter(item => {
+            // Filter out empty parent menus
+            if (item.children && item.children.length === 0) {
+                return false;
+            }
+            // Check if the menu item's module is enabled
+            if (item.moduleKey && !isModuleEnabled(item.moduleKey)) {
+                return false;
+            }
+            return true;
+        }).map(item => {
+            // Filter children based on their module keys
+            if (item.children) {
+                const filteredChildren = item.children.filter(child => {
+                    if (child.moduleKey && !isModuleEnabled(child.moduleKey)) {
+                        return false;
+                    }
+                    return true;
+                });
+                // Only include parent if it has visible children or no children defined
+                if (filteredChildren.length === 0) {
+                    return null;
+                }
+                return { ...item, children: filteredChildren };
+            }
+            return item;
+        }).filter(Boolean) as MenuItem[];
+    }, [isModuleEnabled]);
 
     const toggleMenu = (labelKey: string) => {
         setExpandedMenus(prev =>
@@ -305,7 +346,7 @@ const Sidebar: React.FC = () => {
     const LogoIcon = getIconComponent('graduationCap');
 
     return (
-        <aside className="sidebar" style={branding?.sidebar_color ? { backgroundColor: branding.sidebar_color } : {}}>
+        <aside className="sidebar">
             <div className="sidebar-header">
                 <h1 className="sidebar-logo">
                     {branding?.logo_url ? (
@@ -322,7 +363,7 @@ const Sidebar: React.FC = () => {
             </div>
 
             <nav className="sidebar-nav">
-                {menuItems.map((item) => {
+                {filteredMenuItems.map((item) => {
                     const Icon = getIconComponent(item.iconKey);
                     const hasChildren = item.children && item.children.length > 0;
                     const isExpanded = isMenuExpanded(item.labelKey);

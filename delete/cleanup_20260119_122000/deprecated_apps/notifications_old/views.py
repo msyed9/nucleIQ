@@ -115,10 +115,72 @@ class EmailCampaignViewSet(viewsets.ModelViewSet):
         # Update status
         campaign.status = 'SENDING'
         campaign.save()
-        
-        # TODO: Implement async task to send emails
-        # This would typically be handled by Celery
-        
+
+        # Minimal async sender using a background thread for deprecated app
+        import threading
+
+        def _send_campaign_background(campaign_id):
+            try:
+                campaign_obj = EmailCampaign.objects.get(id=campaign_id)
+                email_service = EmailService()
+                total = 0
+                sent = 0
+
+                recipients = list(campaign_obj.recipient_emails or [])
+                # If no manual list provided, we don't resolve recipient types here (deprecated)
+                campaign_obj.total_recipients = len(recipients)
+                campaign_obj.save(update_fields=['total_recipients'])
+
+                for email in recipients:
+                    total += 1
+                    try:
+                        result = email_service.send_email(
+                            to_email=email,
+                            subject=campaign_obj.subject,
+                            body=campaign_obj.body,
+                        )
+
+                        log = EmailLog.objects.create(
+                            tenant=campaign_obj.tenant,
+                            campaign=campaign_obj,
+                            recipient_email=email,
+                            subject=campaign_obj.subject,
+                            body=campaign_obj.body,
+                            status='SENT' if result.get('success') else 'FAILED',
+                            sent_at=timezone.now() if result.get('success') else None,
+                            error_message=result.get('error', '')
+                        )
+
+                        if result.get('success'):
+                            sent += 1
+                            campaign_obj.sent_count = campaign_obj.sent_count + 1
+                            campaign_obj.delivered_count = campaign_obj.delivered_count + 1
+                        else:
+                            campaign_obj.failed_count = campaign_obj.failed_count + 1
+
+                        campaign_obj.save(update_fields=['sent_count', 'delivered_count', 'failed_count'])
+
+                    except Exception as e:
+                        EmailLog.objects.create(
+                            tenant=campaign_obj.tenant,
+                            campaign=campaign_obj,
+                            recipient_email=email,
+                            subject=campaign_obj.subject,
+                            body=campaign_obj.body,
+                            status='FAILED',
+                            error_message=str(e)
+                        )
+
+                campaign_obj.status = 'SENT' if sent == total else 'SENT' if sent > 0 else 'FAILED'
+                campaign_obj.sent_at = timezone.now()
+                campaign_obj.save(update_fields=['status', 'sent_at'])
+            except Exception:
+                import logging
+                logging.exception('Failed to send email campaign in background')
+
+        thread = threading.Thread(target=_send_campaign_background, args=(campaign.id,), daemon=True)
+        thread.start()
+
         return Response({'status': 'campaign queued for sending'})
         
     @action(detail=True, methods=['post'])

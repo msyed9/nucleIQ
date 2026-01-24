@@ -612,11 +612,13 @@ class WidgetDataService:
         stats = {}
         
         # Student count
-        stats['total_students'] = StudentEnrollment.objects.filter(
+        student_qs = StudentEnrollment.objects.filter(
             tenant=self.tenant,
-            academic_year=current_year,
             status='ACTIVE'
-        ).count()
+        )
+        if current_year:
+            student_qs = student_qs.filter(academic_year=current_year)
+        stats['total_students'] = student_qs.count()
         
         # Staff count
         stats['total_staff'] = Staff.objects.filter(
@@ -651,19 +653,23 @@ class WidgetDataService:
         
         current_year = self._get_current_academic_year()
         
-        count = StudentEnrollment.objects.filter(
+        count_qs = StudentEnrollment.objects.filter(
             tenant=self.tenant,
-            academic_year=current_year,
             status='ACTIVE'
-        ).count()
+        )
+        if current_year:
+            count_qs = count_qs.filter(academic_year=current_year)
+        count = count_qs.count()
         
         # Get last month's count for trend
         last_month = timezone.now().date().replace(day=1) - timedelta(days=1)
-        last_month_count = StudentEnrollment.objects.filter(
+        last_month_qs = StudentEnrollment.objects.filter(
             tenant=self.tenant,
-            academic_year=current_year,
             enrollment_date__lte=last_month
-        ).count()
+        )
+        if current_year:
+            last_month_qs = last_month_qs.filter(academic_year=current_year)
+        last_month_count = last_month_qs.count()
         
         change = count - last_month_count
         
@@ -735,6 +741,7 @@ class WidgetDataService:
         """Get attendance heatmap data."""
         from attendance.models import AttendanceRecord
         from tenants.models import Section
+        from students.models import StudentEnrollment
         
         today = timezone.now().date()
         start_date = today - timedelta(days=30)
@@ -752,12 +759,24 @@ class WidgetDataService:
                 'class': str(section.grade_level) if section.grade_level else 'N/A',
                 'data': []
             }
+
+            enrollment_qs = StudentEnrollment.objects.filter(
+                tenant=self.tenant,
+                section=section,
+                status='ACTIVE'
+            )
+            current_year = self._get_current_academic_year()
+            if current_year:
+                enrollment_qs = enrollment_qs.filter(academic_year=current_year)
+
+            student_ids = enrollment_qs.values_list('student_id', flat=True)
             
             for i in range(30):
                 date = start_date + timedelta(days=i)
                 attendance = AttendanceRecord.objects.filter(
                     tenant=self.tenant,
-                    section=section,
+                    record_type='STUDENT',
+                    student_id__in=student_ids,
                     date=date
                 )
                 total = attendance.count()
@@ -1068,29 +1087,30 @@ class WidgetDataService:
     
     def _get_current_academic_year(self):
         """Get current academic year."""
-        from academics.models import AcademicYear
+        from tenants.models import AcademicYear
         
         try:
             return AcademicYear.objects.get(
                 tenant=self.tenant,
-                is_current=True
+                is_active=True
             )
         except AcademicYear.DoesNotExist:
-            return None
+            return AcademicYear.objects.filter(
+                tenant=self.tenant
+            ).order_by('-start_date').first()
     
     def _calculate_pending_fees(self):
         """Calculate total pending fees."""
-        from fees.models import StudentFee, FeePayment
-        
-        total_due = StudentFee.objects.filter(
+        from fees.models import FeeInvoice
+
+        total_due = FeeInvoice.objects.filter(
             tenant=self.tenant
         ).aggregate(total=Sum('total_amount'))['total'] or 0
-        
-        total_paid = FeePayment.objects.filter(
-            tenant=self.tenant,
-            status='COMPLETED'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
+
+        total_paid = FeeInvoice.objects.filter(
+            tenant=self.tenant
+        ).aggregate(total=Sum('paid_amount'))['total'] or 0
+
         return float(total_due - total_paid)
     
     # Teacher widget methods
@@ -1263,24 +1283,22 @@ class WidgetDataService:
     # Accountant widget methods
     def _get_fee_overview(self, config):
         """Get fee overview for accountant."""
-        from fees.models import StudentFee, FeePayment
+        from fees.models import FeeInvoice, FeeTransaction
         
         today = timezone.now().date()
         month_start = today.replace(day=1)
         
-        total_due = StudentFee.objects.filter(
+        total_due = FeeInvoice.objects.filter(
             tenant=self.tenant
         ).aggregate(total=Sum('total_amount'))['total'] or 0
-        
-        collected = FeePayment.objects.filter(
+
+        collected = FeeInvoice.objects.filter(
+            tenant=self.tenant
+        ).aggregate(total=Sum('paid_amount'))['total'] or 0
+
+        collected_this_month = FeeTransaction.objects.filter(
             tenant=self.tenant,
-            status='COMPLETED'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        collected_this_month = FeePayment.objects.filter(
-            tenant=self.tenant,
-            status='COMPLETED',
-            payment_date__gte=month_start
+            transaction_date__date__gte=month_start
         ).aggregate(total=Sum('amount'))['total'] or 0
         
         return {

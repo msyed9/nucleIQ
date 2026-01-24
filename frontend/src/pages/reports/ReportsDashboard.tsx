@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import {
     FileText,
     Download,
@@ -99,8 +100,25 @@ const ReportsDashboard: React.FC = () => {
     );
 
     const handleGenerateReport = (reportId: string) => {
-        console.log('Generating report:', reportId);
-        // TODO: Implement report generation
+        // Trigger server-side report generation and navigate to result if available
+        (async () => {
+            try {
+                const resp = await api.post('/reports/generate/', { report_id: reportId });
+                const payload = resp.data || {};
+                // If server returns a report URL or job id, navigate to viewer
+                if (payload.report_url) {
+                    window.open(payload.report_url, '_blank');
+                } else if (payload.job_id) {
+                    navigate(`/reports/jobs/${payload.job_id}`);
+                } else {
+                    // Fallback: simple notification
+                    alert('Report generation started. Check Reports > Jobs for status.');
+                }
+            } catch (err: any) {
+                console.error('Report generation failed', err);
+                alert(err?.response?.data?.error || 'Failed to generate report');
+            }
+        })();
     };
 
     return (

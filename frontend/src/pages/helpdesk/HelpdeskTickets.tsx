@@ -11,7 +11,7 @@ const HelpdeskTickets: React.FC = () => {
   const [total, setTotal] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
 
-  useEffect(() => { fetchTickets(); /* eslint-disable-next-line */ }, [page, search]);
+  useEffect(() => { fetchTickets(); }, [page, search]);
 
   const fetchTickets = async () => {
     setLoading(true); setError(null);

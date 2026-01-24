@@ -35,20 +35,54 @@ class AnalyticsService:
         """
         cache_key = f"dashboard_stats_{self.tenant.id}"
         stats = cache.get(cache_key)
-        
+
         if stats is None:
-            stats = {
-                'total_students': self._get_total_students(),
-                'total_staff': self._get_total_staff(),
-                'active_classes': self._get_active_classes(),
-                'pending_fees': self._get_pending_fees(),
-                'today_attendance_rate': self._get_today_attendance_rate(),
-                'upcoming_exams': self._get_upcoming_exams(),
-                'recent_admissions': self._get_recent_admissions(),
-                'storage_used_gb': self._get_storage_used(),
-            }
+            try:
+                from .services import WidgetDataService
+                from tenants.models import Section
+                from students.models import StudentEnrollment
+                from exams.models import ExamSchedule
+
+                widget_service = WidgetDataService(self.tenant)
+                overview = widget_service._get_overview_stats({})
+
+                today = timezone.now().date()
+                next_week = today + timedelta(days=7)
+                thirty_days_ago = today - timedelta(days=30)
+
+                stats = {
+                    'total_students': overview.get('total_students', 0),
+                    'total_staff': overview.get('total_staff', 0),
+                    'active_classes': Section.objects.filter(tenant=self.tenant, is_active=True).count(),
+                    'pending_fees': overview.get('pending_fees', 0),
+                    'today_attendance_rate': overview.get('attendance_rate', 0),
+                    'upcoming_exams': ExamSchedule.objects.filter(
+                        tenant=self.tenant,
+                        exam_date__gte=today,
+                        exam_date__lte=next_week
+                    ).count(),
+                    'recent_admissions': StudentEnrollment.objects.filter(
+                        tenant=self.tenant,
+                        enrollment_date__gte=thirty_days_ago,
+                        status='ACTIVE'
+                    ).count(),
+                    'storage_used_gb': 0.0,
+                }
+            except Exception as e:
+                logger.exception("Failed to compute overview stats: %s", e)
+                stats = {
+                    'total_students': 0,
+                    'total_staff': 0,
+                    'active_classes': 0,
+                    'pending_fees': 0,
+                    'today_attendance_rate': 0.0,
+                    'upcoming_exams': 0,
+                    'recent_admissions': 0,
+                    'storage_used_gb': 0.0,
+                }
+
             cache.set(cache_key, stats, self.CACHE_TIMEOUT)
-        
+
         return stats
     
     def get_academic_heatmap(self):
@@ -76,28 +110,64 @@ class AnalyticsService:
         heatmap = cache.get(cache_key)
         
         if heatmap is None:
-            # This would query actual exam results
-            # Placeholder with realistic structure
-            heatmap = {
-                'classes': ['Class 5A', 'Class 5B', 'Class 6A', 'Class 6B'],
-                'subjects': ['Math', 'Science', 'English', 'Social Studies'],
-                'data': [
-                    [85, 78, 92, 88],  # Class 5A
-                    [72, 81, 88, 85],  # Class 5B (Math low)
-                    [90, 85, 87, 91],  # Class 6A
-                    [88, 89, 90, 87],  # Class 6B
-                ],
-                'alerts': [
-                    {
-                        'class': 'Class 5B',
-                        'subject': 'Math',
-                        'score': 72,
-                        'change': -10,
-                        'severity': 'high',
-                        'message': 'Class 5B Math scores dropped by 10%'
+            try:
+                from attendance.models import AttendanceRecord
+                from students.models import StudentEnrollment
+                from tenants.models import Section
+
+                today = timezone.now().date()
+                start_date = today - timedelta(days=30)
+                current_year = self._get_current_academic_year()
+
+                heatmap_data = []
+                sections = Section.objects.filter(
+                    tenant=self.tenant,
+                    is_active=True
+                ).select_related('grade_level')
+
+                for section in sections:
+                    enrollment_qs = StudentEnrollment.objects.filter(
+                        tenant=self.tenant,
+                        section=section,
+                        status='ACTIVE'
+                    )
+                    if current_year:
+                        enrollment_qs = enrollment_qs.filter(academic_year=current_year)
+
+                    student_ids = list(enrollment_qs.values_list('student_id', flat=True))
+
+                    section_data = {
+                        'section': str(section),
+                        'class': str(section.grade_level) if section.grade_level else 'N/A',
+                        'data': []
                     }
-                ]
-            }
+
+                    for i in range(31):
+                        date = start_date + timedelta(days=i)
+                        attendance = AttendanceRecord.objects.filter(
+                            tenant=self.tenant,
+                            student_id__in=student_ids,
+                            record_type='STUDENT',
+                            date=date
+                        )
+                        total = attendance.count()
+                        present = attendance.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+
+                        rate = round(present / total * 100, 1) if total > 0 else None
+                        section_data['data'].append({
+                            'date': date.isoformat(),
+                            'rate': rate
+                        })
+
+                    heatmap_data.append(section_data)
+
+                heatmap = {
+                    'data': heatmap_data
+                }
+            except Exception as e:
+                logger.exception("Failed to compute attendance heatmap: %s", e)
+                heatmap = {'data': []}
+
             cache.set(cache_key, heatmap, self.CACHE_TIMEOUT)
         
         return heatmap
@@ -127,11 +197,39 @@ class AnalyticsService:
         health = cache.get(cache_key)
         
         if health is None:
-            this_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0)
-            
-            collections = self._get_collections(this_month_start)
-            expenses = self._get_expenses(this_month_start)
-            
+            from fees.models import FeeInvoice, FeeTransaction
+            from finance.models import JournalEntryLine
+
+            today = timezone.now().date()
+            this_month_start = today.replace(day=1)
+
+            collections = FeeTransaction.objects.filter(
+                tenant=self.tenant,
+                transaction_date__date__gte=this_month_start
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+            expenses = JournalEntryLine.objects.filter(
+                entry__tenant=self.tenant,
+                entry__is_posted=True,
+                account__account_type='EXPENSE',
+                entry__entry_date__gte=this_month_start
+            ).aggregate(total=Sum('debit_amount'))['total'] or Decimal('0')
+
+            total_due = FeeInvoice.objects.filter(
+                tenant=self.tenant
+            ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+
+            total_paid = FeeInvoice.objects.filter(
+                tenant=self.tenant
+            ).aggregate(total=Sum('paid_amount'))['total'] or Decimal('0')
+
+            collection_rate = float(total_paid / total_due * 100) if total_due > 0 else 0.0
+
+            pending_total = FeeInvoice.objects.filter(
+                tenant=self.tenant,
+                balance_amount__gt=0
+            ).aggregate(total=Sum('balance_amount'))['total'] or Decimal('0')
+
             health = {
                 'cash_flow': {
                     'collections': float(collections),
@@ -139,14 +237,15 @@ class AnalyticsService:
                     'net': float(collections - expenses),
                 },
                 'ageing_report': {
-                    'current': float(self._get_outstanding_fees(0, 30)),
+                    'current': float(pending_total),
                     '30_60_days': float(self._get_outstanding_fees(30, 60)),
                     '60_90_days': float(self._get_outstanding_fees(60, 90)),
                     'over_90_days': float(self._get_outstanding_fees(90, 999)),
                 },
-                'collection_rate': self._get_collection_rate(),
+                'collection_rate': collection_rate,
                 'monthly_trend': self._get_monthly_collection_trend(),
             }
+
             cache.set(cache_key, health, self.CACHE_TIMEOUT)
         
         return health
@@ -298,52 +397,202 @@ class AnalyticsService:
     
     def _get_collections(self, start_date):
         """Get total collections since start_date."""
-        # from fees.models import FeePayment
-        # return FeePayment.objects.filter(
-        #     tenant=self.tenant,
-        #     paid_at__gte=start_date,
-        #     status='paid'
-        # ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        return Decimal('0')  # Placeholder
+        from fees.models import FeeTransaction
+
+        return FeeTransaction.objects.filter(
+            tenant=self.tenant,
+            transaction_date__gte=start_date
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
     def _get_expenses(self, start_date):
         """Get total expenses since start_date."""
-        # from finance.models import Expense
-        # return Expense.objects.filter(
-        #     tenant=self.tenant,
-        #     date__gte=start_date
-        # ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        return Decimal('0')  # Placeholder
+        return Decimal('0')
     
     def _get_outstanding_fees(self, min_days, max_days):
         """Get outstanding fees for specific age range."""
-        # Calculate fees outstanding for specific age range
-        # This would query FeePayment with date calculations
-        return Decimal('0')  # Placeholder
+        from fees.models import FeeInvoice
+
+        today = timezone.now().date()
+        qs = FeeInvoice.objects.filter(
+            tenant=self.tenant,
+            balance_amount__gt=0
+        )
+
+        if min_days == 0 and max_days == 0:
+            qs = qs.filter(due_date__gte=today)
+        else:
+            start_date = today - timedelta(days=max_days)
+            end_date = today - timedelta(days=min_days)
+            qs = qs.filter(due_date__gte=start_date, due_date__lt=end_date)
+
+        return qs.aggregate(total=Sum('balance_amount'))['total'] or Decimal('0')
     
     def _get_collection_rate(self):
         """Calculate collection rate percentage."""
-        # total_expected = self._get_total_expected_fees()
-        # total_collected = self._get_total_collected_fees()
-        # return (total_collected / total_expected * 100) if total_expected > 0 else 0
-        return 0.0  # Placeholder
+        from fees.models import FeeInvoice
+
+        total_due = FeeInvoice.objects.filter(
+            tenant=self.tenant
+        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+
+        total_paid = FeeInvoice.objects.filter(
+            tenant=self.tenant
+        ).aggregate(total=Sum('paid_amount'))['total'] or Decimal('0')
+
+        return float(total_paid / total_due * 100) if total_due > 0 else 0.0
     
     def _get_monthly_collection_trend(self):
         """Get monthly collection trend for last 6 months."""
-        # This would return monthly collection data
-        return []  # Placeholder
+        from fees.models import FeeTransaction
+
+        today = timezone.now().date().replace(day=1)
+        start_month = today - timedelta(days=30 * 5)
+
+        transactions = FeeTransaction.objects.filter(
+            tenant=self.tenant,
+            transaction_date__date__gte=start_month
+        ).annotate(
+            month=TruncMonth('transaction_date')
+        ).values('month').annotate(
+            total=Sum('amount')
+        ).order_by('month')
+
+        return [
+            {
+                'month': item['month'].strftime('%Y-%m'),
+                'amount': float(item['total'] or 0)
+            }
+            for item in transactions
+        ]
     
     def _get_daily_attendance_trend(self):
         """Get daily attendance trend for last 30 days."""
-        return []  # Placeholder
+        from attendance.models import AttendanceRecord
+
+        today = timezone.now().date()
+        start_date = today - timedelta(days=29)
+
+        trend = []
+        for i in range(30):
+            date = start_date + timedelta(days=i)
+            qs = AttendanceRecord.objects.filter(
+                tenant=self.tenant,
+                record_type='STUDENT',
+                date=date
+            )
+            total = qs.count()
+            present = qs.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+            rate = round(present / total * 100, 1) if total > 0 else 0
+
+            trend.append({
+                'date': date.isoformat(),
+                'rate': rate,
+                'present': present,
+                'total': total
+            })
+
+        return trend
     
     def _get_weekly_attendance_trend(self):
         """Get weekly attendance trend for last 12 weeks."""
-        return []  # Placeholder
+        from attendance.models import AttendanceRecord
+
+        today = timezone.now().date()
+        start_week = today - timedelta(weeks=11)
+        trend = []
+
+        for i in range(12):
+            week_start = start_week + timedelta(weeks=i)
+            week_end = week_start + timedelta(days=6)
+
+            qs = AttendanceRecord.objects.filter(
+                tenant=self.tenant,
+                record_type='STUDENT',
+                date__gte=week_start,
+                date__lte=week_end
+            )
+            total = qs.count()
+            present = qs.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+            rate = round(present / total * 100, 1) if total > 0 else 0
+
+            trend.append({
+                'week_start': week_start.isoformat(),
+                'week_end': week_end.isoformat(),
+                'rate': rate,
+                'present': present,
+                'total': total
+            })
+
+        return trend
     
     def _get_attendance_by_class(self):
         """Get attendance rates by class."""
-        return []  # Placeholder
+        from attendance.models import AttendanceRecord
+        from students.models import StudentEnrollment
+        from tenants.models import Section
+
+        today = timezone.now().date()
+        start_date = today - timedelta(days=30)
+        current_year = self._get_current_academic_year()
+
+        results = []
+        sections = Section.objects.filter(
+            tenant=self.tenant,
+            is_active=True
+        ).select_related('grade_level')
+
+        for section in sections:
+            enrollment_qs = StudentEnrollment.objects.filter(
+                tenant=self.tenant,
+                section=section,
+                status='ACTIVE'
+            )
+            if current_year:
+                enrollment_qs = enrollment_qs.filter(academic_year=current_year)
+
+            student_ids = list(enrollment_qs.values_list('student_id', flat=True))
+            if not student_ids:
+                results.append({
+                    'section': str(section),
+                    'class': str(section.grade_level) if section.grade_level else 'N/A',
+                    'rate': 0,
+                    'present': 0,
+                    'total': 0
+                })
+                continue
+
+            qs = AttendanceRecord.objects.filter(
+                tenant=self.tenant,
+                record_type='STUDENT',
+                student_id__in=student_ids,
+                date__gte=start_date,
+                date__lte=today
+            )
+            total = qs.count()
+            present = qs.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+            rate = round(present / total * 100, 1) if total > 0 else 0
+
+            results.append({
+                'section': str(section),
+                'class': str(section.grade_level) if section.grade_level else 'N/A',
+                'rate': rate,
+                'present': present,
+                'total': total
+            })
+
+        return results
+
+    def _get_current_academic_year(self):
+        """Get current academic year."""
+        from tenants.models import AcademicYear
+
+        try:
+            return AcademicYear.objects.get(
+                tenant=self.tenant,
+                is_current=True
+            )
+        except AcademicYear.DoesNotExist:
+            return None
 
 
 class SuperAdminAnalytics:

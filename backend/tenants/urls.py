@@ -10,6 +10,7 @@ from .views import (
     TenantBrandingViewSet
 )
 from .group_views import HeadquartersViewSet
+from .session_timeout_views import TenantSessionTimeoutViewSet
 
 router = DefaultRouter()
 router.register(r'years', AcademicYearViewSet, basename='academic-year')
@@ -19,6 +20,7 @@ router.register(r'sections', SectionViewSet, basename='section')
 router.register(r'holidays', HolidayViewSet, basename='holiday')
 router.register(r'settings', TenantSettingsViewSet, basename='tenant-settings')
 router.register(r'branding', TenantBrandingViewSet, basename='tenant-branding')
+router.register(r'session-timeout', TenantSessionTimeoutViewSet, basename='session-timeout')
 router.register(r'hq', HeadquartersViewSet, basename='headquarters')
 
 urlpatterns = [

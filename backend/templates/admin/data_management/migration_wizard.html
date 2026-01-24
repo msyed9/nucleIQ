@@ -1,0 +1,731 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Data Migration Wizard | {{ site_header }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .wizard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        color: white;
+    }
+
+    .wizard-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .wizard-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .quick-action-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .quick-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    .wizard-form {
+        background: var(--card-bg, #ffffff);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .step-card {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .step-card:last-child {
+        border-bottom: none;
+    }
+
+    .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .step-header h3 {
+        margin: 0;
+        font-size: 1.3rem;
+        color: var(--text-primary, #1f2937);
+    }
+
+    .step-description {
+        color: var(--text-secondary, #6b7280);
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    /* Tenant Selection */
+    .tenant-select {
+        width: 100%;
+        max-width: 400px;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color, #e5e7eb);
+        border-radius: 8px;
+        font-size: 1rem;
+        background: var(--input-bg, #ffffff);
+        color: var(--text-primary, #1f2937);
+        transition: border-color 0.2s;
+    }
+
+    .tenant-select:focus {
+        outline: none;
+        border-color: #1e40af;
+    }
+
+    /* Module Grid */
+    .module-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    .module-card {
+        border: 2px solid var(--border-color, #e5e7eb);
+        border-radius: 12px;
+        padding: 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--card-bg, #ffffff);
+        text-align: left;
+    }
+
+    .module-card:hover {
+        border-color: #1e40af;
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1);
+    }
+
+    .module-card.selected {
+        border-color: #1e40af;
+        background: linear-gradient(135deg, rgba(30, 64, 175, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    }
+
+    .module-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .module-icon {
+        font-size: 1.5rem;
+    }
+
+    .module-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-primary, #1f2937);
+    }
+
+    .module-description {
+        color: var(--text-secondary, #6b7280);
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .module-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.8rem;
+    }
+
+    .module-meta span {
+        background: var(--badge-bg, #f3f4f6);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    .module-meta .historical {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    /* Year Range Options */
+    .year-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .year-option {
+        border: 2px solid var(--border-color, #e5e7eb);
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--card-bg, #ffffff);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .year-option:hover {
+        border-color: #059669;
+    }
+
+    .year-option.selected {
+        border-color: #059669;
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .year-option input {
+        display: none;
+    }
+
+    /* File Upload */
+    .upload-zone {
+        border: 2px dashed var(--border-color, #e5e7eb);
+        border-radius: 12px;
+        padding: 3rem 2rem;
+        text-align: center;
+        transition: all 0.2s;
+        cursor: pointer;
+        background: var(--input-bg, #fafafa);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+        border-color: #1e40af;
+        background: rgba(30, 64, 175, 0.05);
+    }
+
+    .upload-zone input[type="file"] {
+        display: none;
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: var(--text-primary, #1f2937);
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+        color: var(--text-secondary, #6b7280);
+        font-size: 0.875rem;
+    }
+
+    .selected-file {
+        background: #dcfce7;
+        border: 2px solid #059669;
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1rem;
+    }
+
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .file-icon {
+        font-size: 1.5rem;
+    }
+
+    .remove-file-btn {
+        background: #fee2e2;
+        color: #dc2626;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    /* Actions */
+    .wizard-actions {
+        padding: 2rem;
+        background: var(--card-bg-secondary, #f9fafb);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-secondary {
+        background: var(--btn-secondary-bg, #f3f4f6);
+        color: var(--text-primary, #1f2937);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .btn-secondary:hover {
+        background: var(--btn-secondary-hover, #e5e7eb);
+    }
+
+    .btn-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #047857;
+    }
+
+    /* Alerts */
+    .alert {
+        padding: 1rem 1.25rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .alert-info {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+
+    .alert-success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+
+    .alert-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+    /* Template Download Buttons */
+    .template-download-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .template-btn {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .template-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    }
+
+    .template-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .wizard-form {
+            background: #1f2937;
+        }
+
+        .step-card {
+            border-color: #374151;
+        }
+
+        .tenant-select,
+        .module-card,
+        .year-option,
+        .upload-zone {
+            background: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .module-name,
+        .step-header h3 {
+            color: #f3f4f6;
+        }
+
+        .module-description,
+        .step-description {
+            color: #9ca3af;
+        }
+
+        .wizard-actions {
+            background: #111827;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <!-- Header -->
+    <div class="wizard-header">
+        <h1>📥 Data Migration Wizard</h1>
+        <p>Easily import data from other school ERP systems with our step-by-step wizard</p>
+
+        <div class="quick-actions">
+            <a href="{% url 'nucleiq_admin:template_library' %}" class="quick-action-btn">
+                📋 Template Library
+            </a>
+            <a href="{% url 'nucleiq_admin:import_history' %}" class="quick-action-btn">
+                📜 Import History
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Wizard Form -->
+    <form method="post" action="{% url 'nucleiq_admin:upload_preview' %}" enctype="multipart/form-data"
+        class="wizard-form" id="migrationForm">
+        {% csrf_token %}
+
+        <!-- Step 1: Select Tenant -->
+        <div class="step-card">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <h3>Select School / Tenant</h3>
+            </div>
+            <p class="step-description">Choose the school where you want to import data</p>
+
+            <select name="tenant" id="tenantSelect" class="tenant-select" required>
+                <option value="">-- Select School --</option>
+                {% for tenant in tenants %}
+                <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Step 2: Select Module -->
+        <div class="step-card">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <h3>Select Data Type</h3>
+            </div>
+            <p class="step-description">What type of data do you want to import?</p>
+
+            <div class="module-grid">
+                {% for module in modules %}
+                <label class="module-card" data-module="{{ module.name }}">
+                    <input type="radio" name="module" value="{{ module.name }}" required>
+                    <div class="module-card-header">
+                        <span class="module-icon">{{ module.icon }}</span>
+                        <span class="module-name">{{ module.display_name }}</span>
+                    </div>
+                    <p class="module-description">{{ module.description }}</p>
+                    <div class="module-meta">
+                        <span>{{ module.required_fields }} required fields</span>
+                        {% if module.supports_historical %}
+                        <span class="historical">📅 Historical data</span>
+                        {% endif %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Step 3: Select Year Range -->
+        <div class="step-card" id="yearRangeStep">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <h3>Select Data Range</h3>
+            </div>
+            <p class="step-description">How many years of historical data are you importing?</p>
+
+            <div class="year-options">
+                {% for value, label in year_options %}
+                <label class="year-option" data-years="{{ value }}">
+                    <input type="radio" name="year_range" value="{{ value }}" {% if value == "1" %}checked{% endif %}>
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="template-download-section" id="templateDownload" style="display: none;">
+                <button type="button" class="template-btn" id="downloadTemplateBtn" disabled>
+                    📥 Download Template (Excel)
+                </button>
+                <button type="button" class="template-btn" id="downloadTemplateCsvBtn" disabled
+                    style="background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);">
+                    📥 Download Template (CSV)
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Upload File -->
+        <div class="step-card">
+            <div class="step-header">
+                <span class="step-number">4</span>
+                <h3>Upload Your Data</h3>
+            </div>
+            <p class="step-description">Upload your filled template or data file (Excel or CSV)</p>
+
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" name="data_file" id="dataFile" accept=".csv,.xlsx,.xls" required>
+                <div class="upload-icon">📁</div>
+                <p class="upload-text">Drag and drop your file here, or click to browse</p>
+                <p class="upload-hint">Supported formats: CSV, XLSX, XLS (Max 10MB)</p>
+            </div>
+
+            <div class="selected-file" id="selectedFile" style="display: none;">
+                <div class="file-info">
+                    <span class="file-icon">📄</span>
+                    <span id="fileName"></span>
+                </div>
+                <button type="button" class="remove-file-btn" id="removeFile">Remove</button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="wizard-actions">
+            <div class="alert alert-info" style="margin: 0;">
+                💡 <strong>Tip:</strong> Download the template first, fill in your data, then upload it here.
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                ▶️ Preview & Validate
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tenantSelect = document.getElementById('tenantSelect');
+        const moduleCards = document.querySelectorAll('.module-card');
+        const yearOptions = document.querySelectorAll('.year-option');
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('dataFile');
+        const selectedFile = document.getElementById('selectedFile');
+        const fileNameSpan = document.getElementById('fileName');
+        const removeFileBtn = document.getElementById('removeFile');
+        const submitBtn = document.getElementById('submitBtn');
+        const templateDownload = document.getElementById('templateDownload');
+        const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
+        const downloadTemplateCsvBtn = document.getElementById('downloadTemplateCsvBtn');
+
+        let selectedModule = null;
+        let selectedYears = '1';
+
+        // Module card selection
+        moduleCards.forEach(card => {
+            card.addEventListener('click', function () {
+                moduleCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input').checked = true;
+                selectedModule = this.dataset.module;
+                updateTemplateButtons();
+                checkFormValidity();
+            });
+        });
+
+        // Year option selection
+        yearOptions.forEach(option => {
+            option.addEventListener('click', function () {
+                yearOptions.forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input').checked = true;
+                selectedYears = this.dataset.years;
+                updateTemplateButtons();
+            });
+        });
+
+        // Initialize first year option
+        yearOptions[0].classList.add('selected');
+
+        function updateTemplateButtons() {
+            if (selectedModule) {
+                templateDownload.style.display = 'flex';
+                downloadTemplateBtn.disabled = false;
+                downloadTemplateCsvBtn.disabled = false;
+            } else {
+                templateDownload.style.display = 'none';
+                downloadTemplateBtn.disabled = true;
+                downloadTemplateCsvBtn.disabled = true;
+            }
+        }
+
+        // Template download
+        downloadTemplateBtn.addEventListener('click', function () {
+            if (selectedModule) {
+                window.location.href = `{% url 'nucleiq_admin:download_template' %}?module=${selectedModule}&years=${selectedYears}&format=xlsx`;
+            }
+        });
+
+        downloadTemplateCsvBtn.addEventListener('click', function () {
+            if (selectedModule) {
+                window.location.href = `{% url 'nucleiq_admin:download_template' %}?module=${selectedModule}&years=${selectedYears}&format=csv`;
+            }
+        });
+
+        // File upload handling
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            const validTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+            if (!validExtensions.includes(ext)) {
+                alert('Invalid file type. Please upload CSV or Excel file.');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File too large. Maximum size is 10MB.');
+                return;
+            }
+
+            fileNameSpan.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            uploadZone.style.display = 'none';
+            selectedFile.style.display = 'flex';
+            checkFormValidity();
+        }
+
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            uploadZone.style.display = 'block';
+            selectedFile.style.display = 'none';
+            checkFormValidity();
+        });
+
+        function checkFormValidity() {
+            const tenantValid = tenantSelect.value !== '';
+            const moduleValid = selectedModule !== null;
+            const fileValid = fileInput.files.length > 0;
+
+            submitBtn.disabled = !(tenantValid && moduleValid && fileValid);
+        }
+
+        tenantSelect.addEventListener('change', checkFormValidity);
+    });
+</script>
+{% endblock %}

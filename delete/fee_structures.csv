@@ -1,0 +1,6 @@
+fee_type,class_name,amount,frequency,due_day,is_mandatory,description,academic_year
+Tuition Fee,Class 10,5000,MONTHLY,10,true,Monthly tuition fee,2024-25
+Transport Fee,Class 10,1200,MONTHLY,10,false,Bus transport fee,2024-25
+Lab Fee,Class 9,2000,TERM,10,true,Science lab fee,2024-25
+Sports Fee,Class 8,1500,YEARLY,10,false,Annual sports fee,2024-25
+Admission Fee,Class 10,8000,ONE_TIME,10,true,One-time admission fee,2024-25

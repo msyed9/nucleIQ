@@ -681,3 +681,73 @@ class PermissionsMatrixViewSet(viewsets.ViewSet):
                 'status': 'error',
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UnifiedLoginView(generics.GenericAPIView):
+    """
+    Unified Login Endpoint for all user types.
+    
+    This single endpoint handles authentication for:
+    - Platform Administrators
+    - Tenant Administrators
+    - Staff (Teachers, Accountants, etc.)
+    - Parents
+    
+    POST /api/auth/unified-login/
+    
+    Request:
+    {
+        "username": "email@example.com or phone_number",
+        "password": "password123"
+    }
+    
+    Response:
+    {
+        "access": "jwt_access_token",
+        "refresh": "jwt_refresh_token",
+        "user_type": "platform_admin|tenant_admin|teacher|staff|parent",
+        "redirect_url": "/dashboard or /parent/portal",
+        "tenant": "tenant_id or null",
+        "tenant_name": "Tenant Name or null",
+        "user": {
+            "id": "uuid",
+            "email": "user@example.com",
+            "full_name": "John Doe",
+            "is_platform_admin": false,
+            "is_parent": true,
+            ...
+        }
+    }
+    """
+    
+    from .serializers import UnifiedLoginSerializer
+    serializer_class = UnifiedLoginSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        """Handle unified login request."""
+        from .serializers import UnifiedLoginSerializer
+        
+        serializer = UnifiedLoginSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            data = serializer.validated_data
+            
+            # Update last login IP if we have the user
+            if hasattr(serializer, '_user') and serializer._user:
+                user = serializer._user
+                user.last_login_ip = self.get_client_ip(request)
+                user.save(update_fields=['last_login_ip'])
+            
+            return Response(data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get_client_ip(self, request):
+        """Get client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

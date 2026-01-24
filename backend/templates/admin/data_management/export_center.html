@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Export Center{% endblock %}
+
+{% block extrahead %}
+<style>
+    .export-container { max-width: 1000px; margin: 1.5rem auto; padding: 1.5rem; }
+    .export-header { background: linear-gradient(135deg,#1e40af,#7c3aed); color: #fff; padding: 1rem; border-radius: 8px; }
+    .module-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 1rem; margin-top: 1rem; }
+    .module-card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .btn { padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; border: none; }
+    .btn-primary { background: #1e40af; color: white; }
+    .btn-plain { background: #f3f4f6; }
+    .backup-row { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-top:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="export-container">
+  <div class="export-header">
+    <h2>📤 Export Center</h2>
+    <p>Export module data (CSV/XLSX) or download a full tenant backup.</p>
+  </div>
+
+  <div class="backup-row">
+    <div>
+      <strong>Full Backup</strong>
+      <div style="color:#6b7280">Creates a ZIP with CSV exports for all modules.</div>
+    </div>
+    <div>
+      <a class="btn btn-primary" href="/api/data-management/backup/">⬇️ Download Backup</a>
+    </div>
+  </div>
+
+  <h3 style="margin-top:1.25rem">Module Exports</h3>
+  <div class="module-grid">
+    {% for template in templates %}
+    <div class="module-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:1.1rem;font-weight:600">{{ template.icon }} {{ template.display_name }}</div>
+          <div style="color:#6b7280;font-size:0.9rem">{{ template.description }}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <a class="btn btn-primary" href="/api/data-management/export/{{ template.name }}/?format=xlsx">XLSX</a>
+          <a class="btn btn-plain" href="/api/data-management/export/{{ template.name }}/?format=csv">CSV</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

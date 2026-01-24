@@ -1,24 +1,347 @@
-{% extends "admin/index.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n static %}
 
 {% block content %}
-{{ block.super }}
+<div id="content-main" class="dashboard-layout">
+    <!-- Left Column: Dashboard Content -->
+    <div id="app-list">
 
-{% if show_platform_analytics %}
-<div style="margin: 20px 0;">
-    <div
-        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-        <h2 style="color: white; margin: 0 0 10px 0; font-size: 24px;">
-            🚀 Platform Analytics Dashboard
+        <!-- Dashboard Stats Cards -->
+        <div class="dashboard-stats fade-in">
+            <div class="stat-card info">
+                <div class="stat-icon">🎓</div>
+                <div class="stat-value">{{ total_students|default:0 }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+
+            <div class="stat-card success">
+                <div class="stat-icon">👨‍🏫</div>
+                <div class="stat-value">{{ total_staff|default:0 }}</div>
+                <div class="stat-label">Total Staff</div>
+            </div>
+
+            <div class="stat-card warning">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">{{ pending_fees|default:0|floatformat:0 }}</div>
+                <div class="stat-label">Pending Fees (₹)</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🏫</div>
+                <div class="stat-value">{{ active_tenants|default:0 }}</div>
+                <div class="stat-label">Active Tenants</div>
+            </div>
+        </div>
+
+        <!-- Platform Analytics Banner (for superusers) -->
+        {% if show_platform_analytics %}
+        <div class="analytics-banner fade-in" style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        ">
+            <div
+                style="position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%;">
+            </div>
+            <div
+                style="position: absolute; bottom: -30%; left: 10%; width: 200px; height: 200px; background: rgba(255,255,255,0.05); border-radius: 50%;">
+            </div>
+            <div style="position: relative; z-index: 1;">
+                <h2 style="color: white; margin: 0 0 12px 0; font-size: 1.75rem; font-weight: 700;">
+                    🚀 Platform Analytics Dashboard
+                </h2>
+                <p style="color: rgba(255,255,255,0.9); margin: 0 0 24px 0; font-size: 1rem; line-height: 1.6;">
+                    View comprehensive analytics on all tenants, API usage, system health, and performance metrics
+                    across your entire platform.
+                </p>
+                <a href="{% url 'admin:platform_analytics_dashboard' %}" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    background: white;
+                    color: #667eea;
+                    padding: 14px 32px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                ">
+                    <span>View Analytics Dashboard</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Data Migration Wizard Banner -->
+        <div class="migration-banner fade-in" style="
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            padding: 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(5, 150, 105, 0.3);
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        ">
+            <div style="flex: 1; min-width: 250px;">
+                <h3 style="color: white; margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 600;">
+                    📥 Data Migration Wizard
+                </h3>
+                <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 0.9rem;">
+                    Import data from other school ERP systems with easy-to-use templates
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="{% url 'nucleiq_admin:migration_wizard' %}" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: white;
+                    color: #059669;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                ">
+                    🚀 Start Import
+                </a>
+                <a href="{% url 'nucleiq_admin:template_library' %}" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 500;
+                    font-size: 0.9rem;
+                    border: 1px solid rgba(255,255,255,0.3);
+                ">
+                    📋 Templates
+                </a>
+                <a href="{% url 'nucleiq_admin:import_history' %}" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 500;
+                    font-size: 0.9rem;
+                    border: 1px solid rgba(255,255,255,0.3);
+                ">
+                    📜 History
+                </a>
+            </div>
+        </div>
+
+        <!-- Application Modules Section -->
+        <h2 style="
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #a0aec0;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        ">
+            📦 Application Modules
         </h2>
-        <p style="color: rgba(255,255,255,0.9); margin: 0 0 20px 0; font-size: 14px;">
-            View comprehensive analytics on all tenants, API usage, system health, and performance metrics
-        </p>
-        <a href="{% url 'admin:platform_analytics_dashboard' %}"
-            style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s;">
-            View Analytics Dashboard →
-        </a>
+
+        {% if app_list %}
+        {% for app in app_list %}
+        <div class="app-module module fade-in" style="animation-delay: {{ forloop.counter0|add:1 }}00ms;">
+            <table>
+                <caption>
+                    <a href="{{ app.app_url }}" class="section"
+                        title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">
+                        {{ app.name }}
+                    </a>
+                </caption>
+                {% for model in app.models %}
+                <tr class="model-{{ model.object_name|lower }}">
+                    {% if model.admin_url %}
+                    <th scope="row">
+                        <a href="{{ model.admin_url }}" {% if model.view_only %}
+                            aria-describedby="model-{{ model.object_name|lower }}-view-only" {% endif %}>
+                            {{ model.name }}
+                        </a>
+                        {% if model.view_only %}
+                        <span class="view-only-label" id="model-{{ model.object_name|lower }}-view-only" style="
+                                     font-size: 0.7rem;
+                                     background: rgba(255,255,255,0.1);
+                                     padding: 2px 8px;
+                                     border-radius: 4px;
+                                     margin-left: 8px;
+                                     color: #718096;
+                                 ">View only</span>
+                        {% endif %}
+                    </th>
+                    {% else %}
+                    <th scope="row">{{ model.name }}</th>
+                    {% endif %}
+
+                    {% if model.add_url %}
+                    <td>
+                        <a href="{{ model.add_url }}" class="addlink" style="
+                                background: rgba(72, 187, 120, 0.1);
+                                padding: 6px 12px;
+                                border-radius: 6px;
+                                font-size: 0.75rem;
+                            ">{% translate 'Add' %}</a>
+                    </td>
+                    {% else %}
+                    <td></td>
+                    {% endif %}
+
+                    {% if model.admin_url and show_changelinks %}
+                    {% if model.view_only %}
+                    <td>
+                        <a href="{{ model.admin_url }}" class="viewlink" style="
+                                background: rgba(66, 153, 225, 0.1);
+                                padding: 6px 12px;
+                                border-radius: 6px;
+                                font-size: 0.75rem;
+                            ">{% translate 'View' %}</a>
+                    </td>
+                    {% else %}
+                    <td>
+                        <a href="{{ model.admin_url }}" class="changelink" style="
+                                background: rgba(102, 126, 234, 0.1);
+                                padding: 6px 12px;
+                                border-radius: 6px;
+                                font-size: 0.75rem;
+                            ">{% translate 'Change' %}</a>
+                    </td>
+                    {% endif %}
+                    {% elif model.add_url %}
+                    <td></td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="
+                text-align: center;
+                padding: 60px 24px;
+                color: #718096;
+            ">
+            <div style="font-size: 4rem; margin-bottom: 16px;">📭</div>
+            <p style="font-size: 1.1rem; margin-bottom: 8px;">{% translate "You don't have permission to view or edit
+                anything." %}</p>
+            <p style="font-size: 0.9rem;">Contact your administrator if you believe this is an error.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Recent Actions -->
+    <div id="recent-actions-module">
+        <h2>📋 {% translate 'Recent actions' %}</h2>
+        <ul class="actionlist">
+            {% load log %}
+            {% get_admin_log 10 as admin_log for_user user %}
+            {% if not admin_log %}
+            <li style="padding: 24px; text-align: center; color: #718096;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">📝</div>
+                {% translate 'None available' %}
+            </li>
+            {% else %}
+            {% for entry in admin_log %}
+            <li
+                class="{% if entry.is_addition %}addlink{% elif entry.is_change %}changelink{% elif entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                <span style="color: {% if entry.is_deletion %}#f56565{% else %}#a0aec0{% endif %};">{{ entry.object_repr
+                    }}</span>
+                {% else %}
+                <a href="{{ entry.get_admin_url }}" style="
+                        display: block;
+                        color: white;
+                        font-weight: 500;
+                        margin-bottom: 4px;
+                    ">{{ entry.object_repr }}</a>
+                {% endif %}
+                <div style="font-size: 0.75rem; color: #718096; margin-top: 4px;">
+                    {% if entry.content_type %}
+                    <span class="mini quiet">
+                        {% filter capfirst %}
+                        {{ entry.content_type.name }}
+                        {% endfilter %}
+                    </span>
+                    {% else %}
+                    <span class="mini quiet">{% translate 'Unknown content' %}</span>
+                    {% endif %}
+                    <span style="margin-left: 8px;">{{ entry.action_time|timesince }} ago</span>
+                </div>
+            </li>
+            {% endfor %}
+            {% endif %}
+        </ul>
     </div>
 </div>
-{% endif %}
+
+<style>
+    /* Staggered animation for app modules */
+    .app-module {
+        animation: fadeSlideIn 0.5s ease forwards;
+        opacity: 0;
+    }
+
+    @keyframes fadeSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Recent actions styling */
+    #recent-actions-module .actionlist li {
+        position: relative;
+        padding-left: 32px;
+    }
+
+    #recent-actions-module .actionlist li.addlink::before {
+        content: "➕";
+        position: absolute;
+        left: 16px;
+        top: 16px;
+    }
+
+    #recent-actions-module .actionlist li.changelink::before {
+        content: "✏️";
+        position: absolute;
+        left: 16px;
+        top: 16px;
+    }
+
+    #recent-actions-module .actionlist li.deletelink::before {
+        content: "🗑️";
+        position: absolute;
+        left: 16px;
+        top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar %}
 {% endblock %}

@@ -39,6 +39,16 @@ from tenants.models import GradeLevel, Section, Subject, AcademicYear, Departmen
 from fees.models import FeeCategory, FeeStructure, FeeAllocation
 from attendance.models import AttendanceRecord
 from transport.models import Route, Stop, StudentTransport
+from exams.models import ExamTerm, Exam, ExamSchedule, ExamResult
+from timetable.models import TimetableSlot
+from library.models import Book, BookCopy, LibraryMember, BookIssue
+from hostel.models import HostelBuilding, Room, Bed, HostelAllocation
+from inventory.models import Item, ItemCategory
+from certificates.models import CertificateTemplate, CertificateRequest, GeneratedCertificate
+from finance.models import LedgerAccount, JournalEntry, JournalEntryLine, SalaryPayment
+from helpdesk.models import HelpdeskTicket
+from lms.models import LiveClass
+from idcards.models import IDCardTemplate, IDCardRecord
 
 import logging
 logger = logging.getLogger(__name__)
@@ -391,6 +401,9 @@ class ImportDataView(APIView):
         file = request.FILES.get('file')
         skip_duplicates = request.data.get('skip_duplicates', 'true') == 'true'
         update_existing = request.data.get('update_existing', 'false') == 'true'
+
+        # Store request user for downstream helpers
+        self._request_user = request.user
         
         template = get_template(module)
         if not template:
@@ -404,6 +417,10 @@ class ImportDataView(APIView):
                 {'error': 'No file provided'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Special handling for student photo ZIP uploads
+        if module == 'student_photos' and file.name.lower().endswith('.zip'):
+            return Response(self._process_photo_zip(file, request.user.tenant))
         
         tenant = request.user.tenant
         
@@ -638,6 +655,930 @@ class ImportDataView(APIView):
             grade_level=grade_level,
             is_deleted=False
         ).filter(q).first()
+
+    def _get_academic_year(self, tenant, year_name=None):
+        if year_name:
+            year = AcademicYear.objects.filter(
+                tenant=tenant,
+                name__iexact=str(year_name).strip(),
+                is_deleted=False
+            ).first()
+            if year:
+                return year
+
+        year = AcademicYear.objects.filter(
+            tenant=tenant,
+            is_active=True,
+            is_deleted=False
+        ).first()
+
+        if not year:
+            year = AcademicYear.objects.filter(
+                tenant=tenant,
+                is_deleted=False
+            ).order_by('-start_date').first()
+
+        return year
+
+    def _parse_time(self, value, default=None):
+        if value is None or value == '':
+            return default
+        if hasattr(value, 'strftime') and hasattr(value, 'hour'):
+            return value
+        value = str(value).strip()
+        for fmt in ['%H:%M', '%H:%M:%S']:
+            try:
+                return datetime.strptime(value, fmt).time()
+            except ValueError:
+                continue
+        return default
+
+    def _parse_datetime(self, value, default=None):
+        if value is None or value == '':
+            return default
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time())
+        value = str(value).strip()
+        for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%d-%m-%Y %H:%M:%S', '%d-%m-%Y %H:%M']:
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+        parsed_date = DateParser.parse(value)
+        if parsed_date:
+            return datetime.combine(parsed_date, datetime.min.time())
+        return default
+
+    def _process_photo_zip(self, file, tenant):
+        """Process a ZIP file containing student photos named by admission number"""
+        success = 0
+        failed = 0
+        errors = []
+
+        try:
+            with zipfile.ZipFile(file) as z:
+                for filename in z.namelist():
+                    if filename.endswith('/') or not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        continue
+
+                    name_part = filename.split('/')[-1]
+                    admission_number = name_part.rsplit('.', 1)[0]
+
+                    try:
+                        student = Student.objects.filter(
+                            tenant=tenant,
+                            admission_number=admission_number,
+                            is_deleted=False
+                        ).first()
+
+                        if student:
+                            from django.core.files.base import ContentFile
+                            photo_data = z.read(filename)
+                            ext = name_part.rsplit('.', 1)[1]
+                            student.photo.save(
+                                f"{admission_number}.{ext}",
+                                ContentFile(photo_data),
+                                save=True
+                            )
+                            success += 1
+                        else:
+                            failed += 1
+                            errors.append(f"Student {admission_number} not found (File: {filename})")
+                    except Exception as e:
+                        failed += 1
+                        errors.append(f"Error processing {filename}: {str(e)}")
+
+        except Exception as e:
+            return {'success': 0, 'failed': 0, 'duplicates': [], 'errors': [f"Invalid ZIP: {str(e)}"]}
+
+        return {
+            'success': success,
+            'failed': failed,
+            'duplicates': [],
+            'errors': errors[:20]
+        }
+
+    def _create_fee_allocation(self, data, tenant):
+        admission_number = data.get('admission_number')
+        fee_type = data.get('fee_type')
+        amount = data.get('amount')
+        academic_year_name = data.get('academic_year')
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        fee_category = FeeCategory.objects.filter(
+            tenant=tenant,
+            name__iexact=str(fee_type).strip()
+        ).first()
+        if not fee_category:
+            raise ValueError(f"Fee Category '{fee_type}' not found")
+
+        enrollment = student.get_current_enrollment() if hasattr(student, 'get_current_enrollment') else None
+        class_name = data.get('class_name') or (enrollment.class_assigned.name if enrollment and enrollment.class_assigned else None)
+
+        if not class_name:
+            raise ValueError(f"Class not found for student '{admission_number}'")
+
+        academic_year = self._get_academic_year(tenant, academic_year_name)
+        if not academic_year:
+            raise ValueError("No academic year found")
+
+        fee_structure = FeeStructure.objects.filter(
+            tenant=tenant,
+            academic_year=academic_year,
+            class_level=class_name,
+            category=fee_category
+        ).first()
+
+        if not fee_structure:
+            raise ValueError(f"Fee Structure not found for {class_name} - {fee_type} ({academic_year.name})")
+
+        custom_amount = None
+        if amount is not None and str(amount).strip() != '':
+            try:
+                amount_value = float(amount)
+                if amount_value != float(fee_structure.amount):
+                    custom_amount = amount_value
+            except Exception:
+                pass
+
+        allocation, _ = FeeAllocation.objects.get_or_create(
+            tenant=tenant,
+            student=student,
+            fee_structure=fee_structure,
+            defaults={
+                'custom_amount': custom_amount
+            }
+        )
+
+        if custom_amount is not None:
+            allocation.custom_amount = custom_amount
+            allocation.save(update_fields=['custom_amount'])
+
+        return allocation
+
+    def _create_student_photo(self, data, tenant):
+        admission_number = data.get('admission_number')
+        photo_filename = data.get('photo_filename')
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        if photo_filename:
+            raise ValueError("Photo filename provided without ZIP upload. Please upload a ZIP of photos.")
+
+        return student
+
+    def _create_exam_result(self, data, tenant):
+        admission_number = data.get('admission_number')
+        exam_name = data.get('exam_name')
+        subject_code = data.get('subject_code')
+        marks_obtained = data.get('marks_obtained')
+        max_marks = data.get('max_marks')
+        academic_year_name = data.get('academic_year')
+        exam_date = DateParser.parse(data.get('exam_date'))
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        subject = Subject.objects.filter(
+            tenant=tenant,
+            code__iexact=str(subject_code).strip()
+        ).first()
+        if not subject:
+            raise ValueError(f"Subject '{subject_code}' not found")
+
+        enrollment = student.get_current_enrollment() if hasattr(student, 'get_current_enrollment') else None
+        grade_level = enrollment.section.grade_level if enrollment and enrollment.section else None
+        section = enrollment.section if enrollment else None
+
+        if not grade_level:
+            raise ValueError(f"Student '{admission_number}' has no active class/section")
+
+        academic_year = self._get_academic_year(tenant, academic_year_name)
+        if not academic_year:
+            raise ValueError("No academic year found")
+
+        term_name = f"{exam_name} {academic_year.name}" if exam_name else f"Exam {academic_year.name}"
+        term = ExamTerm.objects.filter(
+            tenant=tenant,
+            name=term_name,
+            academic_year=academic_year,
+            is_deleted=False
+        ).first()
+        if not term:
+            term = ExamTerm.objects.create(
+                tenant=tenant,
+                name=term_name,
+                term_type='OTHER',
+                academic_year=academic_year,
+                start_date=exam_date or academic_year.start_date,
+                end_date=exam_date or academic_year.end_date,
+                is_active=True
+            )
+
+        exam = Exam.objects.filter(
+            tenant=tenant,
+            exam_term=term,
+            subject=subject,
+            grade_level=grade_level,
+            is_deleted=False
+        ).first()
+        if not exam:
+            total_marks = float(max_marks) if max_marks else 100
+            exam = Exam.objects.create(
+                tenant=tenant,
+                name=exam_name or f"{subject.name} Exam",
+                exam_term=term,
+                subject=subject,
+                grade_level=grade_level,
+                total_marks=total_marks,
+                passing_marks=total_marks * 0.4,
+                duration_minutes=60,
+                status='COMPLETED'
+            )
+            if section:
+                exam.sections.add(section)
+
+        if section and not exam.sections.filter(id=section.id).exists():
+            exam.sections.add(section)
+
+        result, _ = ExamResult.objects.get_or_create(
+            tenant=tenant,
+            exam=exam,
+            student=student,
+            section=section or exam.sections.first(),
+            defaults={
+                'marks_obtained': float(marks_obtained or 0),
+                'status': 'DRAFT'
+            }
+        )
+
+        if marks_obtained is not None:
+            result.marks_obtained = float(marks_obtained)
+            result.save(update_fields=['marks_obtained'])
+
+        return result
+
+    def _create_exam_schedule(self, data, tenant):
+        exam_name = data.get('exam_name')
+        class_name = data.get('class_name')
+        subject_code = data.get('subject_code')
+        exam_date = DateParser.parse(data.get('exam_date'))
+        start_time = self._parse_time(data.get('start_time')) or self._parse_time('09:00')
+        end_time = self._parse_time(data.get('end_time')) or self._parse_time('12:00')
+        max_marks = data.get('max_marks')
+        section_name = data.get('section_name')
+
+        grade_level = self._find_grade_level(tenant, class_name)
+        if not grade_level:
+            raise ValueError(f"Class '{class_name}' not found")
+
+        section = self._find_section(tenant, grade_level, section_name) or Section.objects.filter(
+            tenant=tenant,
+            grade_level=grade_level,
+            is_deleted=False
+        ).first()
+        if not section:
+            raise ValueError(f"Section not found for class '{class_name}'")
+
+        subject = Subject.objects.filter(
+            tenant=tenant,
+            code__iexact=str(subject_code).strip()
+        ).first()
+        if not subject:
+            raise ValueError(f"Subject '{subject_code}' not found")
+
+        academic_year = self._get_academic_year(tenant, data.get('academic_year'))
+        if not academic_year:
+            raise ValueError("No academic year found")
+
+        term_name = f"{exam_name} {academic_year.name}" if exam_name else f"Exam {academic_year.name}"
+        term = ExamTerm.objects.filter(
+            tenant=tenant,
+            name=term_name,
+            academic_year=academic_year,
+            is_deleted=False
+        ).first()
+        if not term:
+            term = ExamTerm.objects.create(
+                tenant=tenant,
+                name=term_name,
+                term_type='OTHER',
+                academic_year=academic_year,
+                start_date=exam_date or academic_year.start_date,
+                end_date=exam_date or academic_year.end_date,
+                is_active=True
+            )
+
+        exam = Exam.objects.filter(
+            tenant=tenant,
+            exam_term=term,
+            subject=subject,
+            grade_level=grade_level,
+            is_deleted=False
+        ).first()
+        if not exam:
+            total_marks = float(max_marks) if max_marks else 100
+            exam = Exam.objects.create(
+                tenant=tenant,
+                name=exam_name or f"{subject.name} Exam",
+                exam_term=term,
+                subject=subject,
+                grade_level=grade_level,
+                total_marks=total_marks,
+                passing_marks=total_marks * 0.4,
+                duration_minutes=60,
+                status='SCHEDULED'
+            )
+
+        if not exam.sections.filter(id=section.id).exists():
+            exam.sections.add(section)
+
+        schedule, _ = ExamSchedule.objects.get_or_create(
+            tenant=tenant,
+            exam=exam,
+            section=section,
+            defaults={
+                'exam_date': exam_date or date.today(),
+                'start_time': start_time,
+                'end_time': end_time,
+                'room': data.get('room') or ''
+            }
+        )
+
+        return schedule
+
+    def _create_timetable_slot(self, data, tenant):
+        class_name = data.get('class_name')
+        section_name = data.get('section_name')
+        subject_code = data.get('subject_code')
+        day_of_week = data.get('day_of_week')
+        start_time = self._parse_time(data.get('start_time'))
+        end_time = self._parse_time(data.get('end_time'))
+        period_number = data.get('period_number')
+        teacher_employee_id = data.get('teacher_employee_id')
+        room_number = data.get('room_number')
+
+        grade_level = self._find_grade_level(tenant, class_name)
+        if not grade_level:
+            raise ValueError(f"Class '{class_name}' not found")
+
+        section = self._find_section(tenant, grade_level, section_name)
+        if not section:
+            raise ValueError(f"Section '{section_name}' not found for class '{class_name}'")
+
+        subject = Subject.objects.filter(
+            tenant=tenant,
+            code__iexact=str(subject_code).strip()
+        ).first()
+        if not subject:
+            raise ValueError(f"Subject '{subject_code}' not found")
+
+        academic_year = self._get_academic_year(tenant, data.get('academic_year'))
+        if not academic_year:
+            raise ValueError("No academic year found")
+
+        teacher = None
+        if teacher_employee_id:
+            teacher = Staff.objects.filter(
+                tenant=tenant,
+                employee_id=teacher_employee_id,
+                is_deleted=False
+            ).first()
+
+        day_map = {
+            'MON': 'MONDAY', 'TUE': 'TUESDAY', 'WED': 'WEDNESDAY',
+            'THU': 'THURSDAY', 'FRI': 'FRIDAY', 'SAT': 'SATURDAY', 'SUN': 'SUNDAY'
+        }
+        normalized_day = day_map.get(str(day_of_week).upper(), str(day_of_week).upper())
+
+        if not start_time or not end_time:
+            raise ValueError("Start time and end time are required")
+
+        slot = TimetableSlot.objects.create(
+            tenant=tenant,
+            academic_year=academic_year,
+            section=section,
+            subject=subject,
+            teacher=teacher,
+            day_of_week=normalized_day,
+            start_time=start_time,
+            end_time=end_time,
+            room=room_number or '',
+            period_number=int(period_number) if str(period_number).isdigit() else None
+        )
+
+        return slot
+
+    def _create_library_book(self, data, tenant):
+        title = data.get('title')
+        author = data.get('author')
+        isbn = data.get('isbn')
+        publisher = data.get('publisher')
+        category = data.get('category')
+        copies_total = data.get('copies_total')
+        location = data.get('location')
+        published_year = data.get('published_year')
+
+        total_copies = int(float(copies_total)) if copies_total not in [None, ''] else 0
+        year_published = int(float(published_year)) if published_year not in [None, ''] else None
+
+        book = None
+        if isbn:
+            book = Book.objects.filter(
+                tenant=tenant,
+                isbn=str(isbn).strip(),
+                is_deleted=False
+            ).first()
+        if not book:
+            book = Book.objects.filter(
+                tenant=tenant,
+                title=title,
+                author=author,
+                is_deleted=False
+            ).first()
+
+        if not book:
+            book = Book.objects.create(
+                tenant=tenant,
+                isbn=str(isbn).strip() if isbn else '',
+                title=title,
+                author=author or '',
+                publisher=publisher or '',
+                category=category or 'General',
+                shelf_location=location or '',
+                year_published=year_published,
+                total_copies=total_copies,
+                available_copies=total_copies,
+            )
+
+        if book:
+            book.author = author or book.author
+            book.publisher = publisher or book.publisher
+            book.category = category or book.category
+            book.shelf_location = location or book.shelf_location
+            if year_published:
+                book.year_published = year_published
+            if total_copies:
+                book.total_copies = total_copies
+                book.available_copies = total_copies
+            book.save()
+
+        return book
+
+    def _create_library_transaction(self, data, tenant):
+        transaction_id = data.get('transaction_id')
+        admission_number = data.get('admission_number')
+        isbn = data.get('isbn')
+        issue_date = DateParser.parse(data.get('issue_date'))
+        due_date = DateParser.parse(data.get('due_date'))
+        return_date = DateParser.parse(data.get('return_date'))
+        fine_amount = data.get('fine_amount')
+        status_value = data.get('status')
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        member, _ = LibraryMember.objects.get_or_create(
+            tenant=tenant,
+            student=student,
+            defaults={'member_type': 'STUDENT'}
+        )
+
+        book = Book.objects.filter(
+            tenant=tenant,
+            isbn=str(isbn).strip()
+        ).first()
+        if not book:
+            raise ValueError(f"Book with ISBN '{isbn}' not found")
+
+        barcode = str(transaction_id or f"{isbn}-{student.admission_number}")
+        copy, _ = BookCopy.objects.get_or_create(
+            tenant=tenant,
+            book=book,
+            barcode=barcode,
+            defaults={'status': 'AVAILABLE'}
+        )
+
+        issue = BookIssue.objects.create(
+            tenant=tenant,
+            copy=copy,
+            member=member,
+            issued_date=self._parse_datetime(issue_date) or timezone.now(),
+            due_date=self._parse_datetime(due_date) or timezone.now(),
+            returned_date=self._parse_datetime(return_date) if return_date else None,
+            fine_amount=float(fine_amount or 0),
+            status=status_value or 'ISSUED'
+        )
+
+        return issue
+
+    def _create_payroll_payment(self, data, tenant):
+        payment_reference = data.get('payment_reference')
+        employee_id = data.get('employee_id')
+        period_start = DateParser.parse(data.get('period_start'))
+        payment_date = DateParser.parse(data.get('payment_date'))
+        gross_amount = float(data.get('gross_amount') or 0)
+        deductions = float(data.get('deductions') or 0)
+        net_amount = float(data.get('net_amount') or 0)
+
+        staff = Staff.objects.filter(
+            tenant=tenant,
+            employee_id=employee_id,
+            is_deleted=False
+        ).first()
+        if not staff:
+            raise ValueError(f"Staff '{employee_id}' not found")
+
+        month = period_start or payment_date or date.today()
+
+        payment, _ = SalaryPayment.objects.get_or_create(
+            tenant=tenant,
+            payment_number=payment_reference,
+            defaults={
+                'payment_date': payment_date or date.today(),
+                'staff': staff,
+                'month': date(month.year, month.month, 1),
+                'basic_salary': gross_amount,
+                'allowances': 0,
+                'deductions': deductions,
+                'net_salary': net_amount,
+                'status': 'PAID' if payment_date else 'PENDING',
+                'remarks': data.get('remarks') or ''
+            }
+        )
+
+        return payment
+
+    def _create_hostel_allocation(self, data, tenant):
+        admission_number = data.get('admission_number')
+        hostel_name = data.get('hostel_name')
+        room_number = data.get('room_number')
+        bed_number = data.get('bed_number')
+        start_date = DateParser.parse(data.get('start_date')) or date.today()
+        end_date = DateParser.parse(data.get('end_date'))
+        status_value = data.get('status')
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        building, _ = HostelBuilding.objects.get_or_create(
+            tenant=tenant,
+            name=hostel_name,
+            defaults={'building_type': 'BOYS', 'is_active': True}
+        )
+
+        room, _ = Room.objects.get_or_create(
+            tenant=tenant,
+            building=building,
+            room_number=room_number,
+            defaults={'capacity': 4}
+        )
+
+        bed, _ = Bed.objects.get_or_create(
+            tenant=tenant,
+            room=room,
+            bed_number=bed_number or 'A'
+        )
+
+        allocation, _ = HostelAllocation.objects.get_or_create(
+            tenant=tenant,
+            student=student,
+            bed=bed,
+            defaults={
+                'start_date': start_date,
+                'end_date': end_date,
+                'is_active': str(status_value).upper() != 'INACTIVE'
+            }
+        )
+
+        return allocation
+
+    def _create_inventory_item(self, data, tenant):
+        item_code = data.get('item_code')
+        item_name = data.get('item_name')
+        category_name = data.get('category')
+        quantity = data.get('quantity')
+        unit_cost = data.get('unit_cost')
+        purchase_date = data.get('purchase_date')
+        vendor_name = data.get('vendor')
+        location = data.get('location')
+        condition = data.get('condition')
+
+        category = None
+        if category_name:
+            category, _ = ItemCategory.objects.get_or_create(
+                tenant=tenant,
+                name=category_name
+            )
+
+        item, _ = Item.objects.get_or_create(
+            tenant=tenant,
+            sku=str(item_code).strip() if item_code else '',
+            defaults={
+                'name': item_name,
+                'category': category,
+                'current_stock': int(float(quantity or 0)),
+                'cost_price': float(unit_cost or 0),
+                'price': float(unit_cost or 0),
+                'description': f"Location: {location or ''} | Condition: {condition or ''}".strip(),
+                'is_active': True
+            }
+        )
+
+        return item
+
+    def _create_certificate_issued(self, data, tenant):
+        certificate_number = data.get('certificate_number')
+        admission_number = data.get('admission_number')
+        certificate_type = data.get('certificate_type')
+        issue_date = DateParser.parse(data.get('issue_date')) or date.today()
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        template, _ = CertificateTemplate.objects.get_or_create(
+            tenant=tenant,
+            name=certificate_type,
+            defaults={'content': certificate_type or 'Certificate'}
+        )
+
+        request = CertificateRequest.objects.create(
+            tenant=tenant,
+            student=student,
+            template=template,
+            reason=data.get('remarks') or '',
+            status='GENERATED'
+        )
+
+        generated = GeneratedCertificate.objects.create(
+            tenant=tenant,
+            request=request,
+            certificate_number=certificate_number,
+            issued_date=issue_date,
+            content_snapshot=template.content,
+            verified=True
+        )
+
+        return generated
+
+    def _create_finance_journal_entry(self, data, tenant):
+        entry_number = data.get('entry_number')
+        entry_date = DateParser.parse(data.get('entry_date')) or date.today()
+        account_code = data.get('account_code')
+        account_name = data.get('account_name')
+        debit = float(data.get('debit') or 0)
+        credit = float(data.get('credit') or 0)
+        narration = data.get('narration') or data.get('description') or ''
+        reference = data.get('reference')
+
+        if not entry_number:
+            raise ValueError("Entry number is required")
+
+        account = LedgerAccount.objects.filter(
+            tenant=tenant,
+            code=str(account_code).strip()
+        ).first()
+
+        if not account:
+            account_type = 'INCOME' if credit > 0 else 'EXPENSE'
+            account = LedgerAccount.objects.create(
+                tenant=tenant,
+                code=str(account_code).strip(),
+                name=account_name or f"Account {account_code}",
+                account_type=account_type,
+                is_active=True
+            )
+
+        entry, _ = JournalEntry.objects.get_or_create(
+            tenant=tenant,
+            entry_number=entry_number,
+            defaults={
+                'entry_date': entry_date,
+                'description': narration or f"Journal Entry {entry_number}",
+                'reference_type': 'IMPORT',
+                'reference_id': None,
+                'status': 'DRAFT',
+                'is_posted': False,
+                'created_by': self._request_user
+            }
+        )
+
+        line = JournalEntryLine.objects.create(
+            entry=entry,
+            account=account,
+            description=narration or account.name,
+            debit_amount=debit,
+            credit_amount=credit
+        )
+
+        return line
+
+    def _apply_fee_discount(self, data, tenant):
+        admission_number = data.get('admission_number')
+        discount_type = data.get('discount_type')
+        value = float(data.get('value') or 0)
+        reason = data.get('reason')
+
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number=admission_number,
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        allocation = FeeAllocation.objects.filter(
+            tenant=tenant,
+            student=student
+        ).first()
+        if not allocation:
+            raise ValueError(f"No fee allocation found for student '{admission_number}'")
+
+        if str(discount_type).upper() == 'PERCENT':
+            allocation.is_scholarship = True
+            allocation.scholarship_percentage = value
+        else:
+            allocation.discount_amount = value
+
+        allocation.discount_reason = reason or allocation.discount_reason
+        allocation.save()
+
+        return allocation
+
+    def _create_helpdesk_ticket(self, data, tenant):
+        requester_type = data.get('requester_type')
+        requester_id = data.get('requester_id')
+        subject = data.get('subject')
+        description = data.get('description')
+        status_value = data.get('status') or 'OPEN'
+        priority = data.get('priority') or 'MEDIUM'
+
+        user = None
+        if str(requester_type).upper() == 'STUDENT':
+            student = Student.objects.filter(
+                tenant=tenant,
+                admission_number=requester_id,
+                is_deleted=False
+            ).first()
+            user = student.user if student and hasattr(student, 'user') else None
+        elif str(requester_type).upper() == 'STAFF':
+            staff = Staff.objects.filter(
+                tenant=tenant,
+                employee_id=requester_id,
+                is_deleted=False
+            ).first()
+            user = staff.user if staff and hasattr(staff, 'user') else None
+
+        if not user:
+            user = self._request_user
+
+        ticket = HelpdeskTicket.objects.create(
+            tenant=tenant,
+            raised_by=user,
+            category='OTHER',
+            subject=subject,
+            description=description,
+            status=status_value,
+            priority=priority
+        )
+
+        return ticket
+
+    def _create_lms_course(self, data, tenant):
+        course_name = data.get('course_name')
+        course_code = data.get('course_code')
+        class_name = data.get('class_name')
+        subject_code = data.get('subject_code')
+        teacher_employee_id = data.get('teacher_employee_id')
+        start_time = self._parse_datetime(data.get('start_time'))
+        duration_minutes = int(float(data.get('duration_minutes') or 45))
+        meeting_link = data.get('meeting_link')
+
+        grade_level = self._find_grade_level(tenant, class_name)
+        if not grade_level:
+            raise ValueError(f"Class '{class_name}' not found")
+
+        subject = Subject.objects.filter(
+            tenant=tenant,
+            code__iexact=str(subject_code).strip()
+        ).first()
+        if not subject:
+            raise ValueError(f"Subject '{subject_code}' not found")
+
+        teacher = Staff.objects.filter(
+            tenant=tenant,
+            employee_id=teacher_employee_id,
+            is_deleted=False
+        ).first()
+        if not teacher:
+            raise ValueError(f"Teacher '{teacher_employee_id}' not found")
+
+        if not start_time:
+            start_date = DateParser.parse(data.get('start_date')) or date.today()
+            start_time = datetime.combine(start_date, datetime.min.time())
+
+        live_class = LiveClass.objects.create(
+            tenant=tenant,
+            title=course_name or course_code,
+            description=data.get('description') or '',
+            start_time=start_time,
+            duration_minutes=duration_minutes,
+            grade_level=grade_level,
+            subject=subject,
+            teacher=teacher,
+            meeting_link=meeting_link or '',
+        )
+
+        return live_class
+
+    def _create_lms_enrollment(self, data, tenant):
+        raise ValueError("LMS enrollments are not supported (no enrollment model found)")
+
+    def _create_idcard_record(self, data, tenant):
+        card_number = data.get('card_number')
+        admission_number = data.get('admission_number')
+        employee_id = data.get('employee_id')
+        template_code = data.get('template_code')
+        issued_date = DateParser.parse(data.get('issued_date')) or date.today()
+        expiry_date = DateParser.parse(data.get('expiry_date'))
+        status_value = data.get('status') or 'active'
+        file_url = data.get('file_url') or f"manual://{card_number}"
+
+        entity_type = 'student' if admission_number else 'staff'
+        entity = None
+        if admission_number:
+            entity = Student.objects.filter(
+                tenant=tenant,
+                admission_number=admission_number,
+                is_deleted=False
+            ).first()
+        elif employee_id:
+            entity = Staff.objects.filter(
+                tenant=tenant,
+                employee_id=employee_id,
+                is_deleted=False
+            ).first()
+
+        if not entity:
+            raise ValueError("Student or Staff not found for ID card")
+
+        template = IDCardTemplate.objects.filter(
+            tenant=tenant,
+            name__iexact=str(template_code).strip(),
+            is_active=True
+        ).first()
+        if not template:
+            raise ValueError(f"ID Card Template '{template_code}' not found")
+
+        valid_until = datetime.combine(expiry_date, datetime.min.time()) if expiry_date else datetime.now()
+
+        record = IDCardRecord.objects.create(
+            tenant=tenant,
+            entity_type=entity_type,
+            entity_id=entity.id,
+            template=template,
+            file_url=file_url,
+            file_format='pdf',
+            status=status_value,
+            valid_until=valid_until
+        )
+
+        return record
     
     def _get_transformer(self, module):
         """Get data transformer for module"""
@@ -670,10 +1611,27 @@ class ImportDataView(APIView):
             'classes': self._create_class_section,
             'subjects': self._create_subject,
             'fee_structures': self._create_fee_structure,
+            'fee_allocations': self._create_fee_allocation,
             'student_enrollments': self._create_enrollment,
             'parents': self._update_parent,
             'attendance': self._create_attendance,
             'transport': self._create_transport,
+            'student_photos': self._create_student_photo,
+            'exam_results': self._create_exam_result,
+            'exam_schedule': self._create_exam_schedule,
+            'timetable': self._create_timetable_slot,
+            'library_books': self._create_library_book,
+            'library_transactions': self._create_library_transaction,
+            'payroll_payments': self._create_payroll_payment,
+            'hostel_allocations': self._create_hostel_allocation,
+            'inventory_items': self._create_inventory_item,
+            'certificates_issued': self._create_certificate_issued,
+            'finance_journal_entries': self._create_finance_journal_entry,
+            'fee_discounts': self._apply_fee_discount,
+            'helpdesk_tickets': self._create_helpdesk_ticket,
+            'lms_courses': self._create_lms_course,
+            'lms_enrollments': self._create_lms_enrollment,
+            'idcards': self._create_idcard_record,
         }
         
         creator = creators.get(module)
@@ -1471,6 +2429,56 @@ class ExportDataView(APIView):
         elif module == 'classes':
             sections = Section.objects.filter(tenant=tenant, is_deleted=False)
             return [self._section_to_dict(s) for s in sections]
+        elif module == 'fee_allocations':
+            allocations = FeeAllocation.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._fee_allocation_to_dict(a) for a in allocations]
+        elif module == 'student_photos':
+            students = Student.objects.filter(tenant=tenant, is_deleted=False).exclude(photo='')
+            return [self._student_photo_to_dict(s) for s in students]
+        elif module == 'exam_results':
+            results = ExamResult.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._exam_result_to_dict(r) for r in results]
+        elif module == 'exam_schedule':
+            schedules = ExamSchedule.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._exam_schedule_to_dict(s) for s in schedules]
+        elif module == 'timetable':
+            slots = TimetableSlot.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._timetable_to_dict(s) for s in slots]
+        elif module == 'library_books':
+            books = Book.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._library_book_to_dict(b) for b in books]
+        elif module == 'library_transactions':
+            issues = BookIssue.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._library_issue_to_dict(i) for i in issues]
+        elif module == 'payroll_payments':
+            payments = SalaryPayment.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._salary_payment_to_dict(p) for p in payments]
+        elif module == 'hostel_allocations':
+            allocations = HostelAllocation.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._hostel_allocation_to_dict(a) for a in allocations]
+        elif module == 'inventory_items':
+            items = Item.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._inventory_item_to_dict(i) for i in items]
+        elif module == 'certificates_issued':
+            certs = GeneratedCertificate.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._certificate_to_dict(c) for c in certs]
+        elif module == 'finance_journal_entries':
+            entries = JournalEntry.objects.filter(tenant=tenant)
+            return self._journal_entries_to_dict(entries)
+        elif module == 'fee_discounts':
+            allocations = FeeAllocation.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._fee_discount_to_dict(a) for a in allocations]
+        elif module == 'helpdesk_tickets':
+            tickets = HelpdeskTicket.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._helpdesk_ticket_to_dict(t) for t in tickets]
+        elif module == 'lms_courses':
+            live_classes = LiveClass.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._live_class_to_dict(c) for c in live_classes]
+        elif module == 'lms_enrollments':
+            return []
+        elif module == 'idcards':
+            records = IDCardRecord.objects.filter(tenant=tenant, is_deleted=False)
+            return [self._idcard_to_dict(r) for r in records]
         return []
     
     def _student_to_dict(self, student):
@@ -1523,6 +2531,213 @@ class ExportDataView(APIView):
             'section_name': section.name,
             'room_number': section.room_number,
             'capacity': section.capacity,
+        }
+
+    def _fee_allocation_to_dict(self, allocation):
+        return {
+            'admission_number': allocation.student.admission_number if allocation.student else '',
+            'fee_type': allocation.fee_structure.category.name if allocation.fee_structure else '',
+            'amount': str(allocation.custom_amount or allocation.fee_structure.amount) if allocation.fee_structure else '',
+            'frequency': allocation.fee_structure.frequency if allocation.fee_structure else '',
+            'academic_year': allocation.fee_structure.academic_year.name if allocation.fee_structure else '',
+        }
+
+    def _student_photo_to_dict(self, student):
+        return {
+            'admission_number': student.admission_number,
+            'photo_filename': getattr(student.photo, 'name', '') if student.photo else '',
+            'photo_url': getattr(student.photo, 'url', '') if student.photo else '',
+        }
+
+    def _exam_result_to_dict(self, result):
+        return {
+            'admission_number': result.student.admission_number if result.student else '',
+            'exam_name': result.exam.name if result.exam else '',
+            'subject_code': result.exam.subject.code if result.exam and result.exam.subject else '',
+            'max_marks': str(result.exam.total_marks) if result.exam else '',
+            'marks_obtained': str(result.marks_obtained),
+            'grade': result.grade,
+            'exam_date': DateParser.format_for_display(result.exam.exam_term.start_date) if result.exam and result.exam.exam_term else '',
+            'academic_year': result.exam.exam_term.academic_year.name if result.exam and result.exam.exam_term else '',
+        }
+
+    def _exam_schedule_to_dict(self, schedule):
+        return {
+            'exam_name': schedule.exam.name if schedule.exam else '',
+            'class_name': schedule.exam.grade_level.name if schedule.exam and schedule.exam.grade_level else '',
+            'section_name': schedule.section.name if schedule.section else '',
+            'subject_code': schedule.exam.subject.code if schedule.exam and schedule.exam.subject else '',
+            'exam_date': DateParser.format_for_display(schedule.exam_date),
+            'start_time': schedule.start_time.strftime('%H:%M') if schedule.start_time else '',
+            'end_time': schedule.end_time.strftime('%H:%M') if schedule.end_time else '',
+            'max_marks': str(schedule.exam.total_marks) if schedule.exam else '',
+            'academic_year': schedule.exam.exam_term.academic_year.name if schedule.exam and schedule.exam.exam_term else '',
+        }
+
+    def _timetable_to_dict(self, slot):
+        return {
+            'class_name': slot.section.grade_level.name if slot.section else '',
+            'section_name': slot.section.name if slot.section else '',
+            'academic_year': slot.academic_year.name if slot.academic_year else '',
+            'day_of_week': slot.day_of_week,
+            'start_time': slot.start_time.strftime('%H:%M') if slot.start_time else '',
+            'end_time': slot.end_time.strftime('%H:%M') if slot.end_time else '',
+            'period_number': slot.period_number or '',
+            'subject_code': slot.subject.code if slot.subject else '',
+            'teacher_employee_id': slot.teacher.employee_id if slot.teacher else '',
+            'room_number': slot.room,
+        }
+
+    def _library_book_to_dict(self, book):
+        return {
+            'isbn': book.isbn,
+            'title': book.title,
+            'author': book.author,
+            'publisher': book.publisher,
+            'category': book.category,
+            'copies_total': str(book.total_copies),
+            'location': book.shelf_location,
+            'published_year': book.year_published or '',
+        }
+
+    def _library_issue_to_dict(self, issue):
+        return {
+            'transaction_id': f"LIB{issue.id}",
+            'admission_number': issue.member.student.admission_number if issue.member and issue.member.student else '',
+            'isbn': issue.copy.book.isbn if issue.copy and issue.copy.book else '',
+            'issue_date': issue.issued_date.date().isoformat() if issue.issued_date else '',
+            'due_date': issue.due_date.date().isoformat() if issue.due_date else '',
+            'return_date': issue.returned_date.date().isoformat() if issue.returned_date else '',
+            'fine_amount': str(issue.fine_amount),
+            'status': issue.status,
+        }
+
+    def _salary_payment_to_dict(self, payment):
+        return {
+            'payment_reference': payment.payment_number,
+            'employee_id': payment.staff.employee_id if payment.staff else '',
+            'period_start': payment.month.isoformat() if payment.month else '',
+            'period_end': payment.month.isoformat() if payment.month else '',
+            'gross_amount': str(payment.basic_salary + payment.allowances),
+            'deductions': str(payment.deductions),
+            'net_amount': str(payment.net_salary),
+            'payment_date': payment.payment_date.isoformat() if payment.payment_date else '',
+            'payment_mode': '',
+            'remarks': payment.remarks,
+        }
+
+    def _hostel_allocation_to_dict(self, allocation):
+        return {
+            'admission_number': allocation.student.admission_number if allocation.student else '',
+            'hostel_name': allocation.bed.room.building.name if allocation.bed else '',
+            'room_number': allocation.bed.room.room_number if allocation.bed else '',
+            'bed_number': allocation.bed.bed_number if allocation.bed else '',
+            'start_date': DateParser.format_for_display(allocation.start_date) if allocation.start_date else '',
+            'end_date': DateParser.format_for_display(allocation.end_date) if allocation.end_date else '',
+            'status': 'ACTIVE' if allocation.is_active else 'INACTIVE',
+        }
+
+    def _inventory_item_to_dict(self, item):
+        return {
+            'item_code': item.sku,
+            'item_name': item.name,
+            'category': item.category.name if item.category else '',
+            'quantity': str(item.current_stock),
+            'unit_cost': str(item.cost_price),
+            'purchase_date': '',
+            'vendor': '',
+            'location': '',
+            'condition': '',
+        }
+
+    def _certificate_to_dict(self, cert):
+        return {
+            'certificate_number': cert.certificate_number,
+            'admission_number': cert.request.student.admission_number if cert.request and cert.request.student else '',
+            'certificate_type': cert.request.template.name if cert.request and cert.request.template else '',
+            'issue_date': DateParser.format_for_display(cert.issued_date) if cert.issued_date else '',
+            'expiry_date': '',
+            'remarks': cert.request.reason if cert.request else '',
+        }
+
+    def _journal_entries_to_dict(self, entries):
+        rows = []
+        for entry in entries:
+            for line in entry.lines.all():
+                rows.append({
+                    'entry_number': entry.entry_number,
+                    'entry_date': entry.entry_date.isoformat() if entry.entry_date else '',
+                    'account_code': line.account.code if line.account else '',
+                    'account_name': line.account.name if line.account else '',
+                    'debit': str(line.debit_amount),
+                    'credit': str(line.credit_amount),
+                    'narration': line.description or entry.description,
+                    'reference': entry.reference_type or '',
+                })
+        return rows
+
+    def _fee_discount_to_dict(self, allocation):
+        discount_type = 'PERCENT' if allocation.scholarship_percentage > 0 else 'AMOUNT'
+        value = allocation.scholarship_percentage if allocation.scholarship_percentage > 0 else allocation.discount_amount
+        return {
+            'admission_number': allocation.student.admission_number if allocation.student else '',
+            'discount_code': allocation.discount_reason or 'DISCOUNT',
+            'discount_type': discount_type,
+            'value': str(value),
+            'start_date': '',
+            'end_date': '',
+            'reason': allocation.discount_reason,
+        }
+
+    def _helpdesk_ticket_to_dict(self, ticket):
+        return {
+            'ticket_number': f"TICKET-{ticket.id}",
+            'requester_type': 'STAFF' if ticket.raised_by and getattr(ticket.raised_by, 'is_staff', False) else 'STUDENT',
+            'requester_id': ticket.raised_by.email if ticket.raised_by else '',
+            'subject': ticket.subject,
+            'description': ticket.description,
+            'status': ticket.status,
+            'priority': ticket.priority,
+            'created_at': ticket.created_at.isoformat() if ticket.created_at else '',
+            'resolved_at': ticket.resolved_at.isoformat() if ticket.resolved_at else '',
+        }
+
+    def _live_class_to_dict(self, live_class):
+        return {
+            'course_code': live_class.id,
+            'class_name': live_class.grade_level.name if live_class.grade_level else '',
+            'subject_code': live_class.subject.code if live_class.subject else '',
+            'course_name': live_class.title,
+            'description': live_class.description,
+            'teacher_employee_id': live_class.teacher.employee_id if live_class.teacher else '',
+            'start_time': live_class.start_time.isoformat() if live_class.start_time else '',
+            'duration_minutes': live_class.duration_minutes,
+            'meeting_link': live_class.meeting_link,
+            'start_date': live_class.start_time.date().isoformat() if live_class.start_time else '',
+            'end_date': '',
+            'status': 'ACTIVE' if not live_class.is_completed else 'INACTIVE',
+        }
+
+    def _idcard_to_dict(self, record):
+        admission_number = ''
+        employee_id = ''
+        if record.entity_type == 'student':
+            student = Student.objects.filter(id=record.entity_id, is_deleted=False).first()
+            admission_number = student.admission_number if student else ''
+        if record.entity_type == 'staff':
+            staff = Staff.objects.filter(id=record.entity_id, is_deleted=False).first()
+            employee_id = staff.employee_id if staff else ''
+
+        return {
+            'card_number': record.id,
+            'admission_number': admission_number,
+            'employee_id': employee_id,
+            'template_code': record.template.name if record.template else '',
+            'file_url': record.file_url,
+            'issued_date': record.issued_date.date().isoformat() if record.issued_date else '',
+            'expiry_date': record.valid_until.date().isoformat() if record.valid_until else '',
+            'status': record.status,
+            'qr_code': '',
         }
     
     def _export_xlsx(self, module, template, data):

@@ -14,19 +14,32 @@ class StudentBasicSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     age = serializers.IntegerField(source='get_age', read_only=True)
     current_class = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
+    # Alias for current_class - used by attendance module frontend
+    class_name = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
     section = serializers.CharField(source='get_current_enrollment.section.name', read_only=True)
     roll_number = serializers.CharField(source='get_current_enrollment.roll_number', read_only=True)
     fee_summary = serializers.SerializerMethodField()
+    # Photo URL for frontend display
+    photo_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Student
         fields = [
             'id', 'admission_number', 'full_name', 'first_name', 'last_name',
-            'current_class', 'section', 'roll_number', 'photo', 'age',
+            'current_class', 'class_name', 'section', 'roll_number', 'photo', 'photo_url', 'age',
             'date_of_birth', 'blood_group', 'is_active', 'email', 'phone',
             'fee_summary'
         ]
-        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'section', 'roll_number', 'fee_summary']
+        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'class_name', 'section', 'roll_number', 'photo_url', 'fee_summary']
+    
+    def get_photo_url(self, obj):
+        """Return absolute URL for student photo."""
+        if obj.photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.photo.url)
+            return obj.photo.url
+        return None
     
     def get_fee_summary(self, obj):
         """Get fee summary for the student including discount information."""
@@ -357,12 +370,15 @@ class ParentCredentialsSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     students_count = serializers.SerializerMethodField()
     students = serializers.SerializerMethodField()
+    occupation = serializers.CharField(allow_blank=True, allow_null=True, read_only=True)
+    preferred_language = serializers.CharField(read_only=True)
 
     class Meta:
         model = ParentUser
         fields = [
             'id', 'relation_type', 'portal_access_enabled', 'last_login_at',
-            'user_email', 'user_phone', 'user_name', 'students_count', 'students'
+            'user_email', 'user_phone', 'user_name', 'students_count', 'students',
+            'occupation', 'preferred_language'
         ]
         read_only_fields = fields
 
@@ -370,7 +386,17 @@ class ParentCredentialsSerializer(serializers.ModelSerializer):
         return obj.students.filter(is_active=True).count()
 
     def get_students(self, obj):
-        students = obj.students.filter(is_active=True).values(
-            'id', 'admission_number', 'first_name', 'last_name'
-        )
-        return list(students)
+        students_data = []
+        for student in obj.students.filter(is_active=True):
+            enrollment = student.get_current_enrollment()
+            students_data.append({
+                'id': str(student.id),
+                'admission_number': student.admission_number,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'grade_level_name': enrollment.section.grade_level.name if enrollment and enrollment.section else None,
+                'section_name': enrollment.section.name if enrollment and enrollment.section else None,
+                'photo_url': student.photo.url if student.photo else None
+            })
+        return students_data
+

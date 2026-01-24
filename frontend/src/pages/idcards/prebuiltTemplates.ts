@@ -76,6 +76,118 @@ const PALETTES = {
     amber: { primary: '#FF8F00', secondary: '#FFA000', accent: '#FFD54F', background: '#FFF8E1', text: '#E65100' },
 };
 
+// Inline SVG decorative backgrounds (data URIs) — avoids adding image assets
+const svgToDataUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+
+const SVG_BACKGROUNDS = {
+        corporatePortrait: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='540' height='860' viewBox='0 0 540 860' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='g1' x1='0' x2='1' y1='0' y2='1'>
+                            <stop offset='0' stop-color='#1A237E'/>
+                            <stop offset='1' stop-color='#303F9F'/>
+                        </linearGradient>
+                        <linearGradient id='g2' x1='0' x2='1'>
+                            <stop offset='0' stop-color='#FFFFFF22'/>
+                            <stop offset='1' stop-color='transparent'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#g1)' />
+                    <g opacity='0.12' fill='url(#g2)'>
+                        <circle cx='90' cy='120' r='160'/>
+                        <circle cx='450' cy='740' r='220'/>
+                    </g>
+                    <g fill='none' stroke='#FFFFFF22' stroke-width='2'>
+                        <path d='M0,200 C120,140 420,120 540,180' />
+                        <path d='M0,520 C160,460 380,540 540,500' />
+                    </g>
+                </svg>
+        `),
+        freshGreenPortrait: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='540' height='860' viewBox='0 0 540 860' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='fg' x1='0' y1='0' x2='0' y2='1'>
+                            <stop offset='0' stop-color='#4CAF50'/>
+                            <stop offset='1' stop-color='#8BC34A'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#fg)' />
+                    <g fill='#FFFFFF11'>
+                        <rect x='-40' y='120' width='220' height='320' rx='30' transform='rotate(-18 0 0)' />
+                        <rect x='420' y='560' width='220' height='320' rx='40' transform='rotate(-30 0 0)' />
+                    </g>
+                    <g opacity='0.06' fill='#FFFFFF'>
+                        <circle cx='460' cy='80' r='80'/>
+                    </g>
+                </svg>
+        `),
+        subtleWaves: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='860' height='540' viewBox='0 0 860 540' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='w1' x1='0' x2='1'>
+                            <stop offset='0' stop-color='#FF6B6B'/>
+                            <stop offset='1' stop-color='#FFD93D'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#w1)' />
+                    <path d='M0 120 C200 180 400 80 860 140 L860 540 L0 540 Z' fill='#FFFFFF11' />
+                    <path d='M0 240 C200 300 400 200 860 260 L860 540 L0 540 Z' fill='#FFFFFF08' />
+                </svg>
+        `),
+        geometricLandscape: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='860' height='540' viewBox='0 0 860 540' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='geo' x1='0' x2='1'>
+                            <stop offset='0' stop-color='#6C63FF'/>
+                            <stop offset='1' stop-color='#9D4EDD'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#geo)' />
+                    <g opacity='0.08' fill='#FFFFFF'>
+                        <rect x='20' y='20' width='160' height='160' rx='12' transform='skewX(-12)' />
+                        <rect x='220' y='120' width='260' height='260' rx='18' transform='skewX(-8)' />
+                        <rect x='520' y='40' width='260' height='180' rx='10' transform='skewX(-6)' />
+                    </g>
+                </svg>
+        `)
+        ,
+        pinkBlossom: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='540' height='860' viewBox='0 0 540 860' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='pb' x1='0' y1='0' x2='0' y2='1'>
+                            <stop offset='0' stop-color='#F8BBD0'/>
+                            <stop offset='1' stop-color='#FCE4EC'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#pb)' />
+                    <g opacity='0.06' fill='#FFFFFF'>
+                        <circle cx='80' cy='120' r='90'/>
+                        <circle cx='460' cy='760' r='120'/>
+                    </g>
+                    <g fill='#FFFFFF11'>
+                        <path d='M40 240 C120 200 220 260 320 220 C420 180 520 260 600 220 L600 860 L0 860 Z' />
+                    </g>
+                </svg>
+        `),
+        oceanPortrait: svgToDataUrl(`
+                <svg xmlns='http://www.w3.org/2000/svg' width='540' height='860' viewBox='0 0 540 860' preserveAspectRatio='none'>
+                    <defs>
+                        <linearGradient id='oc' x1='0' y1='0' x2='0' y2='1'>
+                            <stop offset='0' stop-color='#0077B6'/>
+                            <stop offset='1' stop-color='#90E0EF'/>
+                        </linearGradient>
+                    </defs>
+                    <rect width='100%' height='100%' fill='url(#oc)' />
+                    <g opacity='0.08' fill='#FFFFFF'>
+                        <path d='M0 520 C120 480 240 560 360 520 C480 480 600 560 720 520 L720 860 L0 860 Z' />
+                    </g>
+                    <g opacity='0.05' fill='#FFFFFF'>
+                        <circle cx='460' cy='80' r='80'/>
+                    </g>
+                </svg>
+        `)
+};
+
 // Helper to create basic element structure - adapted for portrait layout
 const createTextElement = (id: string, text: string, x: number, y: number, fontSize: number, color: string, fontWeight = 'normal', width = 44, height = 6) => ({
     id,
@@ -147,7 +259,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/corporate_portrait.png' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
                 createImageElement('photo', 6, 30, 26, 32, '{{photo}}'),
@@ -169,7 +281,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/fresh_green_portrait.png' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 12, 10, '#11998e', 'bold', 50, 7),
                 createImageElement('photo', 12, 26, 30, 36, '{{photo}}'),
@@ -238,7 +350,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #FF6B6B 0%, #FFA07A 50%, #FFD93D 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createShapeElement('header', 0, 0, 54, 10, '#FFFFFF40'),
                 createTextElement('school-name', '{{school_name}}', 2, 2, 8, '#FFFFFF', 'bold', 50, 6),
@@ -261,7 +373,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #1A1A2E 0%, #16213E 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
             elements: [
                 createShapeElement('gold-bar-top', 0, 0, 54, 2, '#DAA520'),
                 createTextElement('school-name', '{{school_name}}', 2, 5, 9, '#DAA520', 'bold', 50, 6),
@@ -308,7 +420,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #4CAF50 0%, #8BC34A 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createShapeElement('photo-frame', 10, 14, 34, 40, '#FFFFFF'),
@@ -330,7 +442,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #E91E63 0%, #F8BBD0 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -351,7 +463,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #0077B6 0%, #00B4D8 50%, #90E0EF 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_ocean.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -374,7 +486,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #6C63FF 0%, #9D4EDD 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createShapeElement('header', 0, 0, 54, 12, '#FFFFFF20'),
                 createTextElement('school-name', '{{school_name}}', 2, 2, 9, '#FFFFFF', 'bold', 50, 7),
@@ -397,7 +509,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #009688 0%, #4DB6AC 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createShapeElement('photo-border', 11, 13, 32, 38, '#FFFFFF40'),
@@ -419,7 +531,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #3F51B5 0%, #5C6BC0 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createShapeElement('header', 0, 0, 54, 14, '#1A237E'),
                 createTextElement('school-name', '{{school_name}}', 2, 3, 9, '#FFFFFF', 'bold', 50, 7),
@@ -442,7 +554,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #FF8F00 0%, #FFA000 50%, #FFD54F 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -463,7 +575,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'gradient', value: 'linear-gradient(180deg, #039BE5 0%, #4FC3F7 50%, #B3E5FC 100%)' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#01579B', 'bold', 50, 6),
                 createShapeElement('photo-frame', 10, 12, 34, 40, '#FFFFFF'),
@@ -511,7 +623,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/corporate_portrait.png' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
             elements: [
                 createTextElement('org-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
                 createImageElement('photo', 6, 28, 24, 30, '{{photo}}'),
@@ -739,7 +851,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: LANDSCAPE_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/vibrant_landscape.png' },
+            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
             elements: [
                 createImageElement('photo', 6, 12, 24, 30, '{{photo}}'),
                 createTextElement('school-name', '{{school_name}}', 32, 6, 12, '#FFFFFF', 'bold', 50, 8),

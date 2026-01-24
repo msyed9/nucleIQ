@@ -15,6 +15,16 @@ import * as Hi2 from 'react-icons/hi2'; // Heroicons v2
 import * as Pi from 'react-icons/pi';   // Phosphor Icons
 import * as Tb from 'react-icons/tb';   // Tabler Icons
 import * as Md from 'react-icons/md';   // Material Icons
+import * as Fa from 'react-icons/fa';   // FontAwesome (react-icons)
+import * as Bs from 'react-icons/bs';   // Bootstrap Icons
+import * as Ri from 'react-icons/ri';   // Remix Icons
+import * as Bi from 'react-icons/bi';   // BoxIcons (via react-icons)
+import * as Gi from 'react-icons/gi';   // Game Icons
+import * as Ci from 'react-icons/ci';   // Circum Icons
+import * as Io5 from 'react-icons/io5'; // Ionicons v5
+import * as Si from 'react-icons/si';   // Simple Icons (brands)
+import * as Cg from 'react-icons/cg';   // CSS.gg / decorative
+import * as Md5 from 'react-icons/md';  // additional material icons (for colorful picks)
 
 // Additional icon libraries (registered for selection)
 import * as AntdIcons from '@ant-design/icons';
@@ -26,6 +36,7 @@ import * as BoxIcons from 'boxicons';
 import * as SimpleIcons from 'simple-icons';
 import * as Ionicons from 'ionicons';
 import * as EvaIcons from 'eva-icons';
+import * as Ai from 'react-icons/ai'; // Ant Design icons via react-icons
 
 // Define the icon keys used in the sidebar
 export type IconKey =
@@ -104,7 +115,20 @@ export type IconSetType =
     | 'boxicons'
     | 'simple_icons'
     | 'ionicons'
-    | 'eva_icons';
+    | 'eva_icons'
+    | 'bootstrap'
+    | 'remix'
+    | 'boxicons_react'
+    | 'fontawesome_react'
+    | 'game_icons'
+    | 'ionicons_react'
+    | 'simple_icons_react';
+    
+// Include fun sets in IconSetType
+export type IconSetTypeExtended = IconSetType | 'fun_neon' | 'fun_pastel' | 'fun_cartoon' | 'fun_emoji';
+    
+// Add fun sets to IconSetType (string literal union extension)
+export type FunIconSetType = 'fun_neon' | 'fun_pastel' | 'fun_cartoon' | 'fun_emoji';
 
 export interface IconSetInfo {
     id: IconSetType;
@@ -164,6 +188,73 @@ export const iconSetInfo: Record<IconSetType, IconSetInfo> = {
         previewIcons: ['dashboard', 'users', 'settings', 'bell']
     }
     ,
+    bootstrap: {
+        id: 'bootstrap',
+        name: 'Bootstrap Icons',
+        description: 'Clean, geometric icons from Bootstrap Icons (via react-icons/bs)',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    remix: {
+        id: 'remix',
+        name: 'Remix Icons',
+        description: 'Remix icon set for modern interfaces (via react-icons/ri)',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    boxicons_react: {
+        id: 'boxicons_react',
+        name: 'Boxicons (React)',
+        description: 'Boxicons via react-icons/bi for a playful UI style',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    fontawesome_react: {
+        id: 'fontawesome_react',
+        name: 'Font Awesome (React)',
+        description: 'Font Awesome icons via react-icons/fa for broader variety',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    game_icons: {
+        id: 'game_icons',
+        name: 'Game Icons',
+        description: 'Decorative and expressive icons (via react-icons/gi)',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    ionicons_react: {
+        id: 'ionicons_react',
+        name: 'Ionicons (React)',
+        description: 'Ionicons via react-icons/io5 for sharp glyphs',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    simple_icons_react: {
+        id: 'simple_icons_react',
+        name: 'Simple Icons (Brands)',
+        description: 'Brand-focused icons via react-icons/si',
+        previewIcons: ['dashboard', 'users', 'settings', 'bell']
+    },
+    fun_neon: {
+        id: 'fun_neon',
+        name: 'Fun Neon',
+        description: 'Bright neon-style icons with energetic shapes',
+        previewIcons: ['dashboard', 'bookOpen', 'calendar', 'bell']
+    },
+    fun_pastel: {
+        id: 'fun_pastel',
+        name: 'Playful Pastel',
+        description: 'Soft pastel icons with friendly shapes',
+        previewIcons: ['dashboard', 'bookOpen', 'calendar', 'bell']
+    },
+    fun_cartoon: {
+        id: 'fun_cartoon',
+        name: 'Cartoonish',
+        description: 'Whimsical cartoon-style icons (bold, rounded)',
+        previewIcons: ['dashboard', 'bookOpen', 'calendar', 'bell']
+    },
+    fun_emoji: {
+        id: 'fun_emoji',
+        name: 'Emoji Style',
+        description: 'Emoji-like glyphs for a playful experience',
+        previewIcons: ['dashboard', 'bookOpen', 'calendar', 'bell']
+    },
+    
     ant_design: {
         id: 'ant_design',
         name: 'Ant Design',
@@ -584,6 +675,218 @@ const materialIcons: Record<IconKey, IconComponent> = {
     database: Md.MdOutlineStorage,
 };
 
+// Additional react-icons backed mappings (merge with lucide for full coverage)
+const bootstrapIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Bs.BsColumnsGap,
+    users: Bs.BsPeople,
+    graduationCap: Bs.BsMortarboard,
+    bookOpen: Bs.BsBook,
+    calendar: Bs.BsCalendar,
+    dollarSign: Bs.BsCurrencyDollar,
+    package: Bs.BsBoxSeam,
+    briefcase: Bs.BsBriefcase,
+    trendingUp: Bs.BsGraphUp,
+    messageSquare: Bs.BsChatSquareDots,
+    settings: Bs.BsGear,
+    chevronDown: Bs.BsChevronDown,
+    chevronRight: Bs.BsChevronRight,
+    userPlus: Bs.BsPersonPlus,
+    list: Bs.BsList,
+    messageCircle: Bs.BsChatDots,
+    folderOpen: Bs.BsFolder2Open,
+    bell: Bs.BsBell,
+};
+
+const remixIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Ri.RiDashboardLine,
+    users: Ri.RiUser3Line,
+    graduationCap: Ri.RiGraduationCapLine,
+    bookOpen: Ri.RiBookOpenLine,
+    calendar: Ri.RiCalendarLine,
+    dollarSign: Ri.RiMoneyDollarCircleLine,
+    package: Ri.RiPackageLine,
+    briefcase: Ri.RiBriefcaseLine,
+    trendingUp: Ri.RiLineChartLine,
+    messageSquare: Ri.RiChat4Line,
+    settings: Ri.RiSettings3Line,
+    chevronDown: Ri.RiArrowDownSLine,
+    chevronRight: Ri.RiArrowRightSLine,
+    userPlus: Ri.RiUserAddLine,
+    list: Ri.RiMenuLine,
+    messageCircle: Ri.RiChat1Line,
+    folderOpen: Ri.RiFolderOpenLine,
+    bell: Ri.RiNotificationLine,
+};
+
+const boxiconsReactIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Bi.BiGridAlt,
+    users: Bi.BiUser,
+    graduationCap: Bi.BiBookAlt,
+    bookOpen: Bi.BiBookOpen,
+    calendar: Bi.BiCalendar,
+    dollarSign: Bi.BiDollar,
+    package: Bi.BiPackage,
+    briefcase: Bi.BiBriefcase,
+    trendingUp: Bi.BiTrendingUp,
+    messageSquare: Bi.BiMessageSquare,
+    settings: Bi.BiCog,
+    chevronDown: Bi.BiChevronsDown,
+    chevronRight: Bi.BiChevronRight,
+    userPlus: Bi.BiUserPlus,
+    list: Bi.BiListUl,
+    messageCircle: Bi.BiMessageRoundedDots,
+    folderOpen: Bi.BiFolderOpen,
+    bell: Bi.BiBell,
+};
+
+const fontawesomeReactIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Fa.FaTachometerAlt,
+    users: Fa.FaUsers,
+    graduationCap: Fa.FaGraduationCap,
+    bookOpen: Fa.FaBookOpen,
+    calendar: Fa.FaCalendarAlt,
+    dollarSign: Fa.FaDollarSign,
+    package: Fa.FaBoxOpen,
+    briefcase: Fa.FaBriefcase,
+    trendingUp: Fa.FaChartLine,
+    messageSquare: Fa.FaComments,
+    settings: Fa.FaCog,
+    chevronDown: Fa.FaChevronDown,
+    chevronRight: Fa.FaChevronRight,
+    userPlus: Fa.FaUserPlus,
+    list: Fa.FaListUl,
+    messageCircle: Fa.FaCommentDots,
+    folderOpen: Fa.FaFolderOpen,
+    bell: Fa.FaBell,
+};
+
+const gameIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Gi.GiAbstract050,
+    users: Gi.GiTeamIdea,
+    graduationCap: Gi.GiLaurelsTrophy,
+    bookOpen: Gi.GiOpenBook,
+    calendar: Gi.GiCalendar,
+    dollarSign: Gi.GiReceiveMoney,
+    package: Gi.GiPackage,
+    briefcase: Gi.GiSuitcase,
+    trendingUp: Gi.GiChart,
+    messageSquare: Gi.GiChatBubble,
+    settings: Gi.GiCog,
+    chevronDown: Gi.GiChevronDown,
+    chevronRight: Gi.GiChevronRight,
+    userPlus: Gi.GiGroupAdd,
+    list: Gi.GiNotebook,
+    messageCircle: Gi.GiConversation,
+    folderOpen: Gi.GiFolderOpen,
+    bell: Gi.GiBell,
+};
+
+const ioniconsReactIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Io5.IoGridOutline,
+    users: Io5.IoPeopleOutline,
+    graduationCap: Io5.IoSchoolOutline,
+    bookOpen: Io5.IoBookOutline,
+    calendar: Io5.IoCalendarClearOutline,
+    dollarSign: Io5.IoCashOutline,
+    package: Io5.IoCubeOutline,
+    briefcase: Io5.IoBriefcaseOutline,
+    trendingUp: Io5.IoTrendingUpOutline,
+    messageSquare: Io5.IoChatbubbleEllipsesOutline,
+    settings: Io5.IoSettingsOutline,
+    chevronDown: Io5.IoChevronDownOutline,
+    chevronRight: Io5.IoChevronForwardOutline,
+    userPlus: Io5.IoPersonAddOutline,
+    list: Io5.IoListOutline,
+    messageCircle: Io5.IoChatbubbleOutline,
+    folderOpen: Io5.IoFolderOpenOutline,
+    bell: Io5.IoNotificationsOutline,
+};
+
+const simpleIconsReactIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Si.SiDatadog,
+    users: Si.SiLinkedin,
+    graduationCap: Si.SiGoogleclassroom,
+    bookOpen: Si.SiBookstack,
+    calendar: Si.SiGooglecalendar,
+    dollarSign: Si.SiStripe,
+    package: Si.SiAmazon,
+    briefcase: Si.SiMicrosoft,
+    trendingUp: Si.SiGoogleanalytics,
+    messageSquare: Si.SiSlack,
+    settings: Si.SiGithub,
+    chevronDown: Si.SiChevron,
+    chevronRight: Si.SiChevron,
+    userPlus: Si.SiOkta,
+    list: Si.SiNotion,
+    messageCircle: Si.SiDiscord,
+    folderOpen: Si.SiDropbox,
+    bell: Si.SiRss,
+};
+
+// Fun / colorful icon sets — use a mix of playful icon packs
+const funNeonIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Fa.FaBolt,
+    bookOpen: Fa.FaBookOpen || Fa.FaBook,
+    calendar: Fa.FaCalendarAlt,
+    dollarSign: Fa.FaDollarSign,
+    package: Fa.FaBoxOpen || Fa.FaBox,
+    briefcase: Fa.FaBriefcase,
+    trendingUp: Fa.FaChartLine,
+    messageSquare: Fa.FaComments,
+    settings: Fa.FaCog,
+    bell: Fa.FaBell,
+};
+
+const funPastelIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Bi.BiGridAlt,
+    bookOpen: Bi.BiBookOpen,
+    calendar: Bi.BiCalendar,
+    dollarSign: Bi.BiDollar,
+    package: Bi.BiPackage,
+    briefcase: Bi.BiBriefcase,
+    trendingUp: Bi.BiTrendingUp,
+    messageSquare: Bi.BiMessageSquare,
+    settings: Bi.BiCog,
+    bell: Bi.BiBell,
+};
+
+const funCartoonIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Ri.RiDashboardLine,
+    bookOpen: Ri.RiBookOpenLine,
+    calendar: Ri.RiCalendarLine,
+    dollarSign: Ri.RiMoneyDollarCircleLine,
+    package: Ri.RiPackageLine,
+    briefcase: Ri.RiBriefcaseLine,
+    trendingUp: Ri.RiLineChartLine,
+    messageSquare: Ri.RiChat4Line,
+    settings: Ri.RiSettings3Line,
+    bell: Ri.RiNotificationLine,
+};
+
+const funEmojiIcons: Record<IconKey, IconComponent> = {
+    ...lucideIcons,
+    dashboard: Fa.FaSmile,
+    bookOpen: Fa.FaBook,
+    calendar: Fa.FaCalendarAlt,
+    dollarSign: Fa.FaDollarSign,
+    package: Fa.FaBoxOpen || Fa.FaBox,
+    briefcase: Fa.FaSuitcase || Fa.FaBriefcase,
+    trendingUp: Fa.FaChartLine,
+    messageSquare: Fa.FaCommentDots || Fa.FaComments,
+    settings: Fa.FaCog,
+    bell: Fa.FaBell,
+};
+
 // All icon sets mapping
 const iconSets: Record<IconSetType, Record<IconKey, IconComponent>> = {
     lucide: lucideIcons,
@@ -594,22 +897,67 @@ const iconSets: Record<IconSetType, Record<IconKey, IconComponent>> = {
     phosphor_fill: phosphorIcons, // Will apply fill via props
     tabler: tablerIcons,
     material_outlined: materialIcons,
-    // Registered new icon libraries (use lucide fallback mapping for safety)
-    ant_design: lucideIcons,
-    feather: lucideIcons,
-    fontawesome_solid: lucideIcons,
-    fontawesome_regular: lucideIcons,
-    boxicons: lucideIcons,
-    simple_icons: lucideIcons,
-    ionicons: lucideIcons,
-    eva_icons: lucideIcons,
+    // Registered new icon libraries (react-icons mappings)
+    ant_design: {
+        ...lucideIcons,
+        dashboard: Ai.AiOutlineDashboard,
+        users: Ai.AiOutlineTeam,
+        graduationCap: Ai.AiOutlineBook,
+        bookOpen: Ai.AiOutlineBook,
+        calendar: Ai.AiOutlineCalendar,
+        dollarSign: Ai.AiOutlineDollarCircle,
+        package: Ai.AiOutlineAppstore,
+        briefcase: Ai.AiOutlineTool,
+        settings: Ai.AiOutlineSetting,
+        bell: Ai.AiOutlineBell,
+    },
+    feather: {
+        ...lucideIcons,
+        dashboard: Feather.Grid,
+        users: Feather.Users,
+        graduationCap: Feather.BookOpen,
+        bookOpen: Feather.Book,
+        calendar: Feather.Calendar,
+        dollarSign: Feather.DollarSign,
+        package: Feather.Package,
+        briefcase: Feather.Briefcase,
+        settings: Feather.Settings,
+        bell: Feather.Bell,
+    },
+    fontawesome_solid: fontawesomeReactIcons,
+    fontawesome_regular: fontawesomeReactIcons,
+    boxicons: boxiconsReactIcons,
+    simple_icons: simpleIconsReactIcons,
+    ionicons: ioniconsReactIcons,
+    eva_icons: {
+        ...lucideIcons,
+        // Eva Icons via Ci as a stable substitute for preview purposes
+        dashboard: Ci.CiGrid41,
+        users: Ci.CiUser,
+        bookOpen: Ci.CiBook,
+        calendar: Ci.CiCalendarDate,
+        bell: Ci.CiBellOn,
+    },
+    // New react-icons backed sets (provide real mappings for common keys)
+    bootstrap: bootstrapIcons,
+    remix: remixIcons,
+    boxicons_react: boxiconsReactIcons,
+    fontawesome_react: fontawesomeReactIcons,
+    game_icons: gameIcons,
+    ionicons_react: ioniconsReactIcons,
+    simple_icons_react: simpleIconsReactIcons,
+    // Fun colorful sets
+    fun_neon: funNeonIcons,
+    fun_pastel: funPastelIcons,
+    fun_cartoon: funCartoonIcons,
+    fun_emoji: funEmojiIcons,
 };
 
 /**
  * Get an icon component for a given key and icon set
  */
-export const getIcon = (key: IconKey, iconSet: IconSetType = 'lucide'): IconComponent => {
-    const set = iconSets[iconSet] || iconSets.lucide;
+export const getIcon = (key: IconKey, iconSet: IconSetType | string = 'lucide'): IconComponent => {
+    const set = (iconSets as Record<string, Record<IconKey, IconComponent>>)[iconSet] || iconSets.lucide;
     return set[key] || lucideIcons[key];
 };
 

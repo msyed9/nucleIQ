@@ -94,10 +94,10 @@ class ParentPortalService:
         student = self.get_student(student_id)
         
         # Import here to avoid circular imports
-        from attendance.models import StudentAttendance
+        from attendance.models import AttendanceRecord
         
-        # Build query
-        attendance_query = StudentAttendance.objects.filter(
+        # Build query - AttendanceRecord may use 'student' or 'person' field
+        attendance_query = AttendanceRecord.objects.filter(
             student=student,
             tenant=self.user.tenant
         )
@@ -112,7 +112,7 @@ class ParentPortalService:
         present_days = attendance_query.filter(status='PRESENT').count()
         absent_days = attendance_query.filter(status='ABSENT').count()
         late_days = attendance_query.filter(status='LATE').count()
-        excused_days = attendance_query.filter(status='EXCUSED').count()
+        excused_days = attendance_query.filter(status='ON_LEAVE').count()
         
         # Calculate percentage
         percentage = (present_days / total_days * 100) if total_days > 0 else 0
@@ -140,7 +140,7 @@ class ParentPortalService:
         student = self.get_student(student_id)
         
         # Import here to avoid circular imports
-        from fees.models import FeeInvoice, FeePayment
+        from fees.models import FeeInvoice
         
         # Build query
         invoices_query = FeeInvoice.objects.filter(
@@ -153,21 +153,14 @@ class ParentPortalService:
                 academic_year_id=academic_year_id
             )
         
-        # Calculate totals
-        total_amount = invoices_query.aggregate(
-            total=Sum('total_amount')
-        )['total'] or 0
-        
-        # Get payments
-        payments_query = FeePayment.objects.filter(
-            invoice__in=invoices_query,
-            status='COMPLETED'
+        # Calculate totals using invoice fields directly
+        totals = invoices_query.aggregate(
+            total=Sum('total_amount'),
+            paid=Sum('paid_amount')
         )
         
-        paid_amount = payments_query.aggregate(
-            total=Sum('amount')
-        )['total'] or 0
-        
+        total_amount = totals['total'] or 0
+        paid_amount = totals['paid'] or 0
         balance = total_amount - paid_amount
         
         # Get overdue invoices
@@ -281,9 +274,9 @@ class ParentPortalService:
         return StudentRemark.objects.filter(
             student=student,
             tenant=self.user.tenant,
-            is_visible_to_parent=True
+            visible_to_parent=True
         ).select_related(
-            'created_by'
+            'created_by_staff'
         ).order_by('-created_at')[:limit]
     
     def get_student_documents(self, student_id):
@@ -301,7 +294,7 @@ class ParentPortalService:
         return StudentDocument.objects.filter(
             student=student,
             tenant=self.user.tenant
-        ).order_by('-uploaded_at')
+        ).order_by('-created_at')
     
     def get_student_health_records(self, student_id):
         """
@@ -318,7 +311,7 @@ class ParentPortalService:
         return StudentHealthRecord.objects.filter(
             student=student,
             tenant=self.user.tenant
-        ).order_by('-record_date')
+        ).order_by('-date')
     
     def update_last_login(self):
         """Update the parent's last login timestamp."""
@@ -360,7 +353,7 @@ class ParentPortalService:
         Returns:
             str: Class and section name
         """
-        if hasattr(student, 'current_enrollment') and student.current_enrollment:
-            enrollment = student.current_enrollment
-            return f"{enrollment.grade.name} - {enrollment.section.name}"
+        enrollment = student.get_current_enrollment()
+        if enrollment and enrollment.section and enrollment.section.grade_level:
+            return f"{enrollment.section.grade_level.name} - {enrollment.section.name}"
         return "Not Enrolled"

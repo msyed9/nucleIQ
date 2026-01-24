@@ -32,8 +32,8 @@ class ParentStudentListSerializer(serializers.ModelSerializer):
     def get_current_class(self, obj):
         """Get current class and section."""
         enrollment = obj.get_current_enrollment()
-        if enrollment and enrollment.section and enrollment.section.grade:
-            return f"{enrollment.section.grade.name} - {enrollment.section.name}"
+        if enrollment and enrollment.section and enrollment.section.grade_level:
+            return f"{enrollment.section.grade_level.name} - {enrollment.section.name}"
         return "Not Enrolled"
     
     def get_photo_url(self, obj):
@@ -74,8 +74,8 @@ class ParentStudentDetailSerializer(serializers.ModelSerializer):
     def get_current_class(self, obj):
         """Get current class and section."""
         enrollment = obj.get_current_enrollment()
-        if enrollment and enrollment.section and enrollment.section.grade:
-            return f"{enrollment.section.grade.name} - {enrollment.section.name}"
+        if enrollment and enrollment.section and enrollment.section.grade_level:
+            return f"{enrollment.section.grade_level.name} - {enrollment.section.name}"
         return "Not Enrolled"
     
     def get_photo_url(self, obj):
@@ -93,7 +93,7 @@ class ParentStudentDetailSerializer(serializers.ModelSerializer):
         if enrollment:
             return {
                 'academic_year': enrollment.academic_year.name,
-                'grade': enrollment.section.grade.name,
+                'grade': enrollment.section.grade_level.name,
                 'section': enrollment.section.name,
                 'roll_number': enrollment.roll_number,
                 'enrollment_date': enrollment.enrollment_date,

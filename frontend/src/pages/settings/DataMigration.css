@@ -9,6 +9,10 @@
     margin: 0 auto;
 }
 
+:root {
+    --card-shadow: 0 6px 18px rgba(22, 24, 35, 0.06);
+}
+
 /* Page Header */
 .page-header {
     display: flex;
@@ -38,6 +42,34 @@
 .header-actions {
     display: flex;
     gap: 0.75rem;
+    align-items: center;
+}
+
+/* Inline backup progress */
+.backup-progress-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface-elevated);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.progress-bar-mini {
+    width: 80px;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-mini .progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    border-radius: 3px;
+    transition: width 0.3s ease;
 }
 
 /* Error Banner */
@@ -115,6 +147,11 @@
 /* Step Cards */
 .step-card {
     margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--color-surface);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--color-border);
 }
 
 .step-header {
@@ -193,7 +230,7 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: var(--color-surface-elevated);
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(79,70,229,0.08));
     border-radius: 10px;
     color: var(--color-primary);
     flex-shrink: 0;
@@ -342,17 +379,18 @@
 .drop-zone {
     border: 2px dashed var(--color-border);
     border-radius: 16px;
-    padding: 2.5rem;
+    padding: 2.25rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
-    background: var(--color-surface);
+    transition: all 0.18s ease;
+    background: linear-gradient(180deg, var(--color-surface), var(--color-surface-elevated));
+    box-shadow: 0 8px 24px rgba(16,24,40,0.04);
 }
 
 .drop-zone:hover,
 .drop-zone.drag-active {
     border-color: var(--color-primary);
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.02));
+    background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(79,70,229,0.04));
 }
 
 .drop-zone.drag-active {
@@ -371,6 +409,12 @@
     align-items: center;
     gap: 0.75rem;
     color: var(--color-text-secondary);
+}
+
+.drop-content p {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--color-text-primary);
 }
 
 .drop-content svg {
@@ -432,6 +476,36 @@
     display: flex;
     justify-content: center;
     margin-top: 1.5rem;
+}
+
+/* Tabs polish */
+.tabs {
+    box-shadow: 0 6px 18px rgba(22,24,35,0.04);
+}
+
+.tab.active {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: #fff;
+    box-shadow: 0 8px 28px rgba(99,102,241,0.12);
+}
+
+/* Make preview table header more readable */
+.preview-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Make small improvements to history table for readability */
+.history-table td,
+.preview-table td {
+    vertical-align: middle;
+}
+
+/* Add subtle hover to module cards */
+.module-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(16,24,40,0.06);
 }
 
 /* Validation Result */
@@ -758,6 +832,7 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
