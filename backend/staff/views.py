@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from core.permissions import IsTenantUser
+from core.permissions import IsTenantUser, IsTenantAdmin
 from .qr_attendance import (
     generate_staff_attendance_token,
     verify_staff_attendance_token,
@@ -132,6 +132,28 @@ class StaffViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(staff)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsTenantAdmin], url_path='reset-password')
+    def reset_password(self, request, pk=None):
+        """Tenant admin can reset a staff user's password and receive a temporary password."""
+        staff = self.get_object()
+        if not hasattr(staff, 'user') or staff.user is None:
+            return Response({'error': 'Staff member has no linked user account'}, status=400)
+
+        user = staff.user
+        import random, string
+
+        temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        user.set_password(temp_password)
+        user.is_active = True
+        user.save(update_fields=['password', 'is_active'])
+
+        return Response({
+            'staff_id': staff.id,
+            'user_email': user.email,
+            'user_name': user.get_full_name(),
+            'temporary_password': temp_password
+        })
     
     @action(detail=False, methods=['get'])
     def stats(self, request):

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const DEFAULT_VERSION = 'v1';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -9,10 +10,21 @@ const api = axios.create({
     },
 });
 
+/**
+ * Utility to get a versioned URL
+ * @param path The endpoint path (e.g., '/students/')
+ * @param version The version string (e.g., 'v1', 'v2')
+ */
+export const getVersionedUrl = (path: string, version: string = DEFAULT_VERSION) => {
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return `${version}/${cleanPath}`;
+};
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token');
+        // Support both new 'access_token' and legacy 'token' keys for backward compatibility
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

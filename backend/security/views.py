@@ -18,13 +18,14 @@ from .serializers import (
     ApproveGatePassSerializer, ScanGatePassSerializer
 )
 from core.middleware import get_current_tenant
+from core.permissions import IsTenantUser
 
 
 class GatePassViewSet(viewsets.ModelViewSet):
     """ViewSet for GatePass management."""
     
     serializer_class = GatePassSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['pass_type', 'status', 'student']
     search_fields = ['visitor_name', 'reason', 'student__user__first_name', 'student__user__last_name']
@@ -196,7 +197,7 @@ class GateLogViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for GateLog (read-only)."""
     
     serializer_class = GateLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['gate_pass', 'action', 'guard']
     search_fields = ['gate_pass__student__user__first_name', 'notes']
@@ -215,7 +216,7 @@ class CampusVisitorViewSet(viewsets.ModelViewSet):
     """ViewSet for Visitor management."""
     
     serializer_class = VisitorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['visitor_type', 'status', 'person_to_meet']
     search_fields = ['name', 'phone', 'email', 'organization', 'purpose']
@@ -374,7 +375,7 @@ class CampusVisitorLogViewSet(viewsets.ModelViewSet):
     """ViewSet for VisitorLog management."""
     
     serializer_class = VisitorLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['visitor', 'logged_by']
     search_fields = ['location', 'action', 'notes']

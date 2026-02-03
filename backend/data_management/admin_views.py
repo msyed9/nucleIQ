@@ -301,15 +301,16 @@ def migration_wizard(request):
             'optional_fields': len(config['template'].get_optional_fields()),
         })
     
-    # Sort modules by common usage
-    module_order = ['students', 'staff', 'classes', 'subjects', 'fee_structures', 
-                    'fee_invoices', 'fee_payments', 'fee_allocations', 'fee_discounts',
-                    'student_enrollments', 'attendance', 'transport', 'parents', 'user_accounts',
-                    'student_photos', 'exam_results', 'exam_schedule', 'timetable',
-                    'library_books', 'library_transactions', 'payroll_payments',
-                    'hostel_allocations', 'inventory_items', 'certificates_issued',
-                    'finance_journal_entries', 'helpdesk_tickets', 'lms_courses',
-                    'lms_enrollments', 'idcards']
+    # Sort modules in recommended import/export sequence (dependencies first)
+    module_order = [
+        'classes', 'subjects', 'staff', 'user_accounts', 'students', 'student_photos',
+        'student_enrollments', 'parents', 'fee_structures', 'fee_discounts',
+        'fee_allocations', 'fee_invoices', 'fee_payments', 'finance_journal_entries',
+        'transport', 'attendance', 'timetable', 'exam_schedule', 'exam_results',
+        'library_books', 'library_transactions', 'payroll_payments', 'hostel_allocations',
+        'inventory_items', 'certificates_issued', 'helpdesk_tickets', 'lms_courses',
+        'lms_enrollments', 'idcards'
+    ]
     modules.sort(key=lambda x: module_order.index(x['name']) if x['name'] in module_order else 999)
     
     context = {
@@ -674,15 +675,16 @@ def template_library(request):
             'instructions': template.instructions[:5] if template.instructions else [],
         })
     
-    # Sort templates
-    module_order = ['students', 'staff', 'classes', 'subjects', 'fee_structures', 
-                    'fee_invoices', 'fee_payments', 'fee_allocations', 'fee_discounts',
-                    'student_enrollments', 'attendance', 'transport', 'parents', 'user_accounts',
-                    'student_photos', 'exam_results', 'exam_schedule', 'timetable',
-                    'library_books', 'library_transactions', 'payroll_payments',
-                    'hostel_allocations', 'inventory_items', 'certificates_issued',
-                    'finance_journal_entries', 'helpdesk_tickets', 'lms_courses',
-                    'lms_enrollments', 'idcards']
+    # Sort templates in recommended import/export sequence
+    module_order = [
+        'classes', 'subjects', 'staff', 'user_accounts', 'students', 'student_photos',
+        'student_enrollments', 'parents', 'fee_structures', 'fee_discounts',
+        'fee_allocations', 'fee_invoices', 'fee_payments', 'finance_journal_entries',
+        'transport', 'attendance', 'timetable', 'exam_schedule', 'exam_results',
+        'library_books', 'library_transactions', 'payroll_payments', 'hostel_allocations',
+        'inventory_items', 'certificates_issued', 'helpdesk_tickets', 'lms_courses',
+        'lms_enrollments', 'idcards'
+    ]
     templates.sort(key=lambda x: module_order.index(x['name']) if x['name'] in module_order else 999)
     
     context = {

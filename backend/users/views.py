@@ -17,7 +17,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 
-from core.permissions import IsTenantUser, IsPlatformAdmin, HasModulePermission
+from core.permissions import IsTenantUser, IsPlatformAdmin, HasModulePermission, IsTenantAdmin
 from .models import (
     User, UserPreference, Role, Permission,
     RolePermission, UserRole, ImpersonationLog
@@ -106,6 +106,10 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         if self.action in ['me', 'preferences']:
             return [IsAuthenticated()]
+
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'activate', 'deactivate']:
+            return [IsAuthenticated(), IsTenantAdmin()]
+
         return super().get_permissions()
     
     def get_serializer_class(self):
@@ -356,7 +360,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
-    permission_classes = [IsAuthenticated, IsTenantUser]
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
     
     def get_queryset(self):
         """Filter roles by tenant."""
@@ -570,7 +574,7 @@ class PermissionsMatrixViewSet(viewsets.ViewSet):
     - PATCH /permissions-matrix/bulk-update/ - Bulk update role permissions
     """
     
-    permission_classes = [IsAuthenticated, IsTenantUser]
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
     
     def list(self, request):
         """

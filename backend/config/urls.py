@@ -42,6 +42,108 @@ def health_check(request):
             "error": str(e)
         }, status=503)
 
+def media_download(request, file_path):
+    """
+    Secure media download handler.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    if not (request.user.is_platform_admin or request.user.is_superuser):
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'error': 'Tenant context required'}, status=403)
+        if request.user.tenant_id != tenant.id:
+            return JsonResponse({'error': 'Tenant mismatch'}, status=403)
+
+    normalized_path = os.path.normpath(file_path).lstrip(os.sep)
+
+    if not default_storage.exists(normalized_path):
+        raise Http404("File not found")
+
+    file_handle = default_storage.open(normalized_path, 'rb')
+    return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(normalized_path))
+
+# API v1 Patterns
+v1_patterns = [
+    path('', include('users.api.v1.urls')),
+    path('', include('core.api.v1.urls')),
+    path('communication/', include('communication.api.v1.urls')),
+    path('billing/', include('billing.api.v1.urls')),
+    path('dashboard/', include('dashboard.api.v1.urls')),
+    path('search/', include('search.api.v1.urls')),
+    path('students/', include('students.api.v1.urls')),
+    path('parent/', include('students.api.v1.parent_urls')),
+    path('analytics/', include('analytics.api.v1.urls')),
+    path('idcards/', include('idcards.api.v1.urls')),
+    path('staff/', include('staff.api.v1.urls')),
+    path('attendance/', include('attendance.api.v1.urls')),
+    path('fees/', include('fees.api.v1.urls')),
+    path('finance/', include('finance.api.v1.urls')),
+    path('tenants/', include('tenants.api.v1.urls')),
+    path('timetable/', include('timetable.api.v1.urls')),
+    path('academics/', include('academics.api.v1.urls')),
+    path('exams/', include('exams.api.v1.urls')),
+    path('hr/', include('hr.api.v1.urls')),
+    path('payroll/', include('payroll.api.v1.urls')),
+    path('crm/', include('crm.api.v1.urls')),
+    path('cms/', include('cms.api.v1.urls')),
+    path('library/', include('library.api.v1.urls')),
+    path('transport/', include('transport.api.v1.urls')),
+    path('inventory/', include('inventory.api.v1.urls')),
+    path('hostel/', include('hostel.api.v1.urls')),
+    path('salah/', include('salah_tracker.api.v1.urls')),
+    path('habits/', include('habit_tracker.api.v1.urls')),
+    path('lms/', include('lms.api.v1.urls')),
+    path('certificates/', include('certificates.api.v1.urls')),
+    path('security/', include('security.api.v1.urls')),
+    path('placement/', include('placement.api.v1.urls')),
+    path('helpdesk/', include('helpdesk.api.v1.urls')),
+    path('reports/', include('reports.api.v1.urls')),
+    path('data-management/', include('data_management.api.v1.urls')),
+]
+
+# API v2 Patterns (Future major breaking changes)
+v2_patterns = [
+    path('', include('users.api.v2.urls')),
+    path('', include('core.api.v2.urls')),
+    path('communication/', include('communication.api.v2.urls')),
+    path('billing/', include('billing.api.v2.urls')),
+    path('dashboard/', include('dashboard.api.v2.urls')),
+    path('search/', include('search.api.v2.urls')),
+    path('students/', include('students.api.v2.urls')),
+    path('parent/', include('students.api.v2.parent_urls')),
+    path('analytics/', include('analytics.api.v2.urls')),
+    path('idcards/', include('idcards.api.v2.urls')),
+    path('staff/', include('staff.api.v2.urls')),
+    path('attendance/', include('attendance.api.v2.urls')),
+    path('fees/', include('fees.api.v2.urls')),
+    path('finance/', include('finance.api.v2.urls')),
+    path('tenants/', include('tenants.api.v2.urls')),
+    path('timetable/', include('timetable.api.v2.urls')),
+    path('academics/', include('academics.api.v2.urls')),
+    path('exams/', include('exams.api.v2.urls')),
+    path('hr/', include('hr.api.v2.urls')),
+    path('payroll/', include('payroll.api.v2.urls')),
+    path('crm/', include('crm.api.v2.urls')),
+    path('cms/', include('cms.api.v2.urls')),
+    path('library/', include('library.api.v2.urls')),
+    path('transport/', include('transport.api.v2.urls')),
+    path('inventory/', include('inventory.api.v2.urls')),
+    path('hostel/', include('hostel.api.v2.urls')),
+    path('salah/', include('salah_tracker.api.v2.urls')),
+    path('habits/', include('habit_tracker.api.v2.urls')),
+    path('lms/', include('lms.api.v2.urls')),
+    path('certificates/', include('certificates.api.v2.urls')),
+    path('security/', include('security.api.v2.urls')),
+    path('placement/', include('placement.api.v2.urls')),
+    path('helpdesk/', include('helpdesk.api.v2.urls')),
+    path('reports/', include('reports.api.v2.urls')),
+    path('data-management/', include('data_management.api.v2.urls')),
+]
+
+v1_schema_urlpatterns = v1_patterns
+v2_schema_urlpatterns = v2_patterns
 
 urlpatterns = [
     # Health check (no authentication required)
@@ -57,87 +159,43 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path(
+        'api/v1/schema/',
+        SpectacularAPIView.as_view(
+            custom_settings={
+                'TITLE': 'NucleiQ API v1',
+                'SCHEMA_PATH_PREFIX_INSERT': '/api/v1',
+            },
+            urlconf=v1_schema_urlpatterns
+        ),
+        name='schema-v1'
+    ),
+    path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema-v1'), name='swagger-ui-v1'),
+    path('api/v1/redoc/', SpectacularRedocView.as_view(url_name='schema-v1'), name='redoc-v1'),
+    path(
+        'api/v2/schema/',
+        SpectacularAPIView.as_view(
+            custom_settings={
+                'TITLE': 'NucleiQ API v2',
+                'SCHEMA_PATH_PREFIX_INSERT': '/api/v2',
+            },
+            urlconf=v2_schema_urlpatterns
+        ),
+        name='schema-v2'
+    ),
+    path('api/v2/docs/', SpectacularSwaggerView.as_view(url_name='schema-v2'), name='swagger-ui-v2'),
+    path('api/v2/redoc/', SpectacularRedocView.as_view(url_name='schema-v2'), name='redoc-v2'),
     
-    # API endpoints
-    path('api/', include('users.urls')),
-    path('api/communication/', include('communication.urls')),
-    path('api/billing/', include('billing.urls')),
-    path('api/dashboard/', include('dashboard.urls')),
-    path('api/search/', include('search.urls')),
-    path('api/students/', include('students.urls')),
-    path('api/parent/', include('students.parent_urls')),  # Parent Portal
-    path('api/analytics/', include('analytics.urls')),
-    path('api/idcards/', include('idcards.urls')),  # ID Card system
-    path('api/staff/', include('staff.urls')),
-    path('api/attendance/', include('attendance.urls')),
-    path('api/fees/', include('fees.urls')),
-    path('api/finance/', include('finance.urls')),
-    path('api/tenants/', include('tenants.urls')),
-    path('api/timetable/', include('timetable.urls')),
-    path('api/academics/', include('academics.urls')),
-    path('api/exams/', include('exams.urls')),
-    path('api/hr/', include('hr.urls')),
-    path('api/payroll/', include('payroll.urls')),
-    path('api/crm/', include('crm.urls')),
-    path('api/cms/', include('cms.urls')),
-    path('api/library/', include('library.urls')),
-    path('api/transport/', include('transport.urls')),
-    path('api/inventory/', include('inventory.urls')),
-    path('api/hostel/', include('hostel.urls')),
-    path('api/salah/', include('salah_tracker.urls')),
-    path('api/habits/', include('habit_tracker.urls')),
-    # path('api/alumni/', include('alumni.urls')),  # Moved to students app
-    path('api/lms/', include('lms.urls')),
+    # Versioned API routes
+    path('api/v1/', include((v1_patterns, 'v1'), namespace='v1')),
+    path('api/v2/', include((v2_patterns, 'v2'), namespace='v2')),
     
     # Mobile API
     path('api/mobile/', include('core.mobile_urls')),
     
-    # Phase 6
-    path('api/certificates/', include('certificates.urls')),
-    path('api/security/', include('security.urls')),
-    path('api/placement/', include('placement.urls')),
-    path('api/helpdesk/', include('helpdesk.urls')),
-    
-    # Phase 7
-    path('api/reports/', include('reports.urls')),
-    
-    # Data Management - Bulk Import/Export/Backup
-    path('api/data-management/', include('data_management.urls')),
-    
-    # Phase 8 - Notifications moved to communication app
-    # path('api/notifications/', include('notifications.urls')),
-]
-
-# Recycle Bin routes (outside main urlpatterns for custom routing)
-from rest_framework.routers import DefaultRouter
-from core.recyclebin import RecycleBinViewSet
-from core.audit import AuditLogViewSet
-
-admin_router = DefaultRouter()
-admin_router.register(r'recycle-bin', RecycleBinViewSet, basename='recycle-bin')
-admin_router.register(r'audit-logs', AuditLogViewSet, basename='audit-logs')
-
-urlpatterns = [
-    path('api/', include(admin_router.urls)),
-] + urlpatterns
-
-
-# Download media with attachment (forces browser to download)
-def media_download(request, file_path):
-    # file_path should be relative path inside MEDIA_ROOT, e.g. 'idcards/...zip'
-    try:
-        if not default_storage.exists(file_path):
-            raise Http404
-        f = default_storage.open(file_path, 'rb')
-        return FileResponse(f, as_attachment=True, filename=os.path.basename(file_path))
-    except Exception:
-        raise Http404
-
-
-# Expose a simple download endpoint at /media-download/<path:file_path>/
-urlpatterns = [
+    # Media download
     path('media-download/<path:file_path>/', media_download, name='media-download'),
-] + urlpatterns
+]
 
 # Serve media files in development
 if settings.DEBUG:

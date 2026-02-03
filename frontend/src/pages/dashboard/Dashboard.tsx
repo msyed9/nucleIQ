@@ -7,6 +7,7 @@ import api from '../../services/api';
 import './Dashboard.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useTenantBranding } from '../../contexts/TenantBrandingContext';
 
 interface DashboardStats {
     total_students: number;
@@ -26,10 +27,15 @@ interface PendingEnrollmentData {
 const Dashboard: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { branding, getDashboardBannerUrl } = useTenantBranding();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [pendingEnrollments, setPendingEnrollments] = useState<PendingEnrollmentData | null>(null);
     const [loading, setLoading] = useState(true);
     const [, setError] = useState('');
+
+    // Get user info for welcome message
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = user.first_name || user.username || 'User';
 
     useEffect(() => {
         fetchDashboardStats();
@@ -68,13 +74,71 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    // Get dashboard banner URL
+    const dashboardBannerUrl = getDashboardBannerUrl();
+
     if (loading) {
         return <Loading fullScreen text={t('loading.dashboard')} />;
     }
 
     return (
         <div className="dashboard">
-            <div className="dashboard-header">
+            {/* Welcome Banner with Branding */}
+            <div
+                className="dashboard-welcome-banner"
+                style={{
+                    background: dashboardBannerUrl
+                        ? `url(${dashboardBannerUrl}) center/cover no-repeat`
+                        : `linear-gradient(135deg, var(--color-primary, #1976D2), var(--color-secondary, #424242))`,
+                    borderRadius: '16px',
+                    padding: '32px',
+                    marginBottom: '24px',
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minHeight: '140px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                }}
+            >
+                {/* Overlay for better text readability */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)',
+                    pointerEvents: 'none'
+                }} />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <h1 style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '28px',
+                        fontWeight: 700,
+                        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}>
+                        {t('dashboard.welcome_back', { defaultValue: `Welcome back, ${userName}!` })}
+                    </h1>
+                    <p style={{
+                        margin: 0,
+                        fontSize: '16px',
+                        opacity: 0.9,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                    }}>
+                        {branding?.tenant_name || 'NucleiQ'} • {new Date().toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        })}
+                    </p>
+                </div>
+            </div>
+
+            <div className="dashboard-header" style={{ display: 'none' }}>
                 <h1 className="dashboard-title">{t('dashboard.title')}</h1>
                 <p className="dashboard-subtitle">{t('dashboard.subtitle')}</p>
             </div>

@@ -11,7 +11,9 @@ from .models import (
     UsageLog,
     TenantHealthAlert,
     ChurnPrediction,
-    UpsellOpportunity
+    UpsellOpportunity,
+    AlertRule,
+    AlertEvent
 )
 
 
@@ -307,3 +309,119 @@ class ChurnPredictionService:
                 'Share product updates',
                 'Encourage feature adoption'
             ]
+
+
+class AlertingService:
+    """Service for evaluating tenant-level alert rules."""
+
+    def evaluate_rules(self, tenant):
+        """Evaluate all active alert rules for a tenant."""
+        rules = AlertRule.objects.filter(tenant=tenant, is_active=True)
+        results = []
+
+        for rule in rules:
+            current_value = self._compute_metric(rule)
+            if current_value is None:
+                continue
+
+            triggered = self._evaluate(rule, current_value)
+            if triggered:
+                event = AlertEvent.objects.filter(rule=rule, status='OPEN').first()
+                if not event:
+                    event = AlertEvent.objects.create(
+                        tenant=tenant,
+                        rule=rule,
+                        current_value=current_value,
+                        details={
+                            'metric': rule.metric,
+                            'scope': rule.scope,
+                            'threshold': float(rule.threshold_value),
+                            'window_days': rule.window_days,
+                        }
+                    )
+                results.append({'rule': rule.id, 'status': 'OPEN', 'value': float(current_value)})
+            else:
+                AlertEvent.objects.filter(rule=rule, status='OPEN').update(
+                    status='RESOLVED',
+                    resolved_at=timezone.now()
+                )
+                results.append({'rule': rule.id, 'status': 'RESOLVED', 'value': float(current_value)})
+
+        return results
+
+    def _compute_metric(self, rule):
+        from attendance.models import AttendanceRecord
+        from fees.models import FeeInvoice
+
+        today = date.today()
+        window_start = today - timedelta(days=rule.window_days)
+
+        if rule.metric == 'ATTENDANCE_RATE':
+            attendance = AttendanceRecord.objects.filter(
+                tenant=rule.tenant,
+                record_type='STUDENT',
+                date__gte=window_start,
+                date__lte=today
+            )
+
+            if rule.section_id:
+                attendance = attendance.filter(student__enrollments__section_id=rule.section_id)
+            elif rule.grade_level_id:
+                attendance = attendance.filter(student__enrollments__section__grade_level_id=rule.grade_level_id)
+
+            if rule.gender:
+                attendance = attendance.filter(student__gender=rule.gender)
+
+            total = attendance.count()
+            present = attendance.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+            return Decimal(str(round(present / total * 100, 2))) if total > 0 else Decimal('0')
+
+        if rule.metric == 'FEE_DELINQUENCY':
+            invoices = FeeInvoice.objects.filter(
+                tenant=rule.tenant,
+                balance_amount__gt=0
+            )
+
+            if rule.section_id:
+                invoices = invoices.filter(student__enrollments__section_id=rule.section_id)
+            elif rule.grade_level_id:
+                invoices = invoices.filter(student__enrollments__section__grade_level_id=rule.grade_level_id)
+
+            if rule.gender:
+                invoices = invoices.filter(student__gender=rule.gender)
+
+            total = invoices.count()
+            overdue = invoices.filter(due_date__lt=today).count()
+            return Decimal(str(round(overdue / total * 100, 2))) if total > 0 else Decimal('0')
+
+        if rule.metric == 'FEE_COLLECTION_RATE':
+            invoices = FeeInvoice.objects.filter(
+                tenant=rule.tenant,
+                invoice_date__gte=window_start,
+                invoice_date__lte=today
+            )
+
+            if rule.section_id:
+                invoices = invoices.filter(student__enrollments__section_id=rule.section_id)
+            elif rule.grade_level_id:
+                invoices = invoices.filter(student__enrollments__section__grade_level_id=rule.grade_level_id)
+
+            if rule.gender:
+                invoices = invoices.filter(student__gender=rule.gender)
+
+            total_due = invoices.aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+            total_paid = invoices.aggregate(total=Sum('paid_amount'))['total'] or Decimal('0')
+            return Decimal(str(round(total_paid / total_due * 100, 2))) if total_due > 0 else Decimal('0')
+
+        return None
+
+    def _evaluate(self, rule, value):
+        if rule.comparator == 'LT':
+            return value < rule.threshold_value
+        if rule.comparator == 'LTE':
+            return value <= rule.threshold_value
+        if rule.comparator == 'GT':
+            return value > rule.threshold_value
+        if rule.comparator == 'GTE':
+            return value >= rule.threshold_value
+        return False

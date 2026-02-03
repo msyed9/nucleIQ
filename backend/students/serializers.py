@@ -16,7 +16,11 @@ class StudentBasicSerializer(serializers.ModelSerializer):
     current_class = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
     # Alias for current_class - used by attendance module frontend
     class_name = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
+    # Alias for current_class - used by refactored StudentList frontend
+    current_class_name = serializers.CharField(source='get_current_enrollment.section.grade_level.name', read_only=True)
     section = serializers.CharField(source='get_current_enrollment.section.name', read_only=True)
+    # Alias for section - used by refactored StudentList frontend
+    section_name = serializers.CharField(source='get_current_enrollment.section.name', read_only=True)
     roll_number = serializers.CharField(source='get_current_enrollment.roll_number', read_only=True)
     fee_summary = serializers.SerializerMethodField()
     # Photo URL for frontend display
@@ -26,11 +30,12 @@ class StudentBasicSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             'id', 'admission_number', 'full_name', 'first_name', 'last_name',
-            'current_class', 'class_name', 'section', 'roll_number', 'photo', 'photo_url', 'age',
+            'current_class', 'class_name', 'current_class_name', 'section', 'section_name', 
+            'roll_number', 'photo', 'photo_url', 'age',
             'date_of_birth', 'blood_group', 'is_active', 'email', 'phone',
             'fee_summary'
         ]
-        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'class_name', 'section', 'roll_number', 'photo_url', 'fee_summary']
+        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'class_name', 'current_class_name', 'section', 'section_name', 'roll_number', 'photo_url', 'fee_summary']
     
     def get_photo_url(self, obj):
         """Return absolute URL for student photo."""

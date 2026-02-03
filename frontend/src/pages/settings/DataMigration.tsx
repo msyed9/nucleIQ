@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Upload,
     Download,
@@ -44,10 +45,30 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
     classes: <BookOpen size={20} />,
     subjects: <BookOpen size={20} />,
     fee_structures: <DollarSign size={20} />,
+    fee_invoices: <FileText size={20} />,
+    fee_payments: <DollarSign size={20} />,
+    fee_allocations: <DollarSign size={20} />,
+    fee_discounts: <DollarSign size={20} />,
     student_enrollments: <Users size={20} />,
     transport: <Bus size={20} />,
     parents: <Users size={20} />,
+    user_accounts: <Users size={20} />,
     attendance: <Calendar size={20} />,
+    student_photos: <FileText size={20} />,
+    exam_results: <FileSpreadsheet size={20} />,
+    exam_schedule: <Calendar size={20} />,
+    timetable: <Clock size={20} />,
+    library_books: <BookOpen size={20} />,
+    library_transactions: <BookOpen size={20} />,
+    payroll_payments: <DollarSign size={20} />,
+    hostel_allocations: <Users size={20} />,
+    inventory_items: <Archive size={20} />,
+    certificates_issued: <FileText size={20} />,
+    finance_journal_entries: <DollarSign size={20} />,
+    helpdesk_tickets: <HelpCircle size={20} />,
+    lms_courses: <BookOpen size={20} />,
+    lms_enrollments: <Users size={20} />,
+    idcards: <FileText size={20} />,
 };
 
 interface ModuleInfo {
@@ -113,6 +134,14 @@ interface ImportResult {
     errors: string[];
 }
 
+interface ImportConfirmationResponse {
+    success: boolean;
+    requires_confirmation: boolean;
+    message: string;
+    job_id: string;
+    validation: ValidationResult;
+}
+
 interface ImportJob {
     id: string;
     module: string;
@@ -138,6 +167,8 @@ const DataMigration: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [dragActive, setDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cardFileInputRef = useRef<HTMLInputElement>(null);
+    const [pendingModuleForUpload, setPendingModuleForUpload] = useState<string | null>(null);
 
     // Validation state
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -148,6 +179,8 @@ const DataMigration: React.FC = () => {
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [skipDuplicates, setSkipDuplicates] = useState(true);
     const [updateExisting, setUpdateExisting] = useState(false);
+    const [requiresConfirmation, setRequiresConfirmation] = useState(false);
+    const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
 
     // History state
     const [importHistory, setImportHistory] = useState<ImportJob[]>([]);
@@ -166,6 +199,17 @@ const DataMigration: React.FC = () => {
         loadModules();
     }, []);
 
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        // If coming back from preview/import, show result banner
+        const navState: any = location?.state || {};
+        if (navState.uploadResult) {
+            setImportResult(navState.uploadResult);
+        }
+    }, [location?.state]);
+
     // Load fields when module changes
     useEffect(() => {
         if (selectedModule) {
@@ -173,6 +217,8 @@ const DataMigration: React.FC = () => {
         } else {
             setModuleFields(null);
         }
+        setRequiresConfirmation(false);
+        setConfirmationMessage(null);
     }, [selectedModule]);
 
     // Load history when tab changes
@@ -182,11 +228,41 @@ const DataMigration: React.FC = () => {
         }
     }, [activeTab]);
 
+    // Define the recommended upload order for modules
+    const MODULE_UPLOAD_ORDER = [
+        // Phase 1: Infrastructure
+        'classes', 'subjects',
+        // Phase 2: People
+        'staff', 'students', 'parents',
+        // Phase 3: Connectivity
+        'user_accounts', 'student_enrollments', 'student_photos',
+        // Phase 4: Financials
+        'fee_structures', 'fee_allocations', 'fee_invoices', 'fee_payments', 'fee_discounts',
+        // Phase 5: Daily Logs
+        'attendance', 'exam_schedule', 'exam_results', 'timetable',
+        // Phase 6: Assets
+        'library_books', 'library_transactions', 'inventory_items', 'transport', 'hostel_allocations',
+        // Phase 7: Administrative
+        'idcards', 'certificates_issued', 'helpdesk_tickets', 'lms_courses', 'lms_enrollments', 'payroll_payments', 'finance_journal_entries'
+    ];
+
     const loadModules = async () => {
         try {
             setLoading(true);
             const response = await api.get('/data-management/modules/');
-            setModules(response.data.modules || []);
+            const fetchedModules = response.data.modules || [];
+
+            // Sort modules according to the recommended upload order
+            const sortedModules = fetchedModules.sort((a: ModuleInfo, b: ModuleInfo) => {
+                const indexA = MODULE_UPLOAD_ORDER.indexOf(a.name);
+                const indexB = MODULE_UPLOAD_ORDER.indexOf(b.name);
+                // If not in the order list, put at the end
+                const orderA = indexA === -1 ? 999 : indexA;
+                const orderB = indexB === -1 ? 999 : indexB;
+                return orderA - orderB;
+            });
+
+            setModules(sortedModules);
         } catch (err: any) {
             setError('Failed to load modules');
             console.error(err);
@@ -240,30 +316,79 @@ const DataMigration: React.FC = () => {
         }
     }, []);
 
-    const handleFileSelect = (file: File) => {
-        const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const handleFileSelect = (file: File, targetModule?: string) => {
         const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        const moduleToCheck = targetModule || selectedModule;
 
-        if (!validExtensions.includes(extension)) {
-            setError('Invalid file type. Please upload CSV, XLSX, or XLS file.');
-            return;
+        // For student_photos module, allow ZIP files with 50MB limit
+        if (moduleToCheck === 'student_photos') {
+            const validPhotoExtensions = ['.zip'];
+            if (!validPhotoExtensions.includes(extension)) {
+                setError('For Student Photos, please upload a ZIP file containing images.');
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) { // 50MB limit for photos
+                setError('File too large. Maximum size for photos is 50MB.');
+                return;
+            }
+        } else {
+            // Standard data files
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            if (!validExtensions.includes(extension)) {
+                setError('Invalid file type. Please upload CSV, XLSX, or XLS file.');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                setError('File too large. Maximum size is 10MB.');
+                return;
+            }
         }
 
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-            setError('File too large. Maximum size is 10MB.');
-            return;
+        // If upload was triggered from card, select that module
+        if (targetModule && targetModule !== selectedModule) {
+            setSelectedModule(targetModule);
         }
 
         setSelectedFile(file);
         setError(null);
         setValidationResult(null);
         setImportResult(null);
+        setRequiresConfirmation(false);
+        setConfirmationMessage(null);
+        setPendingModuleForUpload(null);
     };
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             handleFileSelect(e.target.files[0]);
         }
+    };
+
+    const handleCardFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0] && pendingModuleForUpload) {
+            handleFileSelect(e.target.files[0], pendingModuleForUpload);
+        }
+        // Reset the input so the same file can be selected again
+        if (cardFileInputRef.current) {
+            cardFileInputRef.current.value = '';
+        }
+    };
+
+    const triggerCardUpload = (moduleName: string) => {
+        setPendingModuleForUpload(moduleName);
+        if (cardFileInputRef.current) {
+            // Set accept attribute based on module type
+            cardFileInputRef.current.accept = moduleName === 'student_photos' ? '.zip' : '.csv,.xlsx,.xls';
+            cardFileInputRef.current.click();
+        }
+    };
+
+    // Get file type hint for a module
+    const getModuleFileHint = (moduleName: string) => {
+        if (moduleName === 'student_photos') {
+            return 'ZIP (max 50MB)';
+        }
+        return 'CSV, XLSX, XLS (max 10MB)';
     };
 
     // Download template
@@ -422,6 +547,8 @@ const DataMigration: React.FC = () => {
         try {
             setIsValidating(true);
             setError(null);
+            setRequiresConfirmation(false);
+            setConfirmationMessage(null);
 
             const formData = new FormData();
             formData.append('file', selectedFile);
@@ -431,7 +558,25 @@ const DataMigration: React.FC = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            setValidationResult(response.data);
+            const data = response.data;
+
+            // If server returned a preview, navigate to the import preview route
+            const preview = data.preview || data.validation?.preview;
+            const duplicates = data.duplicates || data.validation?.duplicates || [];
+            if (preview) {
+                navigate('/settings/data-management/import-preview', {
+                    state: {
+                        file: selectedFile,
+                        preview,
+                        duplicates,
+                        module: selectedModule,
+                        validationErrors: data.errors || data.validation?.errors || []
+                    }
+                });
+                return;
+            }
+
+            setValidationResult(data);
         } catch (err: any) {
             setError(err.response?.data?.error || 'Validation failed');
         } finally {
@@ -440,7 +585,7 @@ const DataMigration: React.FC = () => {
     };
 
     // Import file
-    const importFile = async () => {
+    const importFile = async (confirmImport = false) => {
         if (!selectedFile || !selectedModule) return;
 
         try {
@@ -452,16 +597,36 @@ const DataMigration: React.FC = () => {
             formData.append('module', selectedModule);
             formData.append('skip_duplicates', skipDuplicates.toString());
             formData.append('update_existing', updateExisting.toString());
+            formData.append('confirm_import', confirmImport.toString());
 
             const response = await api.post('/data-management/import/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
+            if (response.data?.requires_confirmation) {
+                const confirmation = response.data as ImportConfirmationResponse;
+                setRequiresConfirmation(true);
+                setConfirmationMessage(confirmation.message || 'Confirmation required to proceed.');
+                setValidationResult(confirmation.validation);
+                setImportResult(null);
+                return;
+            }
+
+            setRequiresConfirmation(false);
+            setConfirmationMessage(null);
             setImportResult(response.data);
 
-            // Refresh history
+            // Refresh history and clear selection on success
             if (response.data.success) {
                 loadImportHistory();
+
+                // Clear file and unselect module after successful upload
+                setSelectedFile(null);
+                setSelectedModule('');
+                setModuleFields(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
             }
         } catch (err: any) {
             setError(err.response?.data?.error || 'Import failed');
@@ -552,6 +717,8 @@ const DataMigration: React.FC = () => {
         setSelectedFile(null);
         setValidationResult(null);
         setImportResult(null);
+        setRequiresConfirmation(false);
+        setConfirmationMessage(null);
         setError(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -623,6 +790,36 @@ const DataMigration: React.FC = () => {
                 </div>
             )}
 
+            {importResult && (() => {
+                const successCount = typeof importResult.success === 'number'
+                    ? importResult.success
+                    : (importResult.success_count || 0);
+                const failedCount = importResult.failed || 0;
+                const hasErrors = failedCount > 0 || (importResult.errors?.length || 0) > 0;
+                return (
+                    <div className={hasErrors ? 'error-banner' : 'success-banner'}>
+                        {hasErrors ? <XCircle size={20} /> : <CheckCircle size={20} />}
+                        <span>
+                            {hasErrors
+                                ? `Import completed with errors. ${successCount} succeeded, ${failedCount} failed.`
+                                : `Import completed successfully. ${successCount} records imported.`}
+                        </span>
+                        <button onClick={() => setImportResult(null)}><X size={16} /></button>
+                    </div>
+                );
+            })()}
+
+            {importResult?.errors?.length > 0 && (
+                <div className="error-list">
+                    <h5>Import Errors</h5>
+                    <ul>
+                        {importResult.errors.map((err, i) => (
+                            <li key={i}>{err}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             {/* Tabs */}
             <div className="tabs">
                 <button
@@ -654,32 +851,120 @@ const DataMigration: React.FC = () => {
                             <span className="step-number">1</span>
                             <h3>Select Module</h3>
                         </div>
+                        {/* Hidden file input for card-level uploads */}
+                        <input
+                            ref={cardFileInputRef}
+                            type="file"
+                            accept=".csv,.xlsx,.xls,.zip"
+                            onChange={handleCardFileInputChange}
+                            hidden
+                        />
                         <div className="module-grid">
-                            {modules.map((module) => (
-                                <button
-                                    key={module.name}
-                                    className={`module-card ${selectedModule === module.name ? 'selected' : ''}`}
-                                    onClick={() => {
-                                        setSelectedModule(module.name);
-                                        clearSelection();
-                                    }}
-                                >
-                                    <div className="module-icon">
-                                        {MODULE_ICONS[module.name] || <FileText size={20} />}
-                                    </div>
-                                    <div className="module-info">
-                                        <span className="module-name">{module.display_name}</span>
-                                        <span className="module-fields">
-                                            {module.required_field_count} required • {module.optional_field_count} optional
-                                        </span>
-                                    </div>
-                                    {module.unique_field && (
-                                        <span className="unique-badge">
-                                            Key: {module.unique_field}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                            {modules.map((module) => {
+                                const isSelected = selectedModule === module.name;
+                                const hasFile = isSelected && selectedFile;
+
+                                return (
+                                        <div
+                                            key={module.name}
+                                            className={`module-card ${isSelected ? 'selected' : ''} ${hasFile ? 'has-file' : ''}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => {
+                                                setSelectedModule(module.name);
+                                                clearSelection();
+                                            }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSelectedModule(module.name); clearSelection(); } }}
+                                        >
+                                        <div className="module-icon">
+                                            {MODULE_ICONS[module.name] || <FileText size={20} />}
+                                        </div>
+                                        <div className="module-info">
+                                            <span className="module-name">{module.display_name}</span>
+                                            <span className="module-fields">
+                                                {module.required_field_count} required • {module.optional_field_count} optional
+                                            </span>
+                                            <span className="module-file-hint">
+                                                {getModuleFileHint(module.name)}
+                                            </span>
+                                            {/* Show selected file info */}
+                                            {hasFile && (
+                                                <span className="module-selected-file">
+                                                    <FileSpreadsheet size={12} />
+                                                    {selectedFile.name.length > 20
+                                                        ? selectedFile.name.substring(0, 17) + '...'
+                                                        : selectedFile.name}
+                                                    <span className="file-size-badge">
+                                                        {(selectedFile.size / 1024).toFixed(0)} KB
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        {module.unique_field && (
+                                            <span className="unique-badge">
+                                                Key: {module.unique_field}
+                                            </span>
+                                        )}
+
+                                        {/* Overlay CTAs (appear on hover) - different when file is selected */}
+                                        <div className="card-overlay" role="group" aria-hidden>
+                                            {hasFile ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="overlay-btn import"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            validateFile();
+                                                        }}
+                                                        disabled={isValidating}
+                                                    >
+                                                        {isValidating ? (
+                                                            <><Loader2 size={14} className="animate-spin" /> Validating...</>
+                                                        ) : (
+                                                            <><Eye size={14} /> Validate & Preview</>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="overlay-btn secondary"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            clearSelection();
+                                                        }}
+                                                    >
+                                                        <X size={14} /> Clear
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="overlay-btn upload"
+                                                        onClick={(e) => { e.stopPropagation(); triggerCardUpload(module.name); }}
+                                                    >
+                                                        <Upload size={14} /> Upload
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="overlay-btn"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedModule(module.name); loadModuleFields(module.name); downloadTemplate('xlsx'); }}
+                                                    >
+                                                        <Download size={14} /> Template
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="overlay-btn secondary"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedModule(module.name); setShowFieldInfo(true); }}
+                                                    >
+                                                        <Eye size={14} /> Info
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                        </div>
+                                );
+                            })}
                         </div>
                     </Card>
 
@@ -806,7 +1091,7 @@ const DataMigration: React.FC = () => {
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept=".csv,.xlsx,.xls"
+                                        accept={selectedModule === 'student_photos' ? '.zip' : '.csv,.xlsx,.xls'}
                                         onChange={handleFileInputChange}
                                         hidden
                                     />
@@ -834,7 +1119,11 @@ const DataMigration: React.FC = () => {
                                         <div className="drop-content">
                                             <Upload size={40} />
                                             <p>Drag and drop your file here, or click to browse</p>
-                                            <span className="formats">Supports CSV, XLSX, XLS (max 10MB)</span>
+                                            <span className="formats">
+                                                {selectedModule === 'student_photos'
+                                                    ? 'Upload ZIP file containing photos named by admission number (max 50MB)'
+                                                    : 'Supports CSV, XLSX, XLS (max 10MB)'}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -868,6 +1157,20 @@ const DataMigration: React.FC = () => {
                                             <Badge variant="danger"><XCircle size={14} /> Has Errors</Badge>
                                         )}
                                     </div>
+
+                                    {validationResult && validationResult.error_count > 0 && (
+                                        <div className="error-banner validation-block">
+                                            <XCircle size={18} />
+                                            <span>{confirmationMessage || 'Validation errors detected. Fix the file before importing.'}</span>
+                                        </div>
+                                    )}
+
+                                    {requiresConfirmation && validationResult && validationResult.error_count === 0 && (
+                                        <div className="warning-banner">
+                                            <AlertTriangle size={18} />
+                                            <span>{confirmationMessage || 'Duplicates or warnings detected. Confirm to proceed.'}</span>
+                                        </div>
+                                    )}
 
                                     <div className="validation-summary">
                                         <div className="stat">
@@ -946,7 +1249,11 @@ const DataMigration: React.FC = () => {
                                             <input
                                                 type="checkbox"
                                                 checked={skipDuplicates}
-                                                onChange={(e) => setSkipDuplicates(e.target.checked)}
+                                                onChange={(e) => {
+                                                    setSkipDuplicates(e.target.checked);
+                                                    setRequiresConfirmation(false);
+                                                    setConfirmationMessage(null);
+                                                }}
                                             />
                                             <span>Skip duplicate records</span>
                                         </label>
@@ -954,7 +1261,11 @@ const DataMigration: React.FC = () => {
                                             <input
                                                 type="checkbox"
                                                 checked={updateExisting}
-                                                onChange={(e) => setUpdateExisting(e.target.checked)}
+                                                onChange={(e) => {
+                                                    setUpdateExisting(e.target.checked);
+                                                    setRequiresConfirmation(false);
+                                                    setConfirmationMessage(null);
+                                                }}
                                             />
                                             <span>Update existing records (instead of skipping)</span>
                                         </label>
@@ -966,8 +1277,8 @@ const DataMigration: React.FC = () => {
                                         </Button>
                                         <Button
                                             variant="primary"
-                                            onClick={importFile}
-                                            disabled={isImporting || (!validationResult.valid && validationResult.error_count > 0)}
+                                            onClick={() => importFile(false)}
+                                            disabled={isImporting || (validationResult && validationResult.error_count > 0)}
                                         >
                                             {isImporting ? (
                                                 <><Loader2 size={18} className="animate-spin" /> Importing...</>
@@ -975,6 +1286,19 @@ const DataMigration: React.FC = () => {
                                                 <><Upload size={18} /> Start Import</>
                                             )}
                                         </Button>
+                                        {requiresConfirmation && (
+                                            <Button
+                                                variant="danger"
+                                                onClick={() => importFile(true)}
+                                                disabled={isImporting}
+                                            >
+                                                {isImporting ? (
+                                                    <><Loader2 size={18} className="animate-spin" /> Importing...</>
+                                                ) : (
+                                                    <><AlertTriangle size={18} /> Confirm Import</>
+                                                )}
+                                            </Button>
+                                        )}
                                     </div>
                                 </Card>
                             )}

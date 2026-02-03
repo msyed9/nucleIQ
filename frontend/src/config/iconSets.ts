@@ -122,11 +122,15 @@ export type IconSetType =
     | 'fontawesome_react'
     | 'game_icons'
     | 'ionicons_react'
-    | 'simple_icons_react';
-    
+    | 'simple_icons_react'
+    | 'fun_neon'
+    | 'fun_pastel'
+    | 'fun_cartoon'
+    | 'fun_emoji';
+
 // Include fun sets in IconSetType
 export type IconSetTypeExtended = IconSetType | 'fun_neon' | 'fun_pastel' | 'fun_cartoon' | 'fun_emoji';
-    
+
 // Add fun sets to IconSetType (string literal union extension)
 export type FunIconSetType = 'fun_neon' | 'fun_pastel' | 'fun_cartoon' | 'fun_emoji';
 
@@ -254,7 +258,7 @@ export const iconSetInfo: Record<IconSetType, IconSetInfo> = {
         description: 'Emoji-like glyphs for a playful experience',
         previewIcons: ['dashboard', 'bookOpen', 'calendar', 'bell']
     },
-    
+
     ant_design: {
         id: 'ant_design',
         name: 'Ant Design',
@@ -706,7 +710,7 @@ const remixIcons: Record<IconKey, IconComponent> = {
     bookOpen: Ri.RiBookOpenLine,
     calendar: Ri.RiCalendarLine,
     dollarSign: Ri.RiMoneyDollarCircleLine,
-    package: Ri.RiPackageLine,
+    package: Ri.RiInboxArchiveLine,
     briefcase: Ri.RiBriefcaseLine,
     trendingUp: Ri.RiLineChartLine,
     messageSquare: Ri.RiChat4Line,
@@ -772,18 +776,18 @@ const gameIcons: Record<IconKey, IconComponent> = {
     bookOpen: Gi.GiOpenBook,
     calendar: Gi.GiCalendar,
     dollarSign: Gi.GiReceiveMoney,
-    package: Gi.GiPackage,
+    package: Gi.GiCardboardBox,
     briefcase: Gi.GiSuitcase,
     trendingUp: Gi.GiChart,
     messageSquare: Gi.GiChatBubble,
     settings: Gi.GiCog,
-    chevronDown: Gi.GiChevronDown,
-    chevronRight: Gi.GiChevronRight,
-    userPlus: Gi.GiGroupAdd,
+    chevronDown: LucideIcons.ChevronDown,
+    chevronRight: LucideIcons.ChevronRight,
+    userPlus: LucideIcons.UserPlus,
     list: Gi.GiNotebook,
     messageCircle: Gi.GiConversation,
-    folderOpen: Gi.GiFolderOpen,
-    bell: Gi.GiBell,
+    folderOpen: LucideIcons.FolderOpen,
+    bell: LucideIcons.Bell,
 };
 
 const ioniconsReactIcons: Record<IconKey, IconComponent> = {
@@ -817,12 +821,12 @@ const simpleIconsReactIcons: Record<IconKey, IconComponent> = {
     calendar: Si.SiGooglecalendar,
     dollarSign: Si.SiStripe,
     package: Si.SiAmazon,
-    briefcase: Si.SiMicrosoft,
+    briefcase: Si.SiAsana,
     trendingUp: Si.SiGoogleanalytics,
     messageSquare: Si.SiSlack,
     settings: Si.SiGithub,
-    chevronDown: Si.SiChevron,
-    chevronRight: Si.SiChevron,
+    chevronDown: LucideIcons.ChevronDown,
+    chevronRight: LucideIcons.ChevronRight,
     userPlus: Si.SiOkta,
     list: Si.SiNotion,
     messageCircle: Si.SiDiscord,
@@ -865,7 +869,7 @@ const funCartoonIcons: Record<IconKey, IconComponent> = {
     bookOpen: Ri.RiBookOpenLine,
     calendar: Ri.RiCalendarLine,
     dollarSign: Ri.RiMoneyDollarCircleLine,
-    package: Ri.RiPackageLine,
+    package: Ri.RiInboxArchiveLine,
     briefcase: Ri.RiBriefcaseLine,
     trendingUp: Ri.RiLineChartLine,
     messageSquare: Ri.RiChat4Line,
@@ -934,7 +938,7 @@ const iconSets: Record<IconSetType, Record<IconKey, IconComponent>> = {
         // Eva Icons via Ci as a stable substitute for preview purposes
         dashboard: Ci.CiGrid41,
         users: Ci.CiUser,
-        bookOpen: Ci.CiBook,
+        bookOpen: Ci.CiRead,
         calendar: Ci.CiCalendarDate,
         bell: Ci.CiBellOn,
     },

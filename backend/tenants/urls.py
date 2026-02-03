@@ -5,6 +5,8 @@ from .views import (
     DepartmentViewSet,
     GradeLevelViewSet,
     SectionViewSet,
+    SubjectViewSet,
+    ClassSubjectViewSet,
     HolidayViewSet,
     TenantSettingsViewSet,
     TenantBrandingViewSet
@@ -17,6 +19,8 @@ router.register(r'years', AcademicYearViewSet, basename='academic-year')
 router.register(r'departments', DepartmentViewSet, basename='department')
 router.register(r'grades', GradeLevelViewSet, basename='grade-level')
 router.register(r'sections', SectionViewSet, basename='section')
+router.register(r'subjects', SubjectViewSet, basename='subject')
+router.register(r'class-subjects', ClassSubjectViewSet, basename='class-subject')
 router.register(r'holidays', HolidayViewSet, basename='holiday')
 router.register(r'settings', TenantSettingsViewSet, basename='tenant-settings')
 router.register(r'branding', TenantBrandingViewSet, basename='tenant-branding')

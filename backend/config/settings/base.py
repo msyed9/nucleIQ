@@ -88,6 +88,7 @@ MIDDLEWARE = [
     
     # Custom middleware - MUST be after authentication
     'core.middleware.TenantMiddleware',
+    'core.middleware.ApiVersionRoutingMiddleware',
     'analytics.middleware.UsageLoggingMiddleware',
     'users.middleware_session.AdminSessionTimeoutMiddleware',  # Must be after TenantMiddleware
     'users.middleware.PermissionMiddleware',
@@ -165,6 +166,12 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# File upload settings (52MB to accommodate photo ZIPs up to 50MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+# Increase max form fields for large admin inlines (e.g., tenant config)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = config('DATA_UPLOAD_MAX_NUMBER_FIELDS', default=20000, cast=int)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -190,11 +197,89 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
+    'DEFAULT_VERSION': 'v1',
+    'ALLOWED_VERSIONS': ['v1', 'v2'],
+    'VERSION_PARAM': 'version',
 }
+
+# API Version Routing (Tenant-Aware)
+API_VERSION_EXCLUDED_PREFIXES = [
+    'health', 'schema', 'docs', 'redoc', 'mobile'
+]
+
+# Map URL path prefixes to module keys for per-tenant version overrides
+API_MODULE_VERSION_ALIASES = {
+    # Users/auth module
+    'auth': 'users',
+    'users': 'users',
+    'roles': 'users',
+    'permissions': 'users',
+    'impersonate': 'users',
+    'permissions-matrix': 'users',
+
+    # Admin utilities
+    'recycle-bin': 'admin',
+    'audit-logs': 'admin',
+    'advanced-reports': 'admin',
+
+    # Students/parent portal
+    'parent': 'students',
+}
+
+# Canonical module keys allowed in api_module_versions
+API_VERSION_ALLOWED_MODULES = [
+    'users',
+    'admin',
+    'communication',
+    'billing',
+    'dashboard',
+    'search',
+    'students',
+    'analytics',
+    'idcards',
+    'staff',
+    'attendance',
+    'fees',
+    'finance',
+    'tenants',
+    'timetable',
+    'academics',
+    'exams',
+    'hr',
+    'payroll',
+    'crm',
+    'cms',
+    'library',
+    'transport',
+    'inventory',
+    'hostel',
+    'salah',
+    'habits',
+    'lms',
+    'certificates',
+    'security',
+    'placement',
+    'helpdesk',
+    'reports',
+    'data-management',
+    'data_management',
+    'mobile',
+    # Alias keys allowed for convenience
+    'auth',
+    'roles',
+    'permissions',
+    'impersonate',
+    'permissions-matrix',
+    'parent',
+    'recycle-bin',
+    'audit-logs',
+    'advanced-reports',
+]
 
 # JWT Settings
 from datetime import timedelta

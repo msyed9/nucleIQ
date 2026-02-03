@@ -3,12 +3,17 @@
  * Allows creating and managing timetable slots with conflict detection
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import axios from 'axios';
 import { useToast, ToastContainer } from '@/design-system';
+import TimetableExport from './TimetableExport';
+import TeacherWorkloadPanel from './TeacherWorkloadPanel';
+import ValidationReport from './ValidationReport';
+import useUndoRedo from '../../hooks/useUndoRedo';
 import './TimetableBuilder.css';
+import './TimetableEnhancements.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -132,11 +137,13 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
 
 const TimetableBuilder: React.FC = () => {
     const [academicYears, setAcademicYears] = useState<any[]>([]);
+    const [gradeLevels, setGradeLevels] = useState<any[]>([]);
     const [sections, setSections] = useState<any[]>([]);
     const [subjects, setSubjects] = useState<any[]>([]);
     const [teachers, setTeachers] = useState<any[]>([]);
 
     const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('');
+    const [selectedGradeLevel, setSelectedGradeLevel] = useState<string>('');
     const [selectedSection, setSelectedSection] = useState<string>('');
 
     const [timetableSlots, setTimetableSlots] = useState<TimetableSlot[]>([]);
@@ -150,13 +157,26 @@ const TimetableBuilder: React.FC = () => {
         teacher: '',
         room: '',
     });
+
+    // Generation state
+    const [generationStatus, setGenerationStatus] = useState<any>(null);
+    const [generating, setGenerating] = useState(false);
+
+    // Phase 6 features state
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [showValidationReport, setShowValidationReport] = useState(false);
+    const [showWorkloadPanel, setShowWorkloadPanel] = useState(false);
+    const [periodConfig, setPeriodConfig] = useState<any>(null);
+
     const { toasts, removeToast, success, error: showError, warning } = useToast();
 
     // Fetch initial data
     useEffect(() => {
         fetchAcademicYears();
+        fetchGradeLevels();
         fetchSubjects();
         fetchTeachers();
+        fetchGenerationStatus();
     }, []);
 
     useEffect(() => {
@@ -166,6 +186,12 @@ const TimetableBuilder: React.FC = () => {
     }, [selectedAcademicYear]);
 
     useEffect(() => {
+        if (selectedAcademicYear) {
+            fetchSections();
+        }
+    }, [selectedGradeLevel]);
+
+    useEffect(() => {
         if (selectedSection && selectedAcademicYear) {
             fetchTimetable();
         }
@@ -173,24 +199,30 @@ const TimetableBuilder: React.FC = () => {
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token');
-        const tenantId = localStorage.getItem('tenant_id');
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('current_tenant');
         return {
             'Authorization': `Bearer ${token}`,
             'X-Tenant-ID': tenantId || '',
         };
     };
 
+    const isUuid = (value: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
     const fetchAcademicYears = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/tenants/academic-years/`, {
+            const response = await axios.get(`${API_BASE_URL}/tenants/years/`, {
                 headers: getAuthHeaders(),
             });
-            setAcademicYears(response.data.results || response.data);
+            const years = response.data.results || response.data;
+            setAcademicYears(years);
 
             // Auto-select active academic year
-            const activeYear = (response.data.results || response.data).find((year: any) => year.is_active);
+            const activeYear = years.find((year: any) => year.is_active);
             if (activeYear) {
-                setSelectedAcademicYear(activeYear.id);
+                setSelectedAcademicYear(String(activeYear.id));
+            } else if (years.length && !selectedAcademicYear) {
+                setSelectedAcademicYear(String(years[0].id));
             }
         } catch (err) {
             console.error('Error fetching academic years:', err);
@@ -199,12 +231,28 @@ const TimetableBuilder: React.FC = () => {
 
     const fetchSections = async () => {
         try {
+            const params: Record<string, string> = {};
+            if (selectedGradeLevel) {
+                params.grade_level = selectedGradeLevel;
+            }
             const response = await axios.get(`${API_BASE_URL}/tenants/sections/`, {
                 headers: getAuthHeaders(),
+                params,
             });
             setSections(response.data.results || response.data);
         } catch (err) {
             console.error('Error fetching sections:', err);
+        }
+    };
+
+    const fetchGradeLevels = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/tenants/grades/`, {
+                headers: getAuthHeaders(),
+            });
+            setGradeLevels(response.data.results || response.data);
+        } catch (err) {
+            console.error('Error fetching grade levels:', err);
         }
     };
 
@@ -230,6 +278,54 @@ const TimetableBuilder: React.FC = () => {
         }
     };
 
+    const fetchGenerationStatus = async () => {
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/timetable/generation/status/`,
+                { headers: getAuthHeaders() }
+            );
+            setGenerationStatus(response.data);
+        } catch (err) {
+            console.error('Error fetching generation status:', err);
+        }
+    };
+
+    const generateTimetable = async (clearExisting: boolean = false) => {
+        if (!generationStatus?.ready) {
+            warning('Please configure periods and subject loads first');
+            return;
+        }
+
+        const sectionIds = selectedSection ? [selectedSection] : undefined;
+
+        setGenerating(true);
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/timetable/generation/generate/`,
+                {
+                    section_ids: sectionIds,
+                    clear_existing: clearExisting
+                },
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.data.success) {
+                success(`Generated ${response.data.generated_count} slots!`);
+                if (response.data.unscheduled?.length > 0) {
+                    warning(`${response.data.unscheduled.length} items could not be fully scheduled`);
+                }
+                fetchTimetable();
+                fetchGenerationStatus();
+            } else {
+                showError(response.data.errors?.[0] || 'Generation failed');
+            }
+        } catch (err: any) {
+            showError(err.response?.data?.error || 'Error generating timetable');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     const fetchTimetable = async () => {
         setLoading(true);
         setError(null);
@@ -245,6 +341,36 @@ const TimetableBuilder: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const fetchPeriodConfig = async () => {
+        if (!selectedAcademicYear) return;
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/timetable/configs/active/?academic_year=${selectedAcademicYear}`,
+                { headers: getAuthHeaders() }
+            );
+            setPeriodConfig(response.data);
+        } catch (err) {
+            // No config exists, use defaults
+            setPeriodConfig({
+                periods: TIME_SLOTS.map(ts => ({
+                    period: ts.period,
+                    start: ts.start,
+                    end: ts.end,
+                    type: ts.period === 0 ? 'break' : 'class',
+                    label: ts.label
+                })),
+                working_days: DAYS
+            });
+        }
+    };
+
+    // Fetch period config when academic year changes
+    useEffect(() => {
+        if (selectedAcademicYear) {
+            fetchPeriodConfig();
+        }
+    }, [selectedAcademicYear]);
 
     const handleDrop = async (day: string, timeSlot: typeof TIME_SLOTS[0], item: TimetableSlot) => {
         // Check if slot already exists at this position
@@ -269,6 +395,7 @@ const TimetableBuilder: React.FC = () => {
             period_number: timeSlot.period,
             academic_year: selectedAcademicYear,
             section: selectedSection,
+            teacher: item.teacher && isUuid(item.teacher) ? item.teacher : null,
         };
 
         try {
@@ -282,8 +409,9 @@ const TimetableBuilder: React.FC = () => {
                     day_of_week: day,
                     start_time: timeSlot.start,
                     end_time: timeSlot.end,
-                    teacher_id: item.teacher,
-                    room: item.room,
+                    teacher_id: item.teacher && isUuid(item.teacher) ? item.teacher : null,
+                    // backend expects a non-null room value; send empty string when not provided
+                    room: item.room || '',
                     section_id: selectedSection,
                 },
                 { headers: getAuthHeaders() }
@@ -378,8 +506,65 @@ const TimetableBuilder: React.FC = () => {
             <DndProvider backend={HTML5Backend}>
                 <div className="timetable-builder">
                     <div className="timetable-header">
-                        <h1>📅 Timetable Builder</h1>
-                        <p>Drag and drop to create your timetable</p>
+                        <div className="header-content">
+                            <h1>📅 Timetable Builder</h1>
+                            <p>Drag and drop to create your timetable</p>
+                        </div>
+                        <div className="header-actions">
+                            <a href="/timetable/config" className="btn-config">
+                                ⚙️ Configuration
+                            </a>
+                            {generationStatus?.ready && (
+                                <>
+                                    <button
+                                        className="btn-generate"
+                                        onClick={() => generateTimetable(false)}
+                                        disabled={generating}
+                                    >
+                                        {generating ? '⏳ Generating...' : '🚀 Auto Generate'}
+                                    </button>
+                                    {selectedSection && (
+                                        <button
+                                            className="btn-regenerate"
+                                            onClick={() => {
+                                                if (confirm('This will replace existing slots for this section. Continue?')) {
+                                                    generateTimetable(true);
+                                                }
+                                            }}
+                                            disabled={generating}
+                                            title="Replace existing slots"
+                                        >
+                                            🔄 Regenerate
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            {!generationStatus?.ready && generationStatus && (
+                                <span className="config-warning">
+                                    ⚠️ Configure periods & loads to enable generation
+                                </span>
+                            )}
+
+                            {/* Quick Action Buttons */}
+                            {selectedSection && timetableSlots.length > 0 && (
+                                <>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => setShowValidationReport(true)}
+                                        title="Validate timetable"
+                                    >
+                                        📋 Validate
+                                    </button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => setShowExportModal(true)}
+                                        title="Export timetable"
+                                    >
+                                        📤 Export
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filters */}
@@ -400,16 +585,35 @@ const TimetableBuilder: React.FC = () => {
                         </div>
 
                         <div className="filter-group">
+                            <label>Class</label>
+                            <select
+                                value={selectedGradeLevel}
+                                onChange={(e) => {
+                                    setSelectedGradeLevel(e.target.value);
+                                    setSelectedSection('');
+                                }}
+                                disabled={!selectedAcademicYear}
+                            >
+                                <option value="">Select Class</option>
+                                {gradeLevels.map((grade) => (
+                                    <option key={grade.id} value={grade.id}>
+                                        {grade.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="filter-group">
                             <label>Section</label>
                             <select
                                 value={selectedSection}
                                 onChange={(e) => setSelectedSection(e.target.value)}
-                                disabled={!selectedAcademicYear}
+                                disabled={!selectedAcademicYear || !selectedGradeLevel}
                             >
                                 <option value="">Select Section</option>
                                 {sections.map((section) => (
                                     <option key={section.id} value={section.id}>
-                                        {section.grade_level?.name} - {section.name}
+                                        {section.grade_level_name || section.grade_level?.name || 'Class'} - {section.name}
                                     </option>
                                 ))}
                             </select>
@@ -549,6 +753,39 @@ const TimetableBuilder: React.FC = () => {
                     )}
                 </div>
             </DndProvider>
+
+            {/* Phase 6 Features */}
+
+            {/* Teacher Workload Panel */}
+            <TeacherWorkloadPanel
+                slots={timetableSlots as any}
+                isOpen={showWorkloadPanel}
+                onToggle={() => setShowWorkloadPanel(!showWorkloadPanel)}
+                onTeacherClick={(teacherId) => {
+                    // Highlight teacher's slots in the grid (future enhancement)
+                    console.log('Selected teacher:', teacherId);
+                }}
+            />
+
+            {/* Export Modal */}
+            {showExportModal && (
+                <TimetableExport
+                    slots={timetableSlots as any}
+                    sectionName={sections.find(s => s.id === selectedSection)?.name || 'Section'}
+                    academicYearName={academicYears.find(y => String(y.id) === selectedAcademicYear)?.name || 'Academic Year'}
+                    periodConfig={periodConfig}
+                    onClose={() => setShowExportModal(false)}
+                />
+            )}
+
+            {/* Validation Report */}
+            <ValidationReport
+                slots={timetableSlots as any}
+                sectionName={sections.find(s => s.id === selectedSection)?.name || 'Section'}
+                workingDays={periodConfig?.working_days || DAYS}
+                isOpen={showValidationReport}
+                onClose={() => setShowValidationReport(false)}
+            />
         </>
     );
 };

@@ -292,3 +292,190 @@ class TimetableTemplate(TenantAwareModel):
     
     def __str__(self):
         return f"{self.name} ({self.academic_year.name})"
+
+
+class TimetablePeriodConfig(TenantAwareModel):
+    """
+    Configuration for timetable periods per tenant.
+    Defines the daily schedule structure including period timings and breaks.
+    """
+    
+    DEFAULT_WORKING_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+    
+    DEFAULT_PERIODS = [
+        {'period': 1, 'start': '08:00', 'end': '08:45', 'type': 'class'},
+        {'period': 2, 'start': '08:45', 'end': '09:30', 'type': 'class'},
+        {'period': 3, 'start': '09:30', 'end': '10:15', 'type': 'class'},
+        {'period': 0, 'start': '10:15', 'end': '10:30', 'type': 'break', 'label': 'Short Break'},
+        {'period': 4, 'start': '10:30', 'end': '11:15', 'type': 'class'},
+        {'period': 5, 'start': '11:15', 'end': '12:00', 'type': 'class'},
+        {'period': 6, 'start': '12:00', 'end': '12:45', 'type': 'class'},
+        {'period': 0, 'start': '12:45', 'end': '13:30', 'type': 'break', 'label': 'Lunch Break'},
+        {'period': 7, 'start': '13:30', 'end': '14:15', 'type': 'class'},
+        {'period': 8, 'start': '14:15', 'end': '15:00', 'type': 'class'},
+    ]
+    
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.CASCADE,
+        related_name='timetable_period_configs',
+        help_text=_('Academic year this configuration is for')
+    )
+    
+    name = models.CharField(
+        max_length=100,
+        default='Default Schedule',
+        help_text=_('Configuration name (e.g., "Regular Schedule", "Exam Schedule")')
+    )
+    
+    working_days = models.JSONField(
+        default=list,
+        help_text=_('Days when school operates as JSON array: ["MONDAY", "TUESDAY", ...]')
+    )
+    
+    periods = models.JSONField(
+        default=list,
+        help_text=_(
+            'Period timings as JSON array: '
+            '[{"period": 1, "start": "08:00", "end": "08:45", "type": "class"}, ...]'
+        )
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text=_('Whether this configuration is currently active')
+    )
+    
+    class Meta:
+        db_table = 'timetable_period_configs'
+        verbose_name = _('Period Configuration')
+        verbose_name_plural = _('Period Configurations')
+        ordering = ['-is_active', '-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'academic_year', 'name'],
+                name='unique_period_config_name_per_year'
+            )
+        ]
+    
+    def __str__(self):
+        status = '(Active)' if self.is_active else ''
+        return f"{self.name} - {self.academic_year.name} {status}"
+    
+    def save(self, *args, **kwargs):
+        # Set defaults if not provided
+        if not self.working_days:
+            self.working_days = self.DEFAULT_WORKING_DAYS.copy()
+        if not self.periods:
+            self.periods = self.DEFAULT_PERIODS.copy()
+        super().save(*args, **kwargs)
+    
+    def get_class_periods(self):
+        """Return only class periods (exclude breaks)."""
+        return [p for p in self.periods if p.get('type') == 'class']
+    
+    def get_period_count(self):
+        """Return the number of class periods per day."""
+        return len(self.get_class_periods())
+
+
+class SubjectSectionLoad(TenantAwareModel):
+    """
+    Defines how many periods per week a subject needs for a specific section.
+    Used by the auto-generation algorithm to schedule classes.
+    """
+    
+    academic_year = models.ForeignKey(
+        'tenants.AcademicYear',
+        on_delete=models.CASCADE,
+        related_name='subject_section_loads',
+        help_text=_('Academic year for this load configuration')
+    )
+    
+    section = models.ForeignKey(
+        'tenants.Section',
+        on_delete=models.CASCADE,
+        related_name='subject_loads',
+        help_text=_('Section/Class this load applies to')
+    )
+    
+    subject = models.ForeignKey(
+        'tenants.Subject',
+        on_delete=models.CASCADE,
+        related_name='section_loads',
+        help_text=_('Subject to be scheduled')
+    )
+    
+    periods_per_week = models.PositiveIntegerField(
+        default=1,
+        help_text=_('Number of periods for this subject per week')
+    )
+    
+    preferred_teacher = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='preferred_subject_loads',
+        help_text=_('Preferred teacher for this subject-section combination')
+    )
+    
+    room_preference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_('Preferred room or room type (e.g., "Lab", "Room 101")')
+    )
+    
+    max_periods_per_day = models.PositiveIntegerField(
+        default=2,
+        help_text=_('Maximum periods of this subject allowed per day')
+    )
+    
+    requires_lab = models.BooleanField(
+        default=False,
+        help_text=_('Whether this subject requires a lab/special room')
+    )
+    
+    priority = models.PositiveIntegerField(
+        default=5,
+        help_text=_('Scheduling priority (1=highest, 10=lowest). Higher priority subjects are scheduled first.')
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text=_('Whether this load is active for scheduling')
+    )
+    
+    class Meta:
+        db_table = 'timetable_subject_section_loads'
+        verbose_name = _('Subject Section Load')
+        verbose_name_plural = _('Subject Section Loads')
+        ordering = ['section', 'subject__name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'academic_year', 'section', 'subject'],
+                name='unique_subject_section_load'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.section} - {self.subject.name}: {self.periods_per_week} periods/week"
+    
+    def clean(self):
+        """Validate the subject section load."""
+        super().clean()
+        
+        if self.periods_per_week < 1:
+            raise ValidationError({
+                'periods_per_week': _('Periods per week must be at least 1')
+            })
+        
+        if self.max_periods_per_day < 1:
+            raise ValidationError({
+                'max_periods_per_day': _('Max periods per day must be at least 1')
+            })
+        
+        if self.priority < 1 or self.priority > 10:
+            raise ValidationError({
+                'priority': _('Priority must be between 1 and 10')
+            })

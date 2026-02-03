@@ -12,6 +12,8 @@ from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 
+from analytics.api.v1.views import AlertRuleViewSet, AlertEventViewSet
+
 
 class PlatformOverviewView(APIView):
     """
@@ -24,7 +26,7 @@ class PlatformOverviewView(APIView):
         from students.models import Student
         from staff.models import Staff
         from attendance.models import AttendanceRecord
-        from fees.models import FeePayment
+        from fees.models import FeeTransaction
 
         tenant = request.user.tenant
         today = timezone.now().date()
@@ -50,10 +52,9 @@ class PlatformOverviewView(APIView):
 
         # Get monthly fee collection
         try:
-            monthly_collection = FeePayment.objects.filter(
+            monthly_collection = FeeTransaction.objects.filter(
                 tenant=tenant,
-                payment_date__gte=month_start,
-                status='COMPLETED'
+                transaction_date__date__gte=month_start
             ).aggregate(total=Count('id'))['total'] or 0
         except Exception:
             monthly_collection = 0
@@ -116,6 +117,8 @@ class TenantMetricsView(APIView):
 
 
 router = DefaultRouter()
+router.register(r'alert-rules', AlertRuleViewSet, basename='alert-rules')
+router.register(r'alert-events', AlertEventViewSet, basename='alert-events')
 
 urlpatterns = [
     path('', include(router.urls)),

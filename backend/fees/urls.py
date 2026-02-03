@@ -7,7 +7,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     FeeCategoryViewSet, FeeStructureViewSet, FeeAllocationViewSet,
     FeeInvoiceViewSet, FeeTransactionViewSet, FeeDefaulterViewSet,
-    SiblingDiscountViewSet, FeeAdvancePaymentViewSet, FeeRefundViewSet
+    SiblingDiscountViewSet, FeeAdvancePaymentViewSet, FeeRefundViewSet,
+    PaymentGatewayViewSet
 )
 
 router = DefaultRouter()
@@ -20,7 +21,9 @@ router.register(r'defaulters', FeeDefaulterViewSet, basename='fee-defaulter')
 router.register(r'sibling-discounts', SiblingDiscountViewSet, basename='sibling-discount')
 router.register(r'advances', FeeAdvancePaymentViewSet, basename='fee-advance')
 router.register(r'refunds', FeeRefundViewSet, basename='fee-refund')
+router.register(r'payment-gateway', PaymentGatewayViewSet, basename='payment-gateway')
 
 urlpatterns = [
     path('', include(router.urls)),
 ]
+

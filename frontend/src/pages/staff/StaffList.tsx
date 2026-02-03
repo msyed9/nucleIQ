@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import './StaffList.css';
@@ -79,6 +80,7 @@ const StaffList: React.FC = () => {
     };
 
     const { t } = useTranslation();
+    const navigate = useNavigate();
 
     const [mountedAt] = useState(() => new Date().toISOString());
 
@@ -90,7 +92,7 @@ const StaffList: React.FC = () => {
             {/* Header */}
             <div className="header">
                 <h1>👩‍🏫 {t('staff.title', 'Staff Directory')}</h1>
-                <button className="btn-primary">{t('staff.add', '+ Add Staff')}</button>
+                <button className="btn-primary" onClick={() => navigate('/staff/add')}>{t('staff.add', '+ Add Staff')}</button>
             </div>
 
             {/* Filters */}
@@ -215,10 +217,10 @@ const StaffList: React.FC = () => {
                             </div>
 
                             <div className="staff-actions">
-                                <button className="btn-view" title={t('staff.view')}>
+                                <button className="btn-view" title={t('staff.view')} onClick={() => navigate(`/staff/${member.id}`)}>
                                     👁️ {t('staff.view')}
                                 </button>
-                                <button className="btn-edit" title={t('staff.edit')}>
+                                <button className="btn-edit" title={t('staff.edit')} onClick={() => navigate(`/staff/${member.id}`)}>
                                     ✏️ {t('staff.edit')}
                                 </button>
                             </div>

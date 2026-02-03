@@ -22,7 +22,7 @@ const resources = {
             'auth.demo_email': 'Email',
             'auth.demo_password': 'Password',
             'auth.logging_in': 'Logging in...',
-            'auth.connection_error': 'Connection error. Please check if the backend is running.',
+            'auth.connection_error': 'We can’t reach the server right now. Please check your connection and try again.',
             'auth.sign_out': 'Sign out',
             'auth.invalid_credentials': 'Invalid email or password',
 

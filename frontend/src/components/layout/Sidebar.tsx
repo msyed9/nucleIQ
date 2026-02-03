@@ -71,6 +71,7 @@ const menuItems: MenuItem[] = [
         moduleKey: 'academics',
         children: [
             { path: '/timetable/builder', iconKey: 'calendarDays', labelKey: 'nav.timetable', label: 'Timetable', moduleKey: 'timetable' },
+            { path: '/timetable/config', iconKey: 'settings', labelKey: 'nav.timetable_config', label: 'Timetable Config', moduleKey: 'timetable' },
             { path: '/subjects', iconKey: 'bookOpen', labelKey: 'nav.subjects', label: 'Subjects' },
             { path: '/syllabus', iconKey: 'list', labelKey: 'nav.syllabus', label: 'Syllabus Progress' },
             { path: '/homework', iconKey: 'penTool', labelKey: 'nav.homework', label: 'Homework' },
@@ -86,7 +87,15 @@ const menuItems: MenuItem[] = [
             { path: '/exams/results/analytics', iconKey: 'barChart', labelKey: 'nav.result_analytics', label: 'Result Analytics', moduleKey: 'exams' },
             { path: '/lms/classes', iconKey: 'video', labelKey: 'nav.live_classes', label: 'Live Classes' },
             { path: '/lms/digital', iconKey: 'library', labelKey: 'nav.digital_lms', label: 'Digital Library' },
-            { path: '/admin/certificates', iconKey: 'award', labelKey: 'nav.certificates', label: 'Certificates' },
+            { path: '/lms/courses', iconKey: 'bookOpen', labelKey: 'nav.courses', label: 'Course Catalog' },
+            { path: '/lms/my-courses', iconKey: 'graduationCap', labelKey: 'nav.my_learning', label: 'My Learning' },
+            { path: '/lms/progress', iconKey: 'trendingUp', labelKey: 'nav.progress', label: 'My Progress' },
+            { path: '/lms/enrollments', iconKey: 'users', labelKey: 'nav.enrollments', label: 'Enrollments' },
+            { path: '/lms/quiz-builder', iconKey: 'clipboardCheck', labelKey: 'nav.quiz_builder', label: 'Quiz Builder' },
+            { path: '/lms/discussions', iconKey: 'messageSquare', labelKey: 'nav.discussions', label: 'Discussions' },
+            { path: '/lms/videos', iconKey: 'video', labelKey: 'nav.videos', label: 'Video Library' },
+            { path: '/lms/certificates', iconKey: 'award', labelKey: 'nav.my_certificates', label: 'My Certificates' },
+            { path: '/admin/certificates', iconKey: 'award', labelKey: 'nav.certificates', label: 'Certificate Templates' },
         ]
     },
     {
@@ -206,8 +215,10 @@ const menuItems: MenuItem[] = [
         children: [
             { path: '/hr/leaves', iconKey: 'leaf', labelKey: 'nav.leaves', label: 'Leaves' },
             { path: '/hr/leave-approval', iconKey: 'clipboardCheck', labelKey: 'nav.leave_approval', label: 'Leave Approval' },
+            { path: '/hr/leave-types', iconKey: 'calendar', labelKey: 'nav.leave_types', label: 'Leave Types' },
             { path: '/payroll/dashboard', iconKey: 'pieChart', labelKey: 'nav.payroll_dashboard', label: 'Payroll Dashboard' },
             { path: '/payroll/salary-structure', iconKey: 'list', labelKey: 'nav.salary_structure', label: 'Salary Structure' },
+            { path: '/payroll/components', iconKey: 'dollarSign', labelKey: 'nav.salary_components', label: 'Salary Components' },
             { path: '/payroll/payslips', iconKey: 'fileSpreadsheet', labelKey: 'nav.payroll', label: 'Payslips' },
         ]
     },
@@ -224,6 +235,7 @@ const menuItems: MenuItem[] = [
             { path: '/alumni/events', iconKey: 'calendar', labelKey: 'nav.alumni_events', label: 'Events', moduleKey: 'alumni' },
             { path: '/alumni/donations', iconKey: 'dollarSign', labelKey: 'nav.donations', label: 'Donations', moduleKey: 'alumni' },
             { path: '/placement/drives', iconKey: 'building', labelKey: 'nav.placement_drives', label: 'Placement Drives', moduleKey: 'placement' },
+            { path: '/placement/recruiters', iconKey: 'users', labelKey: 'nav.recruiters', label: 'Recruiters', moduleKey: 'placement' },
             { path: '/placement/applications', iconKey: 'fileCheck', labelKey: 'nav.placement_applications', label: 'Applications', moduleKey: 'placement' },
         ]
     },
@@ -288,7 +300,7 @@ const menuItems: MenuItem[] = [
 const Sidebar: React.FC = () => {
     const location = useLocation();
     const { t } = useTranslation();
-    const { branding, isModuleEnabled } = useTenantBranding();
+    const { branding, isModuleEnabled, getSmallLogoUrl } = useTenantBranding();
     const { getIconComponent } = useIconSet();
     const { user } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -345,15 +357,19 @@ const Sidebar: React.FC = () => {
     const ChevronRightIcon = getIconComponent('chevronRight');
     const LogoIcon = getIconComponent('graduationCap');
 
+    // Get the small logo URL with fallback chain
+    const smallLogoUrl = getSmallLogoUrl();
+
     return (
         <aside className="sidebar">
             <div className="sidebar-header">
                 <h1 className="sidebar-logo">
-                    {branding?.logo_url ? (
+                    {smallLogoUrl ? (
                         <img
-                            src={branding.logo_url}
-                            alt={branding.tenant_name || 'Logo'}
+                            src={smallLogoUrl}
+                            alt={branding?.tenant_name || 'Logo'}
                             style={{ height: '32px', width: 'auto', maxWidth: '150px' }}
+                            loading="lazy"
                         />
                     ) : (
                         <LogoIcon size={32} className="sidebar-logo-icon" />

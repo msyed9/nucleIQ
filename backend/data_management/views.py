@@ -321,6 +321,7 @@ class ImportDataView(APIView):
         module = request.data.get('module')
         file = request.FILES.get('file')
         skip_duplicates = request.data.get('skip_duplicates', 'true') == 'true'
+        validate_only = request.data.get('validate_only', 'false') == 'true'
         
         if not module or module not in TemplateInfo.TEMPLATES:
             return Response({'error': 'Invalid module'}, status=400)
@@ -349,8 +350,8 @@ class ImportDataView(APIView):
             if not data:
                 return Response({'error': 'No data found in file'}, status=400)
             
-            # Process data
-            result = self._process_import(module, config, data, tenant, skip_duplicates)
+            # Process data (either validate-only preview or perform import)
+            result = self._process_import(module, config, data, tenant, skip_duplicates, validate_only=validate_only)
             return Response(result)
             
         except Exception as e:
@@ -423,53 +424,85 @@ class ImportDataView(APIView):
         
         return data
     
-    def _process_import(self, module, config, data, tenant, skip_duplicates):
+    def _process_import(self, module, config, data, tenant, skip_duplicates, validate_only=False):
+        """
+        Process import or validate-only preview.
+        When validate_only=True, do not create DB records; instead return a preview list marking each row as 'ok', 'failed' or 'duplicate'.
+        """
         success = 0
         failed = 0
         duplicates = []
         errors = []
-        
+        preview = []
+
         unique_field = config.get('unique_field')
         model = config['model']
         required_fields = config['required_fields']
-        
+
         for row_num, row in enumerate(data, start=2):
+            row_status = 'ok'
+            row_errors: list = []
+
             try:
                 # Validate required fields
                 missing = [f for f in required_fields if not row.get(f)]
                 if missing:
-                    errors.append(f"Row {row_num}: Missing required fields: {', '.join(missing)}")
+                    msg = f"Missing required fields: {', '.join(missing)}"
+                    row_errors.append(msg)
+                    row_status = 'failed'
                     failed += 1
-                    continue
-                
+
                 # Check for duplicates
                 if unique_field and row.get(unique_field):
                     existing = self._find_duplicate(model, unique_field, row[unique_field], tenant)
                     if existing:
-                        if skip_duplicates:
-                            duplicates.append({
-                                'row': row_num,
-                                'data': row,
-                                'existingRecord': self._model_to_dict(existing),
-                                'field': unique_field,
-                                'value': row[unique_field]
-                            })
+                        # Mark as duplicate; if skip_duplicates we won't import it
+                        row_status = 'duplicate' if row_status == 'ok' else row_status
+                        duplicates.append({
+                            'row': row_num,
+                            'data': row,
+                            'existingRecord': self._model_to_dict(existing),
+                            'field': unique_field,
+                            'value': row[unique_field]
+                        })
+                        # If we're skipping duplicates during an actual import, count as skipped
+                        if skip_duplicates and not validate_only:
+                            # don't create, treat as skipped
                             continue
-                
-                # Create record
-                self._create_record(module, model, row, tenant)
-                success += 1
-                
+
+                if not validate_only and row_status == 'ok':
+                    # Create record
+                    try:
+                        self._create_record(module, model, row, tenant)
+                        success += 1
+                    except Exception as e:
+                        row_errors.append(str(e))
+                        row_status = 'failed'
+                        failed += 1
+
             except Exception as e:
-                errors.append(f"Row {row_num}: {str(e)}")
+                row_errors.append(str(e))
+                row_status = 'failed'
                 failed += 1
-        
-        return {
+
+            preview.append({
+                'row': row_num,
+                'data': row,
+                'status': row_status,
+                'errors': row_errors
+            })
+
+        result = {
             'success': success,
             'failed': failed,
             'duplicates': duplicates,
-            'errors': errors[:20]  # Limit errors returned
+            'errors': errors[:20],  # legacy field kept
         }
+
+        if validate_only:
+            result['preview'] = preview
+
+        return result
     
     def _find_duplicate(self, model, field, value, tenant):
         try:

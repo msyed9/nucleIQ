@@ -1076,7 +1076,7 @@ PARENT_TEMPLATE = ModuleTemplate(
             required=True,
             description='Student admission number (must exist)',
             sample_value='STU2024001',
-            aliases=['student_id']
+            aliases=['student_id', 'student_admission_number']
         ),
         FieldSpec(
             name='father_name',
@@ -2713,8 +2713,8 @@ def get_template_info() -> List[Dict]:
     """Get summary info for all templates (for API)"""
     return [
         {
-            'name': t.name,
-            'display_name': t.display_name,
+            'name': t.name,  # Module key used in API calls (e.g., 'students')
+            'display_name': t.display_name,  # Human readable name (e.g., 'Students')
             'description': t.description,
             'unique_field': t.unique_field,
             'supported_formats': t.supported_formats,
@@ -2723,3 +2723,4 @@ def get_template_info() -> List[Dict]:
         }
         for t in TEMPLATE_REGISTRY.values()
     ]
+

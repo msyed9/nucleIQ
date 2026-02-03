@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
 import {
     Download,
@@ -45,106 +46,42 @@ interface ModuleTemplate {
     sampleData: string[][];
 }
 
-const TEMPLATES: ModuleTemplate[] = [
-    {
-        id: 'students',
-        name: 'Students',
-        icon: Users,
-        description: 'Import student data including personal info, class, section, and parent details',
-        requiredFields: ['first_name', 'last_name', 'admission_number', 'date_of_birth', 'gender', 'father_name', 'mother_name', 'father_phone', 'mother_phone'],
-        optionalFields: ['email', 'phone', 'address', 'blood_group', 'aadhar_number', 'nationality', 'religion', 'caste', 'admission_date', 'class_name', 'section_name'],
-        sampleData: [
-            ['first_name', 'last_name', 'admission_number', 'date_of_birth', 'gender', 'father_name', 'mother_name', 'father_phone', 'mother_phone', 'class_name', 'section_name', 'email', 'phone', 'blood_group', 'address'],
-            ['John', 'Doe', 'STU001', '15-05-2010', 'M', 'Robert Doe', 'Mary Doe', '9876543210', '9876543211', 'Class 10', 'A', 'john.doe@example.com', '9876543212', 'O+', '123 Main Street']
-        ]
-    },
-    {
-        id: 'staff',
-        name: 'Staff',
-        icon: UserCheck,
-        description: 'Import staff data including personal info, department, and designation',
-        requiredFields: ['first_name', 'last_name', 'employee_id', 'email', 'department', 'designation', 'date_of_joining'],
-        optionalFields: ['phone', 'address', 'blood_group', 'date_of_birth', 'gender', 'qualification', 'experience_years', 'salary', 'bank_account', 'aadhar_number'],
-        sampleData: [
-            ['first_name', 'last_name', 'employee_id', 'email', 'department', 'designation', 'date_of_joining', 'phone', 'gender', 'qualification'],
-            ['Jane', 'Smith', 'EMP001', 'jane.smith@school.com', 'Mathematics', 'Senior Teacher', '01-06-2020', '9876543212', 'Female', 'M.Sc Mathematics']
-        ]
-    },
-    {
-        id: 'classes',
-        name: 'Classes & Sections',
-        icon: GraduationCap,
-        description: 'Import class and section structure for academic setup',
-        requiredFields: ['class_name', 'section_name'],
-        optionalFields: ['class_teacher_email', 'room_number', 'capacity', 'academic_year'],
-        sampleData: [
-            ['class_name', 'section_name', 'class_teacher_email', 'room_number', 'capacity'],
-            ['Class 10', 'A', 'teacher@school.com', '101', '40']
-        ]
-    },
-    {
-        id: 'fee_structures',
-        name: 'Fee Structures',
-        icon: DollarSign,
-        description: 'Import fee types, amounts, and payment schedules',
-        requiredFields: ['fee_type', 'class_name', 'amount', 'frequency'],
-        optionalFields: ['due_day', 'description', 'is_mandatory', 'late_fee_percent', 'academic_year'],
-        sampleData: [
-            ['fee_type', 'class_name', 'amount', 'frequency', 'due_day', 'description', 'is_mandatory'],
-            ['Tuition Fee', 'Class 10', '5000', 'monthly', '10', 'Monthly tuition fee', 'true']
-        ]
-    },
-    {
-        id: 'parents',
-        name: 'Parents',
-        icon: Home,
-        description: 'Import parent/guardian information linked to students',
-        requiredFields: ['student_admission_number', 'parent_name', 'relationship', 'phone'],
-        optionalFields: ['email', 'occupation', 'address', 'alternate_phone', 'workplace'],
-        sampleData: [
-            ['student_admission_number', 'parent_name', 'relationship', 'phone', 'email', 'occupation'],
-            ['STU001', 'Robert Doe', 'Father', '9876543211', 'robert@example.com', 'Engineer']
-        ]
-    },
-    {
-        id: 'student_photos',
-        name: 'Student Photos',
-        icon: Image,
-        description: 'Bulk update student photos (ZIP file with photos named by admission number)',
-        requiredFields: ['admission_number.jpg or admission_number.png'],
-        optionalFields: [],
-        sampleData: [
-            ['Prepare a ZIP file containing photos named as:'],
-            ['STU001.jpg, STU002.png, etc.']
-        ]
-    },
-    {
-        id: 'subjects',
-        name: 'Subjects',
-        icon: Building2,
-        description: 'Import subjects for classes',
-        requiredFields: ['subject_name', 'subject_code', 'class_name'],
-        optionalFields: ['credit_hours', 'teacher_email', 'is_elective', 'max_marks'],
-        sampleData: [
-            ['subject_name', 'subject_code', 'class_name', 'credit_hours', 'is_elective'],
-            ['Mathematics', 'MATH10', 'Class 10', '5', 'false']
-        ]
-    },
-    {
-        id: 'fee_allocations',
-        name: 'Fee Allocations',
-        icon: CreditCard,
-        description: 'Assign fee structures to specific students',
-        requiredFields: ['student_admission_number', 'fee_type', 'amount'],
-        optionalFields: ['discount_percent', 'discount_reason', 'effective_from'],
-        sampleData: [
-            ['student_admission_number', 'fee_type', 'amount', 'discount_percent', 'discount_reason'],
-            ['STU001', 'Tuition Fee', '5000', '10', 'Sibling discount']
-        ]
-    }
-];
+// Icon mapping for backend module IDs
+const ICON_MAP: Record<string, any> = {
+    'students': Users,
+    'staff': UserCheck,
+    'classes': GraduationCap,
+    'fee_structures': DollarSign,
+    'fee_invoices': FileSpreadsheet,
+    'fee_payments': DollarSign,
+    'fee_allocations': CreditCard,
+    'student_enrollments': UserCheck,
+    'transport': Building2,
+    'parents': Home,
+    'attendance': CheckCircle,
+    'student_photos': Image,
+    'subjects': Building2,
+    'exam_results': GraduationCap,
+    'exam_schedule': RefreshCw,
+    'timetable': RefreshCw,
+    'library_books': Database,
+    'library_transactions': Database,
+    'payroll_payments': DollarSign,
+    'hostel_allocations': Home,
+    'inventory_items': Database,
+    'certificates_issued': GraduationCap,
+    'finance_journal_entries': DollarSign,
+    'fee_discounts': DollarSign,
+    'helpdesk_tickets': AlertTriangle,
+    'lms_courses': GraduationCap,
+    'idcards': Users,
+};
+
+const DEFAULT_ICON = Database;
 
 const DataManagement: React.FC = () => {
+    const [templates, setTemplates] = useState<ModuleTemplate[]>([]);
+    const [loadingTemplates, setLoadingTemplates] = useState(true);
     const [activeTab, setActiveTab] = useState<'import' | 'export' | 'backup'>('import');
     const [selectedModule, setSelectedModule] = useState<string>('students');
     const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -157,7 +94,39 @@ const DataManagement: React.FC = () => {
     const [backupProgress, setBackupProgress] = useState<number>(0);
     const [creatingBackup, setCreatingBackup] = useState(false);
 
-    const selectedTemplate = TEMPLATES.find(t => t.id === selectedModule);
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                setLoadingTemplates(true);
+                const response = await api.get('/data-management/modules/');
+                const modules = response.data.modules.map((m: any) => ({
+                    ...m,
+                    icon: ICON_MAP[m.id] || DEFAULT_ICON,
+                }));
+                setTemplates(modules);
+                if (modules.length > 0 && !selectedModule) {
+                    setSelectedModule(modules[0].id);
+                }
+            } catch (error) {
+                console.error('Error fetching modules:', error);
+            } finally {
+                setLoadingTemplates(false);
+            }
+        };
+        // Check navigation state for uploadResult when arriving from preview/import
+        const navState: any = (location && (location as any).state) || {};
+        if (navState.uploadResult) {
+            setUploadResult(navState.uploadResult);
+            // clear state to avoid reusing it accidentally
+            try {
+                (window.history.replaceState as any)(null, '');
+            } catch (e) {}
+        }
+
+        fetchTemplates();
+    }, []);
+
+    const selectedTemplate = templates.find(t => t.id === selectedModule);
 
     const downloadTemplate = async (moduleId: string) => {
         try {
@@ -179,7 +148,7 @@ const DataManagement: React.FC = () => {
     };
 
     const generateClientTemplate = (moduleId: string) => {
-        const template = TEMPLATES.find(t => t.id === moduleId);
+        const template = templates.find(t => t.id === moduleId);
         if (!template) return;
 
         // Create CSV content
@@ -209,6 +178,9 @@ const DataManagement: React.FC = () => {
         }
     };
 
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const handleUpload = async () => {
         if (!uploadFile) return;
 
@@ -219,15 +191,32 @@ const DataManagement: React.FC = () => {
         formData.append('file', uploadFile);
         formData.append('module', selectedModule);
         formData.append('skip_duplicates', 'true');
+        formData.append('validate_only', 'true');
 
         try {
-            const response = await api.post('/data-management/import/', formData, {
+            const response = await api.post('/data-management/validate/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             const result = response.data;
-            setUploadResult(result);
+            // If validate endpoint returned preview use it; some responses nest preview under 'validation'
+            const preview = result.preview || result.validation?.preview || result.validation?.preview_rows;
+            const duplicates = result.duplicates || result.validation?.duplicates || [];
 
+            if (preview) {
+                navigate('/settings/data-management/import-preview', {
+                    state: {
+                        file: uploadFile,
+                        preview,
+                        duplicates,
+                        module: selectedModule
+                    }
+                });
+                return;
+            }
+
+            // Fallback: show result/error summary
+            setUploadResult(result);
             if (result.duplicates && result.duplicates.length > 0) {
                 setDuplicatesToResolve(result.duplicates);
                 setShowDuplicateModal(true);
@@ -263,27 +252,45 @@ const DataManagement: React.FC = () => {
         }
     };
 
-    const overrideDuplicates = async () => {
-        const selectedRecords = duplicatesToResolve.filter((_, i) => selectedDuplicates.has(i));
-
-        try {
-            const response = await api.post('/data-management/override-duplicates/', {
-                module: selectedModule,
-                records: selectedRecords
-            });
-
+    const resolveDuplicates = async (action: 'override' | 'skip') => {
+        if (action === 'skip') {
             setShowDuplicateModal(false);
             setDuplicatesToResolve([]);
             setSelectedDuplicates(new Set());
+            return;
+        }
 
-            // Update result
-            setUploadResult(prev => prev ? {
-                ...prev,
-                success: prev.success + response.data.updated,
-                duplicates: duplicatesToResolve.filter((_, i) => !selectedDuplicates.has(i))
-            } : null);
+        try {
+            setUploading(true);
+            const recordsToOverride = duplicatesToResolve
+                .filter((_, idx) => selectedDuplicates.has(idx))
+                .map(d => d.data);
+
+            const response = await api.post('/data-management/override-duplicates/', {
+                module: selectedModule,
+                records: recordsToOverride
+            });
+
+            if (response.data.success) {
+                // Update result locally
+                setUploadResult(prev => prev ? {
+                    ...prev,
+                    success: prev.success + (response.data.overridden || 0),
+                    duplicates: duplicatesToResolve.filter((_, i) => !selectedDuplicates.has(i))
+                } : null);
+
+                setShowDuplicateModal(false);
+                setDuplicatesToResolve([]);
+                setSelectedDuplicates(new Set());
+                alert(`Successfully overridden ${response.data.overridden} records.`);
+            } else {
+                alert(`Failed to override some records: ${response.data.errors?.join(', ') || 'Unknown error'}`);
+            }
         } catch (error) {
             console.error('Error overriding duplicates:', error);
+            alert('Failed to override duplicates. Please check server logs.');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -341,6 +348,15 @@ const DataManagement: React.FC = () => {
         }
     };
 
+    if (loadingTemplates) {
+        return (
+            <div className="data-management-container loading">
+                <RefreshCw size={48} className="spin" />
+                <p>Loading module configurations...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="data-management-container">
             <div className="page-header">
@@ -379,21 +395,12 @@ const DataManagement: React.FC = () => {
                     <div className="section-header">
                         <h2>📥 Import Data</h2>
                         <p>Select a module and download the template, fill in your data, then upload</p>
-                        <div style={{
-                            background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)',
-                            padding: '1rem',
-                            borderRadius: '12px',
-                            marginTop: '1rem',
-                            border: '1px solid #bae6fd',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '0.75rem'
-                        }}>
-                            <span style={{ fontSize: '1.5rem' }}>📅</span>
-                            <div>
-                                <strong style={{ color: '#0369a1' }}>Date Format:</strong>
-                                <span style={{ marginLeft: '0.5rem', color: '#0c4a6e' }}>
-                                    All date fields accept both <code style={{ background: '#e0f2fe', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>dd-mm-yyyy</code> and <code style={{ background: '#e0f2fe', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>dd/mm/yyyy</code> formats (e.g., 15-05-2010 or 15/05/2010)
+                        <div className="date-format-card">
+                            <span className="date-format-icon">📅</span>
+                            <div className="date-format-text">
+                                <strong>Date Format:</strong>
+                                <span>
+                                    All date fields accept both <code>dd-mm-yyyy</code> and <code>dd/mm/yyyy</code> formats (e.g., 15-05-2010 or 15/05/2010)
                                 </span>
                             </div>
                         </div>
@@ -401,16 +408,47 @@ const DataManagement: React.FC = () => {
 
                     {/* Module Selection */}
                     <div className="module-grid">
-                        {TEMPLATES.map(template => {
+                        {templates.map(template => {
                             const Icon = template.icon;
+                            const keyField = template.requiredFields.find(f => /admission|email|id|number|code/i.test(f)) || template.requiredFields[0];
                             return (
                                 <div
                                     key={template.id}
                                     className={`module-card ${selectedModule === template.id ? 'selected' : ''}`}
                                     onClick={() => setSelectedModule(template.id)}
                                 >
-                                    <Icon size={24} />
-                                    <span>{template.name}</span>
+                                    {keyField && <span className="key-badge card-key">{keyField}</span>}
+                                    <div className="module-icon">
+                                        <Icon size={20} />
+                                    </div>
+                                    <div className="module-body">
+                                        <span className="module-name">{template.name}</span>
+                                        <p className="module-desc">{template.description}</p>
+                                        <div className="module-meta">
+                                            <span className="module-counts">{template.requiredFields.length} required • {template.optionalFields.length} optional</span>
+                                        </div>
+                                        <div className="sample-preview" aria-hidden>
+                                            <strong>Sample:</strong>
+                                            <pre>{template.sampleData && template.sampleData[1] ? template.sampleData[1].join(', ') : template.sampleData[0].join(', ')}</pre>
+                                        </div>
+                                    </div>
+
+                                    <div className="card-overlay" role="group" aria-hidden>
+                                        <button
+                                            type="button"
+                                            className="overlay-btn"
+                                            onClick={(e) => { e.stopPropagation(); downloadTemplate(template.id); }}
+                                        >
+                                            Download Template
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="overlay-btn secondary"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedModule(template.id); }}
+                                        >
+                                            Preview Sample
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -489,7 +527,7 @@ const DataManagement: React.FC = () => {
                                         ) : (
                                             <>
                                                 <Upload size={18} />
-                                                Upload & Import
+                                                Preview & Validate
                                             </>
                                         )}
                                     </button>
@@ -546,7 +584,7 @@ const DataManagement: React.FC = () => {
                     </div>
 
                     <div className="export-grid">
-                        {TEMPLATES.filter(t => t.id !== 'student_photos').map(template => {
+                        {templates.filter(t => t.id !== 'student_photos').map(template => {
                             const Icon = template.icon;
                             return (
                                 <div key={template.id} className="export-card">
@@ -652,7 +690,7 @@ const DataManagement: React.FC = () => {
                     <div className="modal-content duplicate-modal">
                         <div className="modal-header">
                             <h2>⚠️ Duplicate Records Found</h2>
-                            <button onClick={() => setShowDuplicateModal(false)}>×</button>
+                            <button onClick={() => resolveDuplicates('skip')}>×</button>
                         </div>
                         <div className="modal-body">
                             <p>
@@ -704,16 +742,13 @@ const DataManagement: React.FC = () => {
                         <div className="modal-footer">
                             <button
                                 className="btn-secondary"
-                                onClick={() => {
-                                    setShowDuplicateModal(false);
-                                    setDuplicatesToResolve([]);
-                                }}
+                                onClick={() => resolveDuplicates('skip')}
                             >
                                 Skip All Duplicates
                             </button>
                             <button
                                 className="btn-primary"
-                                onClick={overrideDuplicates}
+                                onClick={() => resolveDuplicates('override')}
                                 disabled={selectedDuplicates.size === 0}
                             >
                                 Override Selected ({selectedDuplicates.size})

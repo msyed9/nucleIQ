@@ -8,7 +8,9 @@ from .models import (
     UsageLog,
     TenantHealthAlert,
     ChurnPrediction,
-    UpsellOpportunity
+    UpsellOpportunity,
+    AlertRule,
+    AlertEvent
 )
 
 
@@ -59,6 +61,28 @@ class UpsellOpportunitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UpsellOpportunity
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class AlertRuleSerializer(serializers.ModelSerializer):
+    """Serializer for analytics alert rules."""
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    created_by_email = serializers.CharField(source='created_by.email', read_only=True)
+
+    class Meta:
+        model = AlertRule
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at', 'tenant', 'created_by']
+
+
+class AlertEventSerializer(serializers.ModelSerializer):
+    """Serializer for analytics alert events."""
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    rule_name = serializers.CharField(source='rule.name', read_only=True)
+
+    class Meta:
+        model = AlertEvent
         fields = '__all__'
         read_only_fields = ['id', 'created_at', 'updated_at']
 

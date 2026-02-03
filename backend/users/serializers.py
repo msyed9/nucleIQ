@@ -10,9 +10,24 @@ from .models import (
     RolePermission, UserRole, ImpersonationLog
 )
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from core.middleware import get_current_tenant
+from .utils import (
+    get_tenant_security_settings,
+    is_login_locked,
+    record_login_failure,
+    clear_login_failures,
+    verify_totp
+)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    otp = serializers.CharField(
+        required=False,
+        write_only=True,
+        allow_blank=True,
+        help_text="MFA code if required"
+    )
+
     @classmethod
     def get_token(cls, user):
         from datetime import timedelta
@@ -38,28 +53,64 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
     
     def validate(self, attrs):
-        """Override to set custom refresh token lifetime based on tenant."""
+        """Override to set custom refresh token lifetime based on tenant and enforce MFA/lockout."""
         from datetime import timedelta
-        from rest_framework_simplejwt.settings import api_settings
-        
-        data = super().validate(attrs)
-        
-        # Get the user and set custom refresh token lifetime
+
+        identifier = attrs.get(self.username_field)
+        tenant = get_current_tenant()
+        tenant_id = tenant.id if tenant else None
+        security_settings = get_tenant_security_settings(tenant)
+
+        lock_remaining = is_login_locked(tenant_id, identifier)
+        if lock_remaining:
+            minutes = max(1, int(lock_remaining // 60) + 1)
+            raise serializers.ValidationError({
+                'detail': f'Account locked. Try again in {minutes} minute(s).'
+            })
+
+        try:
+            data = super().validate(attrs)
+        except serializers.ValidationError:
+            record_login_failure(
+                tenant_id,
+                identifier,
+                security_settings['max_login_attempts'],
+                security_settings['lockout_duration_minutes']
+            )
+            raise
+
         user = self.user
+        tenant = user.tenant if hasattr(user, 'tenant') and user.tenant else tenant
+        tenant_id = tenant.id if tenant else None
+        security_settings = get_tenant_security_settings(tenant)
+
+        clear_login_failures(tenant_id, identifier)
+
+        mfa_required = (
+            security_settings['two_factor_auth_required'] or
+            getattr(user, 'is_2fa_enabled', False) or
+            getattr(user, 'is_platform_admin', False) or
+            getattr(user, 'is_superuser', False)
+        )
+
+        if mfa_required:
+            otp = attrs.get('otp')
+            if not getattr(user, 'totp_secret', None):
+                raise serializers.ValidationError({
+                    'detail': 'MFA setup required. Please contact your administrator.'
+                })
+            if not otp or not verify_totp(otp, user.totp_secret):
+                raise serializers.ValidationError({'detail': 'Invalid MFA code.'})
+
         if hasattr(user, 'tenant') and user.tenant:
-            # Create a new refresh token with tenant-specific lifetime
             refresh_timeout_days = getattr(user.tenant, 'refresh_timeout_days', 7)
-            refresh = self.get_token(user)
-            
-            # Manually set the refresh token expiration
             from rest_framework_simplejwt.tokens import RefreshToken
             refresh_token = RefreshToken.for_user(user)
             refresh_token.set_exp(lifetime=timedelta(days=refresh_timeout_days))
-            
-            # Update data with custom tokens
+
             data['refresh'] = str(refresh_token)
             data['access'] = str(refresh_token.access_token)
-        
+
         return data
 
 
@@ -662,6 +713,12 @@ class UnifiedLoginSerializer(serializers.Serializer):
         write_only=True,
         style={'input_type': 'password'}
     )
+    otp = serializers.CharField(
+        required=False,
+        write_only=True,
+        allow_blank=True,
+        help_text="MFA code if required"
+    )
     
     def validate(self, attrs):
         from django.db.models import Q
@@ -671,6 +728,15 @@ class UnifiedLoginSerializer(serializers.Serializer):
         
         username = attrs.get('username', '').strip()
         password = attrs.get('password', '')
+        tenant = get_current_tenant()
+        tenant_id = tenant.id if tenant else None
+        security_settings = get_tenant_security_settings(tenant)
+        lock_remaining = is_login_locked(tenant_id, username)
+        if lock_remaining:
+            minutes = max(1, int(lock_remaining // 60) + 1)
+            raise serializers.ValidationError({
+                'detail': f'Account locked. Try again in {minutes} minute(s).'
+            })
         
         if not username or not password:
             raise serializers.ValidationError(
@@ -683,20 +749,62 @@ class UnifiedLoginSerializer(serializers.Serializer):
         ).first()
         
         if not user:
+            record_login_failure(
+                tenant_id,
+                username,
+                security_settings['max_login_attempts'],
+                security_settings['lockout_duration_minutes']
+            )
             raise serializers.ValidationError({
-                "detail": "No account found with this email or mobile number."
+                "detail": "Invalid credentials."
             })
+
+        if user.tenant:
+            tenant_id = user.tenant.id
         
         # Check password
         if not user.check_password(password):
+            record_login_failure(
+                tenant_id,
+                username,
+                security_settings['max_login_attempts'],
+                security_settings['lockout_duration_minutes']
+            )
             raise serializers.ValidationError({
-                "detail": "Invalid password."
+                "detail": "Invalid credentials."
             })
         
         if not user.is_active:
             raise serializers.ValidationError({
                 "detail": "This account is inactive. Please contact administrator."
             })
+
+        # Block logins for inactive tenants (non-platform admins)
+        if user.tenant and not user.tenant.is_active and not (user.is_platform_admin or user.is_superuser):
+            raise serializers.ValidationError({
+                "detail": "Tenant is inactive. Please contact administrator."
+            })
+
+        security_settings = get_tenant_security_settings(user.tenant or tenant)
+        mfa_required = (
+            security_settings['two_factor_auth_required'] or
+            getattr(user, 'is_2fa_enabled', False) or
+            getattr(user, 'is_platform_admin', False) or
+            getattr(user, 'is_superuser', False)
+        )
+
+        if mfa_required:
+            otp = attrs.get('otp')
+            if not getattr(user, 'totp_secret', None):
+                raise serializers.ValidationError({
+                    "detail": "MFA setup required. Please contact administrator."
+                })
+            if not otp or not verify_totp(otp, user.totp_secret):
+                raise serializers.ValidationError({
+                    "detail": "Invalid MFA code."
+                })
+
+        clear_login_failures(tenant_id, username)
         
         # Generate tokens with tenant-specific timeouts
         from datetime import timedelta

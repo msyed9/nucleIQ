@@ -1,0 +1,141 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin/css/tenant_tabs.css' %}">
+    <script src="{% static 'admin/js/tenant_tabs.js' %}" defer></script>
+{% endblock %}
+
+{% block field_sets %}
+    <div class="tenant-tabs" data-tenant-tabs>
+        <div class="tenant-tab-list" role="tablist" aria-label="Tenant sections">
+            {% for fieldset in adminform %}
+                <button
+                    type="button"
+                    class="tenant-tab-button"
+                    role="tab"
+                    aria-selected="false"
+                    data-tab-target="tab-fieldset-{{ forloop.counter }}"
+                >
+                    <span class="tab-label">📝 {{ fieldset.name|default:_('Details') }}</span>
+                </button>
+            {% endfor %}
+            {% for inline_admin_formset in inline_admin_formsets %}
+                {% with count=inline_admin_formset.formset.total_form_count %}
+                <button
+                    type="button"
+                    class="tenant-tab-button"
+                    role="tab"
+                    aria-selected="false"
+                    data-tab-target="tab-inline-{{ forloop.counter }}"
+                >
+                    <span class="tab-label">{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</span>
+                    <span class="tab-badge">{{ count }}</span>
+                </button>
+                {% endwith %}
+            {% endfor %}
+
+            {# Dedicated Users tab (rendered from tenant relation) #}
+            {% if original %}
+                <button
+                    type="button"
+                    class="tenant-tab-button"
+                    role="tab"
+                    aria-selected="false"
+                    data-tab-target="tab-tenant-users"
+                >
+                    <span class="tab-label">👥 Users</span>
+                    <span class="tab-badge">{{ original.users.count }}</span>
+                </button>
+            {% endif %}
+        </div>
+
+        <div class="tenant-tab-panels">
+            {% for fieldset in adminform %}
+                <section
+                    id="tab-fieldset-{{ forloop.counter }}"
+                    class="tenant-tab-panel"
+                    role="tabpanel"
+                    tabindex="0"
+                >
+                    {% include "admin/includes/fieldset.html" %}
+                    
+                    {# Navigation buttons for this panel #}
+                    <div class="tenant-tab-nav">
+                        <button type="button" class="tenant-nav-btn tenant-nav-prev" data-nav="prev" {% if forloop.first %}disabled{% endif %}>
+                            ← Previous
+                        </button>
+                        <span class="tenant-nav-indicator">Step {{ forloop.counter }}</span>
+                        <button type="button" class="tenant-nav-btn tenant-nav-next" data-nav="next">
+                            Next →
+                        </button>
+                    </div>
+                </section>
+            {% endfor %}
+
+            {% for inline_admin_formset in inline_admin_formsets %}
+                <section
+                    id="tab-inline-{{ forloop.counter }}"
+                    class="tenant-tab-panel"
+                    role="tabpanel"
+                    tabindex="0"
+                >
+                    {% include inline_admin_formset.opts.template %}
+                    
+                    {# Navigation buttons for this panel #}
+                    <div class="tenant-tab-nav">
+                        <button type="button" class="tenant-nav-btn tenant-nav-prev" data-nav="prev">
+                            ← Previous
+                        </button>
+                        <span class="tenant-nav-indicator">{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</span>
+                        <button type="button" class="tenant-nav-btn tenant-nav-next" data-nav="next">
+                            Next →
+                        </button>
+                    </div>
+                </section>
+            {% endfor %}
+
+            {% if original %}
+                <section id="tab-tenant-users" class="tenant-tab-panel" role="tabpanel" tabindex="0">
+                    <div class="tenant-users-grid">
+                        {% for user in original.users.all %}
+                            <div class="tenant-user-card">
+                                {% if user.avatar_url %}
+                                    <img class="user-avatar" src="{{ user.avatar_url }}" alt="{{ user.get_full_name }}">
+                                {% else %}
+                                    <div class="user-avatar">{{ user.first_name|default:user.email|first|upper }}</div>
+                                {% endif %}
+                                <div class="user-info">
+                                    <div class="user-name">{{ user.get_full_name }}</div>
+                                    <div class="user-email">{{ user.email }}</div>
+                                    <div class="user-meta">{% for r in user.roles.all %}{{ r.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</div>
+                                </div>
+                                <div class="user-actions">
+                                    <a class="btn-link" href="{% url 'admin:users_user_change' user.pk %}">Edit</a>
+                                    <a class="btn-link" href="{% url 'admin:auth_user_password_change' user.pk %}">Change Password</a>
+                                    <button type="button" class="btn-link impersonate-btn" data-user-id="{{ user.pk }}">Impersonate</button>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p>No users for this tenant.</p>
+                        {% endfor %}
+                    </div>
+                    
+                    {# Navigation buttons - last panel only has prev #}
+                    <div class="tenant-tab-nav">
+                        <button type="button" class="tenant-nav-btn tenant-nav-prev" data-nav="prev">
+                            ← Previous
+                        </button>
+                        <span class="tenant-nav-indicator">Users</span>
+                        <button type="button" class="tenant-nav-btn tenant-nav-next" data-nav="next" disabled>
+                            Finish
+                        </button>
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block inline_field_sets %}{% endblock %}

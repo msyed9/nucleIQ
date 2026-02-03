@@ -1106,3 +1106,366 @@ class FeeRefundViewSet(viewsets.ModelViewSet):
             )
         
         return Response(FeeRefundSerializer(refund).data)
+
+
+class PaymentGatewayViewSet(viewsets.ViewSet):
+    """
+    ViewSet for payment gateway operations.
+    Supports Razorpay, PhonePe, Google Pay (UPI), and generic UPI payments.
+    """
+    
+    permission_classes = [IsAuthenticated, IsTenantUser]
+    
+    def get_payment_service(self):
+        """Get payment service initialized with tenant settings."""
+        from .payment_gateways import PaymentGatewayService
+        return PaymentGatewayService(tenant=self.request.user.tenant)
+    
+    @action(detail=False, methods=['post'])
+    def create_order(self, request):
+        """
+        Create a payment order with the specified gateway.
+        
+        POST data:
+        - invoice_id: ID of the invoice to pay
+        - amount: Payment amount (optional, defaults to invoice balance)
+        - gateway: 'razorpay', 'phonepe', 'googlepay', or 'upi'
+        - customer_name: Customer name (optional)
+        - customer_email: Customer email (optional)
+        - customer_phone: Customer phone (optional)
+        """
+        invoice_id = request.data.get('invoice_id')
+        gateway = request.data.get('gateway', 'razorpay')
+        amount = request.data.get('amount')
+        
+        try:
+            invoice = FeeInvoice.objects.get(
+                id=invoice_id,
+                tenant=request.user.tenant
+            )
+        except FeeInvoice.DoesNotExist:
+            return Response(
+                {'error': 'Invoice not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Use invoice balance if amount not specified
+        if not amount:
+            amount = invoice.balance_amount
+        
+        if Decimal(str(amount)) <= 0:
+            return Response(
+                {'error': 'Invalid amount'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get student details for customer info
+        student = invoice.student
+        customer_details = {
+            'name': request.data.get('customer_name') or student.get_full_name(),
+            'email': request.data.get('customer_email') or student.email or '',
+            'phone': request.data.get('customer_phone') or student.parent_phone or student.guardian_phone or '',
+        }
+        
+        service = self.get_payment_service()
+        result = service.create_payment_order(
+            amount=Decimal(str(amount)),
+            currency='INR',
+            student_id=str(student.id),
+            invoice_id=str(invoice.id),
+            description=f"Fee Payment - {student.get_full_name()} - {invoice.invoice_number}",
+            gateway=gateway,
+            customer_details=customer_details,
+        )
+        
+        return Response(result)
+    
+    @action(detail=False, methods=['post'])
+    def verify_payment(self, request):
+        """
+        Verify payment callback from gateway.
+        
+        POST data:
+        - gateway: 'razorpay', 'phonepe'
+        - payment_data: Gateway-specific callback data
+        - invoice_id: Invoice ID to update
+        """
+        gateway = request.data.get('gateway')
+        payment_data = request.data.get('payment_data', {})
+        invoice_id = request.data.get('invoice_id')
+        
+        if not gateway or not payment_data:
+            return Response(
+                {'error': 'gateway and payment_data are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        service = self.get_payment_service()
+        is_valid, details = service.verify_payment(gateway, payment_data)
+        
+        if not is_valid:
+            return Response(
+                {'success': False, 'error': details.get('error', 'Verification failed')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # If valid, record the payment
+        if invoice_id:
+            try:
+                invoice = FeeInvoice.objects.get(
+                    id=invoice_id,
+                    tenant=request.user.tenant
+                )
+                
+                # Record the transaction
+                transaction = FeeCalculationService.record_payment(
+                    invoice=invoice,
+                    amount=Decimal(str(details.get('amount', 0))),
+                    payment_mode='ONLINE',
+                    payment_reference=details.get('payment_id', ''),
+                    collected_by=request.user
+                )
+                
+                details['transaction_id'] = str(transaction.id)
+                details['receipt_number'] = transaction.receipt_number
+                
+            except FeeInvoice.DoesNotExist:
+                pass  # Continue without recording - invoice might have been paid already
+        
+        return Response({
+            'success': True,
+            'payment_details': details
+        })
+    
+    @action(detail=False, methods=['get', 'post'])
+    def generate_qr(self, request):
+        """
+        Generate payment QR code.
+        
+        GET/POST params:
+        - amount: Payment amount (optional for dynamic QR)
+        - student_name: Student name for description
+        - invoice_id: Invoice ID (to get amount and student info)
+        """
+        amount = request.data.get('amount') or request.query_params.get('amount')
+        student_name = request.data.get('student_name') or request.query_params.get('student_name')
+        invoice_id = request.data.get('invoice_id') or request.query_params.get('invoice_id')
+        
+        # If invoice_id provided, get details from invoice
+        if invoice_id:
+            try:
+                invoice = FeeInvoice.objects.get(
+                    id=invoice_id,
+                    tenant=request.user.tenant
+                )
+                if not amount:
+                    amount = float(invoice.balance_amount)
+                if not student_name:
+                    student_name = invoice.student.get_full_name()
+            except FeeInvoice.DoesNotExist:
+                pass
+        
+        service = self.get_payment_service()
+        result = service.generate_school_payment_qr(
+            student_name=student_name,
+            amount=Decimal(str(amount)) if amount else None,
+            description='Fee Payment'
+        )
+        
+        return Response(result)
+    
+    @action(detail=False, methods=['post'])
+    def send_payment_link(self, request):
+        """
+        Send payment link via WhatsApp/SMS.
+        
+        POST data:
+        - invoice_id: Invoice ID
+        - phone: Phone number to send to (optional, uses parent phone if not provided)
+        - channel: 'whatsapp', 'sms', or 'both'
+        - include_qr: Include QR code in message (default True)
+        """
+        from communication.services import SMSService, WhatsAppService
+        from communication.models import MessageLog
+        
+        invoice_id = request.data.get('invoice_id')
+        phone = request.data.get('phone')
+        channel = request.data.get('channel', 'whatsapp')
+        include_qr = request.data.get('include_qr', True)
+        
+        try:
+            invoice = FeeInvoice.objects.get(
+                id=invoice_id,
+                tenant=request.user.tenant
+            )
+        except FeeInvoice.DoesNotExist:
+            return Response(
+                {'error': 'Invoice not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        student = invoice.student
+        
+        # Use provided phone or parent phone
+        target_phone = phone or student.parent_phone or student.guardian_phone
+        if not target_phone:
+            return Response(
+                {'error': 'No phone number available'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        service = self.get_payment_service()
+        
+        # Generate payment message with QR
+        message_data = service.generate_whatsapp_payment_message(
+            student_name=student.get_full_name(),
+            amount=invoice.balance_amount,
+            due_date=invoice.due_date.strftime('%d-%b-%Y') if invoice.due_date else None,
+            invoice_number=invoice.invoice_number,
+            include_qr=include_qr,
+        )
+        
+        results = {'whatsapp': None, 'sms': None}
+        errors = []
+        
+        # Send WhatsApp
+        if channel in ['whatsapp', 'both']:
+            try:
+                # Send main message
+                result = WhatsAppService.send_message(
+                    to_phone=target_phone,
+                    message=message_data['message']
+                )
+                
+                if result.get('success'):
+                    MessageLog.objects.create(
+                        tenant=request.user.tenant,
+                        recipient=target_phone,
+                        message_type='WHATSAPP',
+                        subject='Fee Payment Link',
+                        content=message_data['message'],
+                        status='SENT',
+                        provider='whatsapp',
+                        provider_message_id=result.get('message_id', '')
+                    )
+                    results['whatsapp'] = 'sent'
+                    
+                    # Send QR code as image if available
+                    if include_qr and message_data.get('qr_code'):
+                        try:
+                            WhatsAppService.send_image(
+                                to_phone=target_phone,
+                                image_base64=message_data['qr_code'],
+                                caption="Scan this QR code with any UPI app to pay"
+                            )
+                        except Exception:
+                            pass  # QR sending is optional
+                else:
+                    results['whatsapp'] = 'failed'
+                    errors.append(f"WhatsApp: {result.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                results['whatsapp'] = 'failed'
+                errors.append(f"WhatsApp: {str(e)}")
+        
+        # Send SMS
+        if channel in ['sms', 'both']:
+            try:
+                sms_message = (
+                    f"Fee Payment Reminder: Rs.{invoice.balance_amount} due for "
+                    f"{student.get_full_name()}. Pay using: {message_data.get('payment_link', 'UPI')} "
+                    f"- {request.user.tenant.name}"
+                )
+                
+                result = SMSService.send_sms(
+                    to_phone=target_phone,
+                    message=sms_message
+                )
+                
+                if result.get('success'):
+                    MessageLog.objects.create(
+                        tenant=request.user.tenant,
+                        recipient=target_phone,
+                        message_type='SMS',
+                        subject='Fee Payment Link',
+                        content=sms_message,
+                        status='SENT',
+                        provider='sms',
+                        provider_message_id=result.get('message_id', '')
+                    )
+                    results['sms'] = 'sent'
+                else:
+                    results['sms'] = 'failed'
+                    errors.append(f"SMS: {result.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                results['sms'] = 'failed'
+                errors.append(f"SMS: {str(e)}")
+        
+        response_data = {
+            'message': 'Payment link sent',
+            'results': results,
+            'payment_link': message_data.get('payment_link'),
+            'qr_code': message_data.get('qr_code') if include_qr else None,
+        }
+        
+        if errors:
+            response_data['errors'] = errors
+            return Response(response_data, status=status.HTTP_207_MULTI_STATUS)
+        
+        return Response(response_data)
+    
+    @action(detail=False, methods=['get'])
+    def gateway_config(self, request):
+        """Get available payment gateway configuration for frontend."""
+        service = self.get_payment_service()
+        
+        gateways = []
+        
+        # Check Razorpay
+        if service.razorpay_key_id:
+            gateways.append({
+                'id': 'razorpay',
+                'name': 'Razorpay',
+                'type': 'ONLINE',
+                'supports_qr': True,
+                'supports_payment_link': True,
+                'key': service.razorpay_key_id,  # Public key for frontend
+            })
+        
+        # Check PhonePe
+        if service.phonepe_merchant_id:
+            gateways.append({
+                'id': 'phonepe',
+                'name': 'PhonePe',
+                'type': 'ONLINE',
+                'supports_qr': True,
+                'supports_payment_link': True,
+            })
+        
+        # UPI is always available if VPA is set
+        if service.upi_vpa:
+            gateways.append({
+                'id': 'upi',
+                'name': 'UPI (Any App)',
+                'type': 'UPI',
+                'supports_qr': True,
+                'supports_payment_link': True,
+                'upi_vpa': service.upi_vpa,
+            })
+            
+            # Google Pay as a specific option
+            gateways.append({
+                'id': 'googlepay',
+                'name': 'Google Pay',
+                'type': 'UPI',
+                'supports_qr': True,
+                'supports_payment_link': True,
+            })
+        
+        return Response({
+            'gateways': gateways,
+            'school_name': service.school_name,
+            'default_gateway': 'razorpay' if service.razorpay_key_id else 'upi',
+        })
+

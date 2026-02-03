@@ -79,6 +79,12 @@ class UserAdmin(BaseUserAdmin):
                 self.admin_site.admin_view(self.user_change_password),
                 name='auth_user_password_change',
             ),
+            # Also register with users_user prefix for tenant admin redirect
+            path(
+                '<id>/password/',
+                self.admin_site.admin_view(self.user_change_password),
+                name='users_user_password_change',
+            ),
         ]
         return custom_urls + urls
     
@@ -139,9 +145,19 @@ class UserAdmin(BaseUserAdmin):
         )
     
     def get_queryset(self, request):
-        """Platform admins see all users. Tenant admins see only their tenant's users."""
+        """Show only tenant admins in main admin; tenant admins see only their tenant's admins."""
         qs = super().get_queryset(request)
-        if request.user.is_platform_admin:
+        admin_role_codes = [
+            'admin', 'super_admin', 'tenant_admin', 'school_admin',
+            'principal', 'administrator'
+        ]
+        qs = qs.filter(
+            tenant__isnull=False,
+            roles__code__in=admin_role_codes,
+            roles__is_active=True
+        ).distinct()
+
+        if request.user.is_platform_admin or request.user.is_superuser:
             return qs
         if hasattr(request.user, 'tenant') and request.user.tenant:
             return qs.filter(tenant=request.user.tenant)

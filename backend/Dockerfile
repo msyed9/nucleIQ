@@ -44,14 +44,18 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app/backend
 
-# Install system dependencies (minimal runtime requirements)
-# Note: dlib/face_recognition dependencies removed - install manually if needed
+# Install system dependencies (includes dlib/face_recognition build requirements)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
+    g++ \
     python3-dev \
     libpq-dev \
+    libopenblas-dev \
+    liblapack-dev \
     libjpeg-dev \
+    libboost-all-dev \
+    cmake \
     curl \
     postgresql-client \
     libcairo2 \
@@ -93,6 +97,8 @@ WORKDIR /app/backend
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \
+    libopenblas0 \
+    liblapack3 \
     libcairo2 \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \

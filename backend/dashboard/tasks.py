@@ -151,7 +151,7 @@ def calculate_daily_analytics(self):
     from tenants.models import Tenant
     from analytics.models import TenantMetric
     from students.models import StudentEnrollment
-    from fees.models import FeePayment
+    from fees.models import FeeTransaction
     from attendance.models import Attendance
     
     today = timezone.now().date()
@@ -167,10 +167,9 @@ def calculate_daily_analytics(self):
                 status='ACTIVE'
             ).count()
             
-            today_payments = FeePayment.objects.filter(
+            today_payments = FeeTransaction.objects.filter(
                 tenant=tenant,
-                payment_date=today,
-                status='COMPLETED'
+                transaction_date__date=today
             ).aggregate(total=Sum('amount'))['total'] or 0
             
             # Get attendance rate

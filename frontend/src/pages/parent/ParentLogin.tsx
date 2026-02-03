@@ -124,7 +124,7 @@ const ParentLogin: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            setError('Connection error. Please try again later.');
+            setError('We can’t reach the server right now. Please check your connection and try again.');
         } finally {
             setLoading(false);
         }

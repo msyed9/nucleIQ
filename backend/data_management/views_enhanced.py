@@ -33,11 +33,13 @@ from .templates import (
     TEMPLATE_REGISTRY, FieldType
 )
 
-from students.models import Student, StudentEnrollment
+from students.models import Student, StudentEnrollment, ParentUser
 from staff.models import Staff
-from tenants.models import GradeLevel, Section, Subject, AcademicYear, Department
+from users.models import User
+from tenants.models import GradeLevel, Section, Subject, AcademicYear, Department, ClassSubject
 from fees.models import FeeCategory, FeeStructure, FeeAllocation
 from attendance.models import AttendanceRecord
+from decimal import Decimal, InvalidOperation
 from transport.models import Route, Stop, StudentTransport
 from exams.models import ExamTerm, Exam, ExamSchedule, ExamResult
 from timetable.models import TimetableSlot
@@ -173,7 +175,7 @@ class DownloadTemplateView(APIView):
         row = 1
         for instruction in template.instructions:
             instructions_ws.cell(row=row, column=1, value=instruction)
-            if instruction.startswith('📋') or instruction.startswith('💡') or instruction.startswith('⚠️') or instruction.startswith('✅') or instruction.startswith('⚪'):
+            if instruction.startswith(('📋', '💡', '✅', '⚪')):
                 instructions_ws.cell(row=row, column=1).font = Font(bold=True, size=12)
             row += 1
 
@@ -273,6 +275,10 @@ class ValidateDataView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Special handling for student photo ZIP uploads - skip traditional validation
+        if module == 'student_photos' and file.name.lower().endswith('.zip'):
+            return Response(self._validate_photo_zip(file, request.user.tenant))
+        
         try:
             # Parse file
             data, _, file_type = FileParser.parse(file, file.name)
@@ -295,6 +301,91 @@ class ValidateDataView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    def _validate_photo_zip(self, file, tenant):
+        """Validate a ZIP file containing student photos"""
+        try:
+            valid_extensions = ('.jpg', '.jpeg', '.png')
+            photo_files = []
+            invalid_files = []
+            matched_students = 0
+            unmatched_files = []
+            
+            with zipfile.ZipFile(file) as z:
+                for filename in z.namelist():
+                    # Skip directories
+                    if filename.endswith('/'):
+                        continue
+                    
+                    name_part = filename.split('/')[-1]
+                    
+                    # Check if it's a valid image file
+                    if not name_part.lower().endswith(valid_extensions):
+                        if name_part and not name_part.startswith('.'):
+                            invalid_files.append(name_part)
+                        continue
+                    
+                    admission_number = name_part.rsplit('.', 1)[0]
+                    photo_files.append({
+                        'filename': name_part,
+                        'admission_number': admission_number
+                    })
+                    
+                    # Check if student exists
+                    student = Student.objects.filter(
+                        tenant=tenant,
+                        admission_number=admission_number,
+                        is_deleted=False
+                    ).first()
+                    
+                    if student:
+                        matched_students += 1
+                    else:
+                        unmatched_files.append(name_part)
+            
+            # Build preview data
+            preview = []
+            for i, pf in enumerate(photo_files[:10]):
+                preview.append({
+                    'row_number': i + 1,
+                    'data': {
+                        'filename': pf['filename'],
+                        'admission_number': pf['admission_number'],
+                        'status': 'Will Update' if pf['filename'] not in [u.split('/')[-1] for u in unmatched_files] else 'Student Not Found'
+                    },
+                    'has_errors': pf['filename'] in [u.split('/')[-1] for u in unmatched_files]
+                })
+            
+            return {
+                'valid': True,
+                'total_rows': len(photo_files),
+                'error_count': len(unmatched_files),
+                'duplicate_count': 0,
+                'warning_count': len(invalid_files),
+                'errors': [f"Student not found for: {f}" for f in unmatched_files[:20]],
+                'warnings': [f"Skipped non-image file: {f}" for f in invalid_files[:10]],
+                'duplicates': [],
+                'preview': preview,
+                'summary': {
+                    'total_photos': len(photo_files),
+                    'matched_students': matched_students,
+                    'unmatched': len(unmatched_files),
+                    'skipped_files': len(invalid_files)
+                }
+            }
+            
+        except zipfile.BadZipFile:
+            return {
+                'valid': False,
+                'error': 'Invalid ZIP file',
+                'total_rows': 0
+            }
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'Error reading ZIP: {str(e)}',
+                'total_rows': 0
+            }
     
     def _validate_data(self, module, template, data, tenant):
         """Validate all rows in the data"""
@@ -320,7 +411,9 @@ class ValidateDataView(APIView):
             errors.extend(row_errors)
             
             # Check for duplicates
-            if unique_field and transformed.get(unique_field):
+            if module == 'subjects':
+                duplicates.extend(self._check_subject_duplicates(transformed, tenant, row_num))
+            elif unique_field and transformed.get(unique_field):
                 existing = self._check_duplicate(module, unique_field, transformed[unique_field], tenant)
                 if existing:
                     duplicates.append({
@@ -346,9 +439,51 @@ class ValidateDataView(APIView):
             'warning_count': len(warnings),
             'errors': errors[:50],  # Limit errors returned
             'warnings': warnings[:20],
-            'duplicates': duplicates[:20],
+            'duplicates': duplicates,
             'preview': preview_rows,
         }
+
+    def _check_subject_duplicates(self, data, tenant, row_num):
+        """Check duplicates for subjects by both code and name"""
+        duplicates = []
+
+        subject_code = (data.get('subject_code') or '').strip()
+        subject_name = (data.get('subject_name') or '').strip()
+
+        existing_by_code = None
+        existing_by_name = None
+
+        if subject_code:
+            existing_by_code = Subject.objects.filter(
+                tenant=tenant,
+                code__iexact=subject_code,
+                is_deleted=False
+            ).first()
+
+        if subject_name:
+            existing_by_name = Subject.objects.filter(
+                tenant=tenant,
+                name__iexact=subject_name,
+                is_deleted=False
+            ).first()
+
+        if existing_by_code:
+            duplicates.append({
+                'row': row_num,
+                'field': 'subject_code',
+                'value': subject_code,
+                'existing_id': existing_by_code.id if hasattr(existing_by_code, 'id') else None
+            })
+
+        if existing_by_name and (not existing_by_code or existing_by_name.id != existing_by_code.id):
+            duplicates.append({
+                'row': row_num,
+                'field': 'subject_name',
+                'value': subject_name,
+                'existing_id': existing_by_name.id if hasattr(existing_by_name, 'id') else None
+            })
+
+        return duplicates
     
     def _get_transformer(self, module):
         """Get the appropriate data transformer for a module"""
@@ -383,9 +518,16 @@ class ValidateDataView(APIView):
         model = models.get(module)
         if model:
             try:
-                filter_kwargs = {field: value, 'tenant': tenant, 'is_deleted': False}
+                # Basic unique check: tenant + field + is_deleted
+                filter_kwargs = {field: value, 'tenant': tenant}
+                
+                # Check if model has is_deleted field
+                if hasattr(model, 'is_deleted'):
+                    filter_kwargs['is_deleted'] = False
+                    
                 return model.objects.filter(**filter_kwargs).first()
-            except:
+            except Exception as e:
+                logger.warning(f"Error checking duplicate for {module} ({field}={value}): {e}")
                 return None
         return None
 
@@ -401,6 +543,7 @@ class ImportDataView(APIView):
         file = request.FILES.get('file')
         skip_duplicates = request.data.get('skip_duplicates', 'true') == 'true'
         update_existing = request.data.get('update_existing', 'false') == 'true'
+        confirm_import = request.data.get('confirm_import', 'false') == 'true'
 
         # Store request user for downstream helpers
         self._request_user = request.user
@@ -451,6 +594,42 @@ class ImportDataView(APIView):
                     'error': 'No data found in file',
                     'job_id': str(import_job.id)
                 })
+
+            # Validate before importing unless explicitly confirmed
+            validator = ValidateDataView()
+            validation_result = validator._validate_data(module, template, data, tenant)
+            import_job.preview_data = validation_result.get('preview', [])
+            import_job.validation_errors = validation_result.get('errors', [])[:100]
+
+            # If there are validation errors in any rows, block the import entirely.
+            # Do NOT allow `confirm_import` to bypass row-level validation errors.
+            if validation_result.get('error_count', 0) > 0:
+                import_job.status = 'PREVIEW'
+                import_job.save()
+                return Response({
+                    'success': False,
+                    'requires_confirmation': False,
+                    'message': 'Validation errors detected. Fix the file before importing.',
+                    'job_id': str(import_job.id),
+                    'validation': validation_result
+                })
+
+            # Only require explicit confirmation for duplicate handling or warnings
+            requires_confirmation = (
+                (update_existing and validation_result.get('duplicate_count', 0) > 0) or
+                validation_result.get('warning_count', 0) > 0
+            )
+
+            if requires_confirmation and not confirm_import:
+                import_job.status = 'PREVIEW'
+                import_job.save()
+                return Response({
+                    'success': False,
+                    'requires_confirmation': True,
+                    'message': 'Duplicates or warnings detected. Review and confirm to proceed.',
+                    'job_id': str(import_job.id),
+                    'validation': validation_result
+                })
             
             # Process import
             import_job.status = 'IMPORTING'
@@ -495,6 +674,7 @@ class ImportDataView(APIView):
         updated = 0
         errors = []
         created_ids = []
+        duplicates_list = []
         
         transformer = self._get_transformer(module)
         unique_field = template.unique_field
@@ -510,7 +690,12 @@ class ImportDataView(APIView):
 
                     # Check for duplicates
                     existing = None
-                    if unique_field and transformed.get(unique_field):
+                    duplicate_field = unique_field
+                    duplicate_value = transformed.get(unique_field) if unique_field else None
+
+                    if module == 'subjects':
+                        existing, duplicate_field, duplicate_value = self._find_subject_duplicate(transformed, tenant)
+                    elif unique_field and transformed.get(unique_field):
                         existing = self._find_existing(module, unique_field, transformed[unique_field], tenant)
 
                     if existing:
@@ -519,21 +704,72 @@ class ImportDataView(APIView):
                             updated += 1
                         elif skip_duplicates:
                             duplicates_skipped += 1
+                            duplicates_list.append({
+                                'row': row_num,
+                                'field': duplicate_field,
+                                'value': duplicate_value,
+                                'existing_id': getattr(existing, 'id', None)
+                            })
+                            if module == 'subjects':
+                                self._link_subject_to_class(existing, transformed, tenant)
                             # commit savepoint and continue
                             continue
                         else:
-                            errors.append(f'Row {row_num}: Duplicate {unique_field}: {transformed[unique_field]}')
+                            errors.append(f'Row {row_num}: Duplicate {duplicate_field}: {duplicate_value}')
                             failed += 1
+                            duplicates_list.append({
+                                'row': row_num,
+                                'field': duplicate_field,
+                                'value': duplicate_value,
+                                'existing_id': getattr(existing, 'id', None)
+                            })
+                            if module == 'subjects':
+                                self._link_subject_to_class(existing, transformed, tenant)
                             continue
                     else:
                         # Create new record
-                        record = self._create_record(module, transformed, tenant)
-                        if record:
-                            created_ids.append(str(record.id))
-                            success += 1
-                        else:
-                            failed += 1
-                            errors.append(f'Row {row_num}: Failed to create record')
+                        try:
+                            record = self._create_record(module, transformed, tenant)
+                            if record:
+                                created_ids.append(str(record.id))
+                                success += 1
+                            else:
+                                failed += 1
+                                errors.append(f'Row {row_num}: Failed to create record')
+                        except IntegrityError as e:
+                            # Likely a unique constraint violation caused by concurrent create or mismatched lookup
+                            logger.warning(f"IntegrityError creating row {row_num}: {e}")
+                            # Try to find existing record now
+                            if module == 'subjects':
+                                existing_now, duplicate_field, duplicate_value = self._find_subject_duplicate(transformed, tenant)
+                            else:
+                                existing_now = self._find_existing(module, unique_field, transformed.get(unique_field), tenant)
+                            if existing_now:
+                                # Treat as duplicate
+                                duplicates_skipped += 1
+                                # store duplicate info for UI
+                                try:
+                                    existing_id = getattr(existing_now, 'id', None)
+                                    import_job.duplicate_rows = (import_job.duplicate_rows or 0) + 1
+                                except Exception:
+                                    existing_id = None
+                                # Append to errors list as duplicate notice (kept small)
+                                errors.append(f'Row {row_num}: Duplicate detected for {duplicate_field}={duplicate_value}')
+                                # Also collect a duplicates list to return
+                                duplicates_list.append({
+                                    'row': row_num,
+                                    'field': duplicate_field,
+                                    'value': duplicate_value,
+                                    'existing_id': existing_id
+                                })
+                                if module == 'subjects':
+                                    self._link_subject_to_class(existing_now, transformed, tenant)
+                                # continue to next row
+                                continue
+                            else:
+                                failed += 1
+                                errors.append(f'Row {row_num}: IntegrityError: {str(e)}')
+                                continue
 
                     # Update progress
                     import_job.processed_rows = idx + 1
@@ -559,6 +795,7 @@ class ImportDataView(APIView):
             'failed': failed,
             'updated': updated,
             'duplicates_skipped': duplicates_skipped,
+            'duplicates': duplicates_list,
             'total': len(data),
             'errors': errors[:50]
         }
@@ -804,8 +1041,13 @@ class ImportDataView(APIView):
         custom_amount = None
         if amount is not None and str(amount).strip() != '':
             try:
-                amount_value = float(amount)
-                if amount_value != float(fee_structure.amount):
+                # Use Decimal to avoid float/Decimal arithmetic issues
+                try:
+                    amount_value = Decimal(str(amount))
+                except InvalidOperation:
+                    amount_value = Decimal(float(amount))
+
+                if amount_value != fee_structure.amount:
                     custom_amount = amount_value
             except Exception:
                 pass
@@ -1586,6 +1828,7 @@ class ImportDataView(APIView):
             'students': DataTransformer.transform_student,
             'staff': DataTransformer.transform_staff,
             'classes': DataTransformer.transform_class_section,
+            'user_accounts': DataTransformer.transform_user,
         }.get(module, lambda x: x)
     
     def _find_existing(self, module, field, value, tenant):
@@ -1598,10 +1841,70 @@ class ImportDataView(APIView):
         model = models.get(module)
         if model:
             try:
-                return model.objects.filter(tenant=tenant, **{field: value}, is_deleted=False).first()
-            except:
-                pass
+                filter_kwargs = {field: value, 'tenant': tenant}
+                if hasattr(model, 'is_deleted'):
+                    filter_kwargs['is_deleted'] = False
+                return model.objects.filter(**filter_kwargs).first()
+            except Exception as e:
+                logger.warning(f"Error finding existing record for {module} ({field}={value}): {e}")
         return None
+
+    def _find_subject_duplicate(self, data, tenant):
+        """Find existing subject by code or name"""
+        subject_code = (data.get('subject_code') or '').strip()
+        subject_name = (data.get('subject_name') or '').strip()
+
+        existing_by_code = None
+        existing_by_name = None
+
+        if subject_code:
+            existing_by_code = Subject.objects.filter(
+                tenant=tenant,
+                code__iexact=subject_code,
+                is_deleted=False
+            ).first()
+
+        if subject_name:
+            existing_by_name = Subject.objects.filter(
+                tenant=tenant,
+                name__iexact=subject_name,
+                is_deleted=False
+            ).first()
+
+        if existing_by_code:
+            return existing_by_code, 'subject_code', subject_code
+
+        if existing_by_name:
+            return existing_by_name, 'subject_name', subject_name
+
+        return None, None, None
+
+    def _link_subject_to_class(self, subject, data, tenant):
+        """Ensure ClassSubject mapping exists for a subject and class"""
+        class_name = (data.get('class_name') or '').strip()
+        if not class_name:
+            return
+
+        grade_level = self._find_grade_level(tenant, class_name)
+        if not grade_level:
+            return
+
+        academic_year = self._get_academic_year(tenant, data.get('academic_year'))
+        if not academic_year:
+            return
+
+        is_elective = str(data.get('is_elective', '')).lower() in ('true', 'yes', '1')
+
+        ClassSubject.objects.get_or_create(
+            tenant=tenant,
+            academic_year=academic_year,
+            grade_level=grade_level,
+            subject=subject,
+            defaults={
+                'is_mandatory': not is_elective,
+                'is_elective': is_elective,
+            }
+        )
     
     def _create_record(self, module, data, tenant):
         """Create a new record based on module type"""
@@ -1612,6 +1915,7 @@ class ImportDataView(APIView):
             'subjects': self._create_subject,
             'fee_structures': self._create_fee_structure,
             'fee_allocations': self._create_fee_allocation,
+            'fee_payments': self._create_fee_payment,
             'student_enrollments': self._create_enrollment,
             'parents': self._update_parent,
             'attendance': self._create_attendance,
@@ -1632,6 +1936,7 @@ class ImportDataView(APIView):
             'lms_courses': self._create_lms_course,
             'lms_enrollments': self._create_lms_enrollment,
             'idcards': self._create_idcard_record,
+            'user_accounts': self._create_user_account,
         }
         
         creator = creators.get(module)
@@ -1707,6 +2012,87 @@ class ImportDataView(APIView):
             logger.warning(f"Failed to ensure parent accounts for student {student.id}: {e}")
         
         return student
+
+    def _create_fee_payment(self, data, tenant):
+        """Create a fee payment transaction linked to an existing invoice."""
+        from fees.services import FeeCalculationService
+
+        receipt_number = data.get('receipt_number') or data.get('transaction_id') or data.get('receipt_no')
+        invoice_number = data.get('invoice_number') or data.get('invoice_no')
+        amount = data.get('amount_paid') or data.get('amount') or data.get('paid_amount')
+        payment_date = DateParser.parse(data.get('payment_date'))
+        payment_mode = (data.get('payment_mode') or data.get('mode') or '').upper()
+        payment_reference = data.get('payment_reference') or data.get('payment_ref') or ''
+        remarks = data.get('remarks') or ''
+
+        if not invoice_number:
+            raise ValueError('Invoice number is required for fee payment')
+
+        invoice = FeeInvoice.objects.filter(
+            tenant=tenant,
+            invoice_number__iexact=str(invoice_number).strip()
+        ).first()
+
+        if not invoice:
+            raise ValueError(f"Invoice '{invoice_number}' not found")
+
+        # Map incoming payment modes to internal choices
+        mode_map = {
+            'CASH': 'CASH',
+            'CHEQUE': 'CHEQUE',
+            'CARD': 'CARD',
+            'ONLINE': 'NET_BANKING',
+            'BANK_TRANSFER': 'NET_BANKING',
+            'NET_BANKING': 'NET_BANKING',
+            'UPI': 'UPI',
+            'WALLET': 'WALLET',
+            'OTHER': 'OTHER'
+        }
+
+        mapped_mode = mode_map.get(payment_mode, 'OTHER') if payment_mode else 'OTHER'
+
+        try:
+            amt = Decimal(str(amount)) if amount is not None and str(amount).strip() != '' else Decimal('0.00')
+        except Exception:
+            try:
+                amt = Decimal(float(amount))
+            except Exception:
+                amt = Decimal('0.00')
+
+        # Use request user as collector if available
+        collector = getattr(self, '_request_user', None)
+
+        # Record payment using existing service (updates invoice status)
+        transaction = FeeCalculationService.record_payment(
+            invoice=invoice,
+            amount=amt,
+            payment_mode=mapped_mode,
+            payment_reference=payment_reference,
+            collected_by=collector,
+            remarks=remarks
+        )
+
+        # If a receipt_number was provided, set it; also allow setting explicit transaction date
+        updated = False
+        if receipt_number:
+            transaction.receipt_number = str(receipt_number)
+            updated = True
+
+        if payment_date:
+            # Convert to datetime (keep time at midnight if only date)
+            try:
+                if isinstance(payment_date, datetime):
+                    transaction.transaction_date = payment_date
+                elif isinstance(payment_date, date):
+                    transaction.transaction_date = datetime.combine(payment_date, datetime.min.time())
+                updated = True
+            except Exception:
+                pass
+
+        if updated:
+            transaction.save()
+
+        return transaction
     
     def _create_student_enrollment(self, student, class_name, section_name, data, tenant):
         """Create student enrollment in class/section"""
@@ -1966,15 +2352,33 @@ class ImportDataView(APIView):
         if data.get('department'):
             dept_name = (data.get('department') or '').strip()
             if dept_name:
-                # Normalize and get or create department to avoid duplicate errors
-                dept, _ = Department.objects.get_or_create(
+                # Generate a code from department name (first 3-5 chars, uppercase)
+                dept_code = ''.join(word[0] for word in dept_name.split()[:3]).upper()
+                if len(dept_code) < 2:
+                    dept_code = dept_name[:3].upper().replace(' ', '')
+                
+                # Try to find existing department by name first
+                dept = Department.objects.filter(
                     tenant=tenant,
-                    name__iexact=dept_name,
-                    defaults={
-                        'name': dept_name,
-                        'is_active': True
-                    }
-                )
+                    name__iexact=dept_name
+                ).first()
+                
+                if not dept:
+                    # Create new department with unique code
+                    # If code already exists, append a number
+                    base_code = dept_code
+                    counter = 1
+                    while Department.objects.filter(tenant=tenant, code=dept_code).exists():
+                        dept_code = f"{base_code}{counter}"
+                        counter += 1
+                    
+                    dept = Department.objects.create(
+                        tenant=tenant,
+                        name=dept_name,
+                        code=dept_code,
+                        is_active=True
+                    )
+                
                 staff.department = dept
                 staff.save()
         
@@ -2042,32 +2446,37 @@ class ImportDataView(APIView):
         return section
     
     def _create_subject(self, data, tenant):
-        """Create subject"""
+        """Create subject and link to grade level via ClassSubject"""
         raw_name = (data.get('subject_name') or '').strip()
         if not raw_name:
-            return None
+            raise ValueError("Subject name is required")
 
         # Normalize name (collapse whitespace)
         norm_name = ' '.join(raw_name.split())
+        subject_code = (data.get('subject_code') or '').strip()
+        
+        if not subject_code:
+            raise ValueError("Subject code is required")
 
-        # Use case-insensitive lookup to avoid duplicates, create if missing
-        subject = Subject.objects.filter(
-            tenant=tenant,
-            name__iexact=norm_name,
-            is_deleted=False
-        ).first()
-
-        if subject:
-            return subject
-
-        # Create new subject with provided metadata
-        subject = Subject.objects.create(
-            tenant=tenant,
-            name=norm_name,
-            code=(data.get('subject_code') or '').strip(),
-            description=(data.get('description') or '').strip(),
-            is_active=True
+        # Use case-insensitive lookup to avoid duplicates by code or name
+        subject, _, _ = self._find_subject_duplicate(
+            {'subject_code': subject_code, 'subject_name': norm_name},
+            tenant
         )
+
+        if not subject:
+            # Create new subject with provided metadata
+            subject = Subject.objects.create(
+                tenant=tenant,
+                name=norm_name,
+                code=subject_code,
+                description=(data.get('description') or '').strip(),
+                is_active=True
+            )
+
+        # Link to class/grade if provided
+        self._link_subject_to_class(subject, data, tenant)
+
         return subject
     
     def _create_fee_structure(self, data, tenant):
@@ -2168,7 +2577,8 @@ class ImportDataView(APIView):
         else:
             data = data_or_student
             tenant = data_or_tenant
-            admission_number = data.get('admission_number', '').strip()
+            # Support both 'admission_number' and 'student_admission_number' field names
+            admission_number = (data.get('admission_number') or data.get('student_admission_number') or '').strip()
             
             student = Student.objects.filter(
                 tenant=tenant,
@@ -2192,6 +2602,82 @@ class ImportDataView(APIView):
         
         student.save()
         return student
+
+    def _create_user_account(self, data, tenant):
+        """Create a new user account"""
+        from users.models import Role, UserRole
+        
+        email = data.get('email', '').strip()
+        if not email:
+            raise ValueError("Email is required for user account")
+
+        # Check if user already exists
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            # Create user
+            password = data.get('password') or 'NucleiQ@123'
+            first_name = data.get('first_name', '').strip()
+            last_name = data.get('last_name', '').strip()
+            
+            user = User.objects.create_user(
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                tenant=tenant,
+                is_active=True
+            )
+        else:
+            # Check if this user belongs to this tenant
+            if user.tenant and user.tenant != tenant:
+                raise ValueError(f"User with email {email} already exists in another tenant")
+
+        # Handle roles
+        role_name = (data.get('role') or '').strip().upper()
+        if role_name:
+            # Simple mapping for common roles
+            role_map = {
+                'STUDENT': 'student',
+                'PARENT': 'parent',
+                'TEACHER': 'teacher',
+                'STAFF': 'staff',
+                'ADMIN': 'admin'
+            }
+            
+            role_code = role_map.get(role_name, role_name.lower())
+            
+            # Find or create role for this tenant
+            role, _ = Role.objects.get_or_create(
+                tenant=tenant,
+                code=role_code,
+                defaults={'name': role_name.title(), 'is_active': True}
+            )
+            
+            UserRole.objects.get_or_create(user=user, role=role)
+
+        # Link to staff profile if applicable
+        employee_id = data.get('employee_id')
+        if employee_id and role_name in ['TEACHER', 'STAFF']:
+            staff = Staff.objects.filter(tenant=tenant, employee_id=employee_id).first()
+            if staff:
+                staff.user = user
+                staff.save()
+
+        # Link to parent profile if applicable
+        admission_number = data.get('admission_number')
+        if admission_number and role_name == 'PARENT':
+            student = Student.objects.filter(tenant=tenant, admission_number=admission_number).first()
+            if student:
+                # Find or create ParentUser profile
+                parent_profile, p_created = ParentUser.objects.get_or_create(
+                    user=user,
+                    tenant=tenant,
+                    defaults={'relation_type': 'GUARDIAN', 'portal_access_enabled': True}
+                )
+                # Link student to parent
+                parent_profile.students.add(student)
+
+        return user
     
     def _create_attendance(self, data, tenant):
         """Create attendance record"""
@@ -2223,9 +2709,10 @@ class ImportDataView(APIView):
             defaults={
                 'academic_year': academic_year,
                 'record_type': 'STUDENT',
-                'status': data.get('status', 'PRESENT'),
+                # Map incoming columns: allow 'marking_method' or 'method'
+                'status': (lambda s: 'ON_LEAVE' if str(s).upper() == 'LEAVE' else (s or 'PRESENT'))(data.get('status', 'PRESENT')),
                 'remarks': data.get('remarks', ''),
-                'marking_method': 'MANUAL',
+                'method': data.get('marking_method') or data.get('method') or 'MANUAL',
             }
         )
         
@@ -2790,6 +3277,98 @@ class ExportDataView(APIView):
             writer.writerow(row)
         
         return response
+
+
+class OverrideDuplicatesView(APIView):
+    """Override existing records with data from duplicates found during validation/import"""
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    
+    def post(self, request):
+        module = request.data.get('module')
+        records = request.data.get('records', [])
+        
+        template = get_template(module)
+        if not template:
+            return Response(
+                {'error': f'Invalid module: {module}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not records:
+            return Response(
+                {'error': 'No records provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Use an instance of ImportDataView to access its helper methods
+        # This allows us to reuse the complex creation/update logic
+        import_view = ImportDataView()
+        import_view._request_user = request.user
+        
+        tenant = request.user.tenant
+        unique_field = template.unique_field
+        
+        if not unique_field:
+            return Response(
+                {'error': f'Module {module} does not support duplicate overrides (no unique field)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        # Determine the model based on module
+        models_map = {
+            'students': Student,
+            'staff': Staff,
+            'subjects': Subject,
+        }
+        
+        model = models_map.get(module)
+        if not model:
+            return Response(
+                {'error': f'Override not yet supported for module: {module}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            with transaction.atomic():
+                for row in records:
+                    try:
+                        unique_value = row.get(unique_field)
+                        if not unique_value:
+                            error_count += 1
+                            errors.append(f"Missing unique field {unique_field}")
+                            continue
+                            
+                        # Re-use the transformer if it exists for this module
+                        transformer = import_view._get_transformer(module)
+                        transformed = transformer(row) if transformer else row
+                        
+                        existing = import_view._find_existing(module, unique_field, unique_value, tenant)
+                        if existing:
+                            import_view._update_record(module, existing, transformed, tenant)
+                            success_count += 1
+                        else:
+                            error_count += 1
+                            errors.append(f"Record with {unique_field}={unique_value} not found for override")
+                    except Exception as e:
+                        error_count += 1
+                        errors.append(str(e))
+                        logger.warning(f"Error overriding record: {e}")
+        except Exception as e:
+            return Response(
+                {'error': f'Transaction failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response({
+            'success': error_count == 0,
+            'overridden': success_count,
+            'errors': errors[:20],
+            'failed': error_count
+        })
 
 
 class FullBackupView(APIView):

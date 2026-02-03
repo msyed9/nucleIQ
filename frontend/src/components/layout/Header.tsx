@@ -15,15 +15,19 @@ const Header: React.FC = () => {
     const { t } = useTranslation();
     const { theme, themeMode, setThemeMode } = useTheme();
 
-    // Handle Ctrl+K / Cmd+K keyboard shortcut
+    // Handle Ctrl+K / Cmd+K / Ctrl+/ keyboard shortcut
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        // Ctrl+K or Cmd+K
         if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
             event.preventDefault();
             setSearchOpen(true);
         }
-        if (event.key === 'Escape') {
-            setSearchOpen(false);
+        // Ctrl+/ (alternative shortcut)
+        if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+            event.preventDefault();
+            setSearchOpen(true);
         }
+        // Note: ESC handling is done in GlobalSearch component itself
     }, []);
 
     useEffect(() => {
@@ -74,8 +78,8 @@ const Header: React.FC = () => {
                                 themeMode === 'dark'
                                     ? 'Switch to system theme'
                                     : themeMode === 'system'
-                                    ? 'Switch to light theme'
-                                    : 'Switch to dark theme'
+                                        ? 'Switch to light theme'
+                                        : 'Switch to dark theme'
                             }
                             aria-label="Toggle theme"
                             onClick={() => {

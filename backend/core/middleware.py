@@ -8,6 +8,7 @@ from threading import local
 from django.utils.deprecation import MiddlewareMixin
 from django.db import connection
 from django.http import JsonResponse
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,11 @@ class TenantMiddleware(MiddlewareMixin):
             if tenant_id:
                 tenant = self._get_tenant_by_id(tenant_id)
                 logger.debug(f"Tenant detected from header: {tenant}")
+                if not tenant:
+                    return JsonResponse(
+                        {'error': 'Invalid tenant identifier'},
+                        status=400
+                    )
             
             # Strategy 2: Extract from subdomain
             if not tenant:
@@ -149,6 +155,10 @@ class TenantMiddleware(MiddlewareMixin):
             if request.user.is_authenticated:
                 user = request.user
                 set_current_user(user)
+
+                enforcement_response = self._enforce_authenticated_tenant(request, tenant)
+                if enforcement_response:
+                    return enforcement_response
             
             # Set PostgreSQL RLS context (after user is available for super admin check)
             if tenant:
@@ -262,3 +272,125 @@ class TenantMiddleware(MiddlewareMixin):
             return tenant.branding
         except Exception:
             return None
+
+    def _enforce_authenticated_tenant(self, request, tenant):
+        """Enforce tenant context for authenticated non-platform users."""
+        if not request.user or not request.user.is_authenticated:
+            return None
+
+        if request.user.is_platform_admin or request.user.is_superuser:
+            return None
+
+        if not request.user.tenant_id:
+            return None
+
+        if not tenant:
+            if request.path.startswith('/api/') and not self._is_tenant_optional_path(request.path):
+                return JsonResponse(
+                    {'error': 'Tenant context required'},
+                    status=400
+                )
+            return None
+
+        if request.user.tenant_id != tenant.id:
+            return JsonResponse(
+                {'error': 'Tenant mismatch'},
+                status=403
+            )
+
+        return None
+
+    def _is_tenant_optional_path(self, path):
+        """Paths that can operate without tenant context for authenticated users."""
+        optional_prefixes = [
+            '/api/health/',
+            '/api/schema/',
+            '/api/docs/',
+            '/api/redoc/',
+        ]
+
+        return any(path.startswith(prefix) for prefix in optional_prefixes)
+
+
+class ApiVersionRoutingMiddleware(MiddlewareMixin):
+    """
+    Middleware to transparently route /api/ requests to tenant-specific versions.
+
+    - Skips explicit versioned paths (/api/v1/, /api/v2/)
+    - Resolves module-based version overrides per tenant
+    - Rewrites request.path_info for internal routing without redirecting
+    """
+
+    def process_request(self, request):
+        path = request.path_info or request.path
+
+        if not path.startswith('/api/'):
+            return None
+
+        if path.startswith('/api/v1/') or path.startswith('/api/v2/'):
+            return None
+
+        if path in ['/api', '/api/']:
+            return None
+
+        # Skip non-versioned API utility endpoints
+        excluded_prefixes = getattr(settings, 'API_VERSION_EXCLUDED_PREFIXES', [])
+        remainder = path[len('/api/'):]
+        if not remainder:
+            return None
+
+        first_segment = remainder.split('/', 1)[0]
+        if first_segment in excluded_prefixes:
+            return None
+
+        module_aliases = getattr(settings, 'API_MODULE_VERSION_ALIASES', {})
+        module_key = module_aliases.get(first_segment, first_segment)
+        allowed_modules = set(getattr(settings, 'API_VERSION_ALLOWED_MODULES', []))
+
+        if allowed_modules:
+            if module_key not in allowed_modules:
+                if first_segment in allowed_modules:
+                    module_key = first_segment
+                else:
+                    module_key = None
+
+        default_version = settings.REST_FRAMEWORK.get('DEFAULT_VERSION', 'v1')
+        allowed_versions = settings.REST_FRAMEWORK.get('ALLOWED_VERSIONS', [default_version])
+
+        tenant = getattr(request, 'tenant', None)
+        resolved_version = default_version
+
+        if tenant:
+            try:
+                from tenants.models import TenantSettings
+                tenant_settings, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+                module_versions = tenant_settings.api_module_versions or {}
+
+                module_version = None
+                if module_key:
+                    module_version = module_versions.get(module_key)
+
+                if module_version not in allowed_versions:
+                    module_version = None
+
+                resolved_version = (
+                    module_version or
+                    tenant_settings.api_default_version or
+                    default_version
+                )
+            except Exception:
+                resolved_version = default_version
+
+        if resolved_version not in allowed_versions:
+            resolved_version = default_version
+
+        new_path = f"/api/{resolved_version}/" + remainder
+        request.path_info = new_path
+        request.META['PATH_INFO'] = new_path
+        request.resolved_api_version = resolved_version
+        logger.info(
+            "API version resolved: %s (module=%s, path=%s)",
+            resolved_version,
+            module_key or first_segment,
+            path
+        )

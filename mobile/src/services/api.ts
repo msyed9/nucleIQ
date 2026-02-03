@@ -299,7 +299,59 @@ export const feesAPI = {
         const response = await api.get('/fees/structure/');
         return response.data;
     },
+
+    // Invoice APIs
+    getInvoice: async (invoiceId: string) => {
+        const response = await api.get(`/fees/invoices/${invoiceId}/`);
+        return response.data;
+    },
+
+    // Payment Gateway APIs
+    getGatewayConfig: async () => {
+        const response = await api.get('/fees/payment-gateway/gateway_config/');
+        return response.data;
+    },
+
+    createPaymentOrder: async (data: {
+        invoice_id: string;
+        gateway: string;
+        amount: number;
+        customer_name?: string;
+        customer_email?: string;
+        customer_phone?: string;
+    }) => {
+        const response = await api.post('/fees/payment-gateway/create_order/', data);
+        return response.data;
+    },
+
+    verifyPayment: async (data: {
+        gateway: string;
+        invoice_id: string;
+        payment_data: any;
+    }) => {
+        const response = await api.post('/fees/payment-gateway/verify_payment/', data);
+        return response.data;
+    },
+
+    generateQR: async (data: {
+        invoice_id?: string;
+        amount?: number;
+    }) => {
+        const response = await api.post('/fees/payment-gateway/generate_qr/', data);
+        return response.data;
+    },
+
+    sendPaymentLink: async (data: {
+        invoice_id: string;
+        phone: string;
+        channel: 'whatsapp' | 'sms' | 'both';
+        include_qr?: boolean;
+    }) => {
+        const response = await api.post('/fees/payment-gateway/send_payment_link/', data);
+        return response.data;
+    },
 };
+
 
 // Exams API
 export const examsAPI = {

@@ -7,17 +7,30 @@ interface TenantBranding {
     id: number;
     tenant: number;
     tenant_name: string;
+    // Legacy URL fields (kept for backward compatibility)
     logo_url: string;
     favicon_url: string;
     login_background_url: string;
     email_header_image: string;
+    // New computed URL fields (with fallback logic from backend)
+    small_logo_url: string | null;
+    large_logo_url: string | null;
+    square_logo_url: string | null;
+    login_banner_url: string | null;
+    dashboard_banner_url: string | null;
+    report_header_url: string | null;
+    // Colors
     primary_color: string;
     secondary_color: string;
     sidebar_color: string;
+    // Typography
     font_family: string;
+    // Icon/UI Theme
     icon_theme: string;
     icon_set: string;
+    // Gallery
     gallery_images: string[];
+    // Other settings
     custom_css: string;
     enabled_modules: string[];
 }
@@ -32,6 +45,13 @@ interface TenantBrandingContextType {
     refreshBranding: () => Promise<void>;
     isModuleEnabled: (moduleKey: string) => boolean;
     enabledModules: string[];
+    // Helper methods for getting logo URLs with fallback
+    getSmallLogoUrl: () => string | null;
+    getLargeLogoUrl: () => string | null;
+    getSquareLogoUrl: () => string | null;
+    getLoginBannerUrl: () => string | null;
+    getDashboardBannerUrl: () => string | null;
+    getReportHeaderUrl: () => string | null;
 }
 
 const TenantBrandingContext = createContext<TenantBrandingContextType | undefined>(undefined);
@@ -64,6 +84,12 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
                 favicon_url: '',
                 login_background_url: '',
                 email_header_image: '',
+                small_logo_url: null,
+                large_logo_url: null,
+                square_logo_url: null,
+                login_banner_url: null,
+                dashboard_banner_url: null,
+                report_header_url: null,
                 primary_color: '#1976D2',
                 secondary_color: '#424242',
                 sidebar_color: '#263238',
@@ -104,11 +130,27 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
             root.style.setProperty('--font-family-primary', brandingData.font_family);
         }
 
-        // Update favicon if provided
-        if (brandingData.favicon_url) {
+        // Set login banner as CSS variable for use in Login page
+        const loginBannerUrl = brandingData.login_banner_url || brandingData.login_background_url;
+        if (loginBannerUrl) {
+            root.style.setProperty('--login-bg-image', `url(${loginBannerUrl})`);
+        } else {
+            root.style.setProperty('--login-bg-image', 'none');
+        }
+
+        // Set dashboard banner as CSS variable for use in Dashboard
+        if (brandingData.dashboard_banner_url) {
+            root.style.setProperty('--dashboard-banner-image', `url(${brandingData.dashboard_banner_url})`);
+        } else {
+            root.style.setProperty('--dashboard-banner-image', 'none');
+        }
+
+        // Update favicon if provided (prefer square_logo_url, fallback to favicon_url)
+        const faviconUrl = brandingData.square_logo_url || brandingData.favicon_url;
+        if (faviconUrl) {
             const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
             if (favicon) {
-                favicon.href = brandingData.favicon_url;
+                favicon.href = faviconUrl;
             }
         }
 
@@ -151,6 +193,37 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
     // Get the list of enabled modules
     const enabledModules = branding?.enabled_modules || BASIC_MODULES;
 
+    // Helper methods for getting logo/banner URLs with fallback
+    const getSmallLogoUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.small_logo_url || branding.logo_url || null;
+    };
+
+    const getLargeLogoUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.large_logo_url || branding.small_logo_url || branding.logo_url || null;
+    };
+
+    const getSquareLogoUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.square_logo_url || branding.favicon_url || null;
+    };
+
+    const getLoginBannerUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.login_banner_url || branding.login_background_url || null;
+    };
+
+    const getDashboardBannerUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.dashboard_banner_url || null;
+    };
+
+    const getReportHeaderUrl = (): string | null => {
+        if (!branding) return null;
+        return branding.report_header_url || branding.large_logo_url || branding.logo_url || null;
+    };
+
     return (
         <TenantBrandingContext.Provider value={{
             branding,
@@ -158,7 +231,13 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
             error,
             refreshBranding,
             isModuleEnabled,
-            enabledModules
+            enabledModules,
+            getSmallLogoUrl,
+            getLargeLogoUrl,
+            getSquareLogoUrl,
+            getLoginBannerUrl,
+            getDashboardBannerUrl,
+            getReportHeaderUrl
         }}>
             {children}
         </TenantBrandingContext.Provider>

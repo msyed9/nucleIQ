@@ -11,6 +11,12 @@
     margin-bottom: 24px;
 }
 
+.header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .header-content h1 {
     font-size: 28px;
     font-weight: 700;
@@ -28,6 +34,29 @@
     display: flex;
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.subjects-alert {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.subjects-alert.error {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+}
+
+.subjects-alert.warning {
+    background: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
 }
 
 .search-box {
@@ -151,6 +180,32 @@
     border-bottom: 1px solid #F3F4F6;
 }
 
+.grade-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.grade-chip {
+    background: #EEF2FF;
+    color: #3730A3;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.grade-chip.grade-overflow {
+    background: #E0E7FF;
+    color: #4338CA;
+}
+
+.grade-chip.grade-empty {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
 .meta-item {
     display: flex;
     align-items: center;
@@ -165,6 +220,36 @@
 
 .syllabus-progress {
     margin-top: 8px;
+}
+
+.subject-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid #E5E7EB;
+    color: #374151;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-ghost:hover {
+    background: #F3F4F6;
+}
+
+.btn-ghost.danger {
+    color: #B91C1C;
+    border-color: #FECACA;
+}
+
+.btn-ghost.danger:hover {
+    background: #FEF2F2;
 }
 
 .progress-header {
@@ -217,6 +302,10 @@
     max-width: 560px;
 }
 
+.form-modal {
+    max-width: 860px;
+}
+
 .subject-modal .modal-header {
     border-left: 4px solid #6366F1;
     padding-left: 20px;
@@ -259,6 +348,66 @@
     margin-bottom: 24px;
 }
 
+.assignments-section {
+    margin-bottom: 24px;
+}
+
+.assignments-section h4 {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.mapping-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: #FFFFFF;
+}
+
+.mapping-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.mapping-cell label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.mapping-cell input,
+.mapping-cell select {
+    padding: 8px 10px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.mapping-cell.actions {
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.mapping-cell.checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mapping-cell.checkbox label {
+    font-weight: 500;
+    color: #374151;
+}
+
 .detail-item {
     display: flex;
     flex-direction: column;
@@ -282,6 +431,65 @@
     padding: 20px;
     background: #F9FAFB;
     border-radius: 12px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.form-group.checkbox {
+    flex-direction: row;
+    align-items: center;
+}
+
+.field-error {
+    font-size: 12px;
+    color: #B91C1C;
+}
+
+.mapping-editor {
+    margin-top: 8px;
+}
+
+.mapping-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.empty-state {
+    font-size: 13px;
+    color: #9CA3AF;
 }
 
 .syllabus-section h4 {
@@ -308,6 +516,35 @@
 .progress-text {
     text-align: center;
     margin: 12px 0 0 0;
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.subjects-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #F3F4F6;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pagination-controls select {
+    padding: 8px 10px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.page-indicator {
     font-size: 14px;
     color: #6B7280;
 }
@@ -342,6 +579,22 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.btn-danger {
+    background: #EF4444;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background: #DC2626;
 }
 
 .btn-secondary:hover {

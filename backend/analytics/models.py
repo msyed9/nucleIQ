@@ -234,6 +234,130 @@ class TenantHealthAlert(BaseModel):
         return f"{self.tenant.name} - {self.alert_type} ({self.severity})"
 
 
+class AlertRule(BaseModel):
+    """
+    Tenant-level analytics alert rules.
+    """
+
+    METRIC_CHOICES = [
+        ('ATTENDANCE_RATE', 'Attendance Rate'),
+        ('FEE_DELINQUENCY', 'Fee Delinquency'),
+        ('FEE_COLLECTION_RATE', 'Fee Collection Rate'),
+    ]
+
+    COMPARATOR_CHOICES = [
+        ('LT', '<'),
+        ('LTE', '<='),
+        ('GT', '>'),
+        ('GTE', '>='),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+        ('CRITICAL', 'Critical'),
+    ]
+
+    SCOPE_CHOICES = [
+        ('ALL', 'All'),
+        ('GRADE', 'Grade'),
+        ('SECTION', 'Section'),
+    ]
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='alert_rules'
+    )
+
+    name = models.CharField(max_length=200)
+    metric = models.CharField(max_length=30, choices=METRIC_CHOICES)
+    comparator = models.CharField(max_length=5, choices=COMPARATOR_CHOICES, default='LT')
+    threshold_value = models.DecimalField(max_digits=10, decimal_places=2)
+    window_days = models.IntegerField(default=30)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='MEDIUM')
+    scope = models.CharField(max_length=10, choices=SCOPE_CHOICES, default='ALL')
+
+    grade_level = models.ForeignKey(
+        'tenants.GradeLevel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    section = models.ForeignKey(
+        'tenants.Section',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    gender = models.CharField(max_length=1, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'analytics_alert_rules'
+        verbose_name = _('Analytics Alert Rule')
+        verbose_name_plural = _('Analytics Alert Rules')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'metric']),
+            models.Index(fields=['tenant', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.tenant.name} - {self.name}"
+
+
+class AlertEvent(BaseModel):
+    """
+    Triggered events for alert rules.
+    """
+
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('RESOLVED', 'Resolved'),
+    ]
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='alert_events'
+    )
+
+    rule = models.ForeignKey(
+        AlertRule,
+        on_delete=models.CASCADE,
+        related_name='events'
+    )
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OPEN')
+    current_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    triggered_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'analytics_alert_events'
+        verbose_name = _('Analytics Alert Event')
+        verbose_name_plural = _('Analytics Alert Events')
+        ordering = ['-triggered_at']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', '-triggered_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.tenant.name} - {self.rule.name} - {self.status}"
+
+
 class ChurnPrediction(BaseModel):
     """
     ML-based churn prediction for tenants.

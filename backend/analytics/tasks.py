@@ -6,6 +6,7 @@ from celery import shared_task
 from datetime import date, timedelta
 from django.utils import timezone
 from .services import TenantHealthService, ChurnPredictionService
+from .services import AlertingService
 from tenants.models import Tenant
 import logging
 
@@ -160,3 +161,23 @@ def backfill_historical_metrics(days=30):
                 )
 
     logger.info("Historical metrics backfill completed")
+
+
+@shared_task(bind=True)
+def evaluate_alert_rules(self):
+    """Evaluate analytics alert rules for all tenants."""
+    logger.info("Evaluating analytics alert rules...")
+
+    service = AlertingService()
+    tenants = Tenant.objects.filter(is_active=True)
+    results = {}
+
+    for tenant in tenants:
+        try:
+            results[str(tenant.id)] = service.evaluate_rules(tenant)
+        except Exception as e:
+            logger.error("Alert evaluation failed for %s: %s", tenant.name, e)
+            results[str(tenant.id)] = str(e)
+
+    logger.info("Analytics alert rules evaluation completed")
+    return results

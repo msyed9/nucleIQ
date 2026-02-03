@@ -3,6 +3,11 @@ RBAC Permission Utilities
 Provides core functions for permission checking and management.
 """
 
+import base64
+import hashlib
+import hmac
+import struct
+import time
 from django.core.cache import cache
 from django.db.models import Q
 
@@ -142,6 +147,106 @@ def clear_user_permissions_cache(user):
     """
     cache_key = f'user_permissions_{user.id}'
     cache.delete(cache_key)
+
+
+def _normalize_login_identifier(identifier):
+    """Normalize a login identifier for cache keys."""
+    return (identifier or '').strip().lower()
+
+
+def get_tenant_security_settings(tenant=None):
+    """Resolve tenant security settings with safe defaults."""
+    defaults = {
+        'max_login_attempts': 5,
+        'lockout_duration_minutes': 30,
+        'two_factor_auth_required': False,
+    }
+
+    if tenant is None:
+        return defaults
+
+    try:
+        from tenants.models import TenantSettings
+        tenant_settings, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+        return {
+            'max_login_attempts': tenant_settings.max_login_attempts,
+            'lockout_duration_minutes': tenant_settings.lockout_duration_minutes,
+            'two_factor_auth_required': tenant_settings.two_factor_auth_required,
+        }
+    except Exception:
+        return defaults
+
+
+def _login_cache_keys(tenant_id, identifier):
+    tenant_key = str(tenant_id) if tenant_id else 'global'
+    normalized = _normalize_login_identifier(identifier)
+    return (
+        f'login_failures:{tenant_key}:{normalized}',
+        f'login_lock:{tenant_key}:{normalized}'
+    )
+
+
+def is_login_locked(tenant_id, identifier):
+    """Return remaining lockout seconds if locked, otherwise 0."""
+    _, lock_key = _login_cache_keys(tenant_id, identifier)
+    lock_until = cache.get(lock_key)
+    if not lock_until:
+        return 0
+
+    remaining = int(lock_until - time.time())
+    if remaining <= 0:
+        cache.delete(lock_key)
+        return 0
+    return remaining
+
+
+def record_login_failure(tenant_id, identifier, max_attempts=5, lockout_minutes=30):
+    """Record a failed login attempt and set lockout if threshold reached."""
+    fail_key, lock_key = _login_cache_keys(tenant_id, identifier)
+    attempts = cache.get(fail_key, 0) + 1
+
+    timeout_seconds = max(lockout_minutes, 1) * 60
+    cache.set(fail_key, attempts, timeout=timeout_seconds)
+
+    if attempts >= max_attempts:
+        lock_until = time.time() + timeout_seconds
+        cache.set(lock_key, lock_until, timeout=timeout_seconds)
+    return attempts
+
+
+def clear_login_failures(tenant_id, identifier):
+    """Clear login failure and lockout counters."""
+    fail_key, lock_key = _login_cache_keys(tenant_id, identifier)
+    cache.delete_many([fail_key, lock_key])
+
+
+def verify_totp(token, secret, window=1, step=30, digits=6):
+    """Verify a TOTP token using the shared secret."""
+    if not token or not secret:
+        return False
+
+    try:
+        key = base64.b32decode(secret.upper(), casefold=True)
+    except Exception:
+        return False
+
+    token = str(token).strip()
+    if not token.isdigit():
+        return False
+
+    def _hotp(counter):
+        msg = struct.pack('>Q', counter)
+        digest = hmac.new(key, msg, hashlib.sha1).digest()
+        offset = digest[-1] & 0x0F
+        code = struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7fffffff
+        return str(code % (10 ** digits)).zfill(digits)
+
+    current_counter = int(time.time() // step)
+    for offset in range(-window, window + 1):
+        if _hotp(current_counter + offset) == token:
+            return True
+
+    return False
 
 
 class PermissionDenied(Exception):

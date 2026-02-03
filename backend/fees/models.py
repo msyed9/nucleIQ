@@ -206,15 +206,29 @@ class FeeAllocation(BaseModel):
     
     def get_final_amount(self):
         """Calculate final amount after discounts."""
-        base_amount = self.custom_amount or self.fee_structure.amount
-        
+        # Ensure we operate with Decimals to avoid float/Decimal issues
+        try:
+            base_amount = Decimal(str(self.custom_amount)) if self.custom_amount is not None else Decimal(str(self.fee_structure.amount))
+        except Exception:
+            base_amount = Decimal('0.00')
+
         # Apply scholarship
-        if self.is_scholarship and self.scholarship_percentage > 0:
-            scholarship_discount = base_amount * (self.scholarship_percentage / 100)
+        try:
+            scholarship_pct = Decimal(str(self.scholarship_percentage or 0))
+        except Exception:
+            scholarship_pct = Decimal('0')
+
+        if self.is_scholarship and scholarship_pct > 0:
+            scholarship_discount = (base_amount * scholarship_pct) / Decimal('100')
             base_amount -= scholarship_discount
-        
+
         # Apply additional discount
-        final_amount = base_amount - self.discount_amount
+        try:
+            discount_amt = Decimal(str(self.discount_amount or 0))
+        except Exception:
+            discount_amt = Decimal('0')
+
+        final_amount = base_amount - discount_amt
         return max(final_amount, Decimal('0.00'))
 
 
@@ -439,6 +453,14 @@ class FeeTransaction(BaseModel):
     
     def __str__(self):
         return f"{self.transaction_number} - ₹{self.amount}"
+
+    def save(self, *args, **kwargs):
+        # Ensure amount is stored as Decimal to avoid mixed-type arithmetic errors
+        try:
+            self.amount = Decimal(str(self.amount)) if self.amount is not None else Decimal('0.00')
+        except Exception:
+            self.amount = Decimal('0.00')
+        super().save(*args, **kwargs)
 
 
 class FeeDefaulter(BaseModel):

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
-import StudentList from './pages/students/StudentList';
+import StudentList from './pages/students/StudentListRefactored';
 import AddStudent from './pages/students/AddStudent';
 import EditStudent from './pages/students/EditStudent';
 import Enrollments from './pages/students/Enrollments';
@@ -12,11 +12,11 @@ import RemarksManager from './pages/students/RemarksManager';
 import DocumentManager from './pages/students/DocumentManager';
 import StudentAnalytics from './pages/students/StudentAnalytics';
 import IDCardDesigner from './pages/idcards/Designer';
-import StaffList from './pages/staff/StaffList';
+import StaffList from './pages/staff/StaffListRefactored';
 import AddStaff from './pages/staff/AddStaff';
 import CollectFees from './pages/fees/CollectFees';
-import FeeConfiguration from './pages/fees/FeeConfiguration';
-import MarkAttendance from './pages/attendance/MarkAttendance';
+import FeeConfiguration from './pages/fees/FeeConfigurationRefactored';
+import MarkAttendance from './pages/attendance/MarkAttendanceRefactored';
 import AttendanceAggregates from './pages/attendance/AttendanceAggregates';
 import MobileCapture from './pages/attendance/MobileCapture';
 import AttendanceReports from './pages/attendance/AttendanceReports';
@@ -27,7 +27,9 @@ import ExpenseManager from './pages/finance/ExpenseManager';
 import ReportsDashboard from './pages/reports/ReportsDashboard';
 import Settings from './pages/settings/Settings';
 import AcademicSetup from './pages/settings/AcademicSetup';
-import TimetableBuilder from './pages/timetable/TimetableBuilder';
+import ImportPreview from './pages/admin/ImportPreview';
+import TimetableBuilder from './pages/timetable/TimetableBuilderRefactored';
+import TimetableConfig from './pages/timetable/TimetableConfig';
 import TeacherView from './pages/timetable/TeacherView';
 import ClassView from './pages/timetable/ClassView';
 
@@ -71,18 +73,31 @@ import AlumniPortal from './pages/alumni/AlumniPortal';
 import AlumniDirectory from './pages/alumni/AlumniDirectory';
 import AlumniEvents from './pages/alumni/AlumniEvents';
 import LiveClassJoin from './pages/lms/LiveClassJoin';
+import CourseList from './pages/lms/CourseList';
+import CourseDetail from './pages/lms/CourseDetail';
+import MyCourses from './pages/lms/MyCourses';
+import CourseBuilder from './pages/lms/CourseBuilder';
+import EnrollmentManagement from './pages/lms/EnrollmentManagement';
+import QuizBuilder from './pages/lms/QuizBuilder';
+import StudentProgress from './pages/lms/StudentProgress';
+import DiscussionBoard from './pages/lms/DiscussionBoard';
+import VideoLibrary from './pages/lms/VideoLibrary';
+import CertificateViewer from './pages/lms/CertificateViewer';
 import Headquarters from './pages/group/Headquarters';
 
 // Phase 6 Imports
 import CertificateTemplates from './pages/admin/CertificateTemplates';
 import GuardScanner from './pages/security/GuardScanner';
 import DriveDashboard from './pages/placement/DriveDashboard';
+import RecruiterManagement from './pages/placement/RecruiterManagement';
 import TicketBoard from './pages/helpdesk/TicketBoard';
 
 // Extra Module Imports
 import AssignmentList from './pages/assignments/AssignmentList';
 import LeaveManage from './pages/hr/LeaveManage';
+import LeaveTypeConfig from './pages/hr/LeaveTypeConfig';
 import PayslipView from './pages/payroll/PayslipView';
+import SalaryComponentConfig from './pages/payroll/SalaryComponentConfig';
 import LeadKanbanBoard from './pages/crm/LeadKanbanBoard';
 import WebsiteBuilder from './pages/cms/WebsiteBuilder';
 import ExamScheduler from './pages/exams/ExamScheduler';
@@ -322,6 +337,7 @@ function App() {
                                                     <Route path="/settings/permissions" element={<Layout><PermissionsMatrixPage /></Layout>} />
                                                     <Route path="/settings/roles" element={<Layout><RolesPermissions /></Layout>} />
                                                     <Route path="/settings/data-management" element={<Layout><DataMigration /></Layout>} />
+                                                    <Route path="/settings/data-management/import-preview" element={<Layout><ImportPreview /></Layout>} />
                                                     <Route path="/settings/data-migration" element={<Layout><DataMigration /></Layout>} /> {/* Legacy alias */}
                                                     <Route path="/settings/10-year-migration" element={<Layout><TenYearMigration /></Layout>} />
                                                     <Route path="/settings/10-year-migration/:tenantId" element={<Layout><TenYearMigration /></Layout>} />
@@ -342,6 +358,7 @@ function App() {
                                                     <Route path="/admin/parent-portal" element={<Layout><ParentPortalManagement /></Layout>} />
                                                     {/* Timetable routes */}
                                                     <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
+                                                    <Route path="/timetable/config" element={<Layout><TimetableConfig /></Layout>} />
                                                     <Route path="/timetable/teacher" element={<Layout><TeacherView /></Layout>} />
                                                     <Route path="/timetable/class" element={<Layout><ClassView /></Layout>} />
 
@@ -361,6 +378,18 @@ function App() {
                                                     <Route path="/exams/online" element={<Layout><OnlineExamination /></Layout>} />
                                                     <Route path="/lms/classes" element={<Layout><LiveClassJoin /></Layout>} />
                                                     <Route path="/lms/digital" element={<Layout><DigitalResources /></Layout>} />
+                                                    <Route path="/lms/courses" element={<Layout><CourseList /></Layout>} />
+                                                    <Route path="/lms/courses/:courseId" element={<Layout><CourseDetail /></Layout>} />
+                                                    <Route path="/lms/courses/:courseId/builder" element={<Layout><CourseBuilder /></Layout>} />
+                                                    <Route path="/lms/my-courses" element={<Layout><MyCourses /></Layout>} />
+                                                    <Route path="/lms/enrollments" element={<Layout><EnrollmentManagement /></Layout>} />
+                                                    <Route path="/lms/quizzes/:quizId" element={<Layout><QuizBuilder /></Layout>} />
+                                                    <Route path="/lms/quiz-builder" element={<Layout><QuizBuilder /></Layout>} />
+                                                    <Route path="/lms/progress" element={<Layout><StudentProgress /></Layout>} />
+                                                    <Route path="/lms/discussions" element={<Layout><DiscussionBoard /></Layout>} />
+                                                    <Route path="/lms/discussions/:courseId" element={<Layout><DiscussionBoard /></Layout>} />
+                                                    <Route path="/lms/videos" element={<Layout><VideoLibrary /></Layout>} />
+                                                    <Route path="/lms/certificates" element={<Layout><CertificateViewer /></Layout>} />
 
                                                     {/* Operations */}
                                                     <Route path="/library/catalog" element={<Layout><Catalog /></Layout>} />
@@ -407,8 +436,10 @@ function App() {
                                                     {/* Finance & HR */}
                                                     <Route path="/hr/leaves" element={<Layout><LeaveManage /></Layout>} />
                                                     <Route path="/hr/leave-approval" element={<Layout><LeaveApproval /></Layout>} />
+                                                    <Route path="/hr/leave-types" element={<Layout><LeaveTypeConfig /></Layout>} />
                                                     <Route path="/payroll/payslips" element={<Layout><PayslipView /></Layout>} />
                                                     <Route path="/payroll/salary-structure" element={<Layout><SalaryStructure /></Layout>} />
+                                                    <Route path="/payroll/components" element={<Layout><SalaryComponentConfig /></Layout>} />
                                                     <Route path="/payroll/dashboard" element={<Layout><PayrollDashboard /></Layout>} />
 
                                                     {/* Business & Growth */}
@@ -435,6 +466,7 @@ function App() {
                                                     <Route path="/security/gate-passes" element={<Layout><GatePasses /></Layout>} />
                                                     <Route path="/placement" element={<Layout><DriveDashboard /></Layout>} />
                                                     <Route path="/placement/drives" element={<Layout><DriveDashboard /></Layout>} /> {/* Sidebar Alias */}
+                                                    <Route path="/placement/recruiters" element={<Layout><RecruiterManagement /></Layout>} />
                                                     <Route path="/placement/apply" element={<Layout><PlacementApplication /></Layout>} />
                                                     <Route path="/placement/applications" element={<Layout><PlacementApplication /></Layout>} /> {/* Sidebar Alias */}
                                                     <Route path="/certificates/request" element={<Layout><CertificateRequest /></Layout>} />

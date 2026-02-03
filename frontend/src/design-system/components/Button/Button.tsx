@@ -9,7 +9,7 @@ import './Button.css';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     /** Button variant */
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning';
 
     /** Button size */
     size?: 'sm' | 'md' | 'lg' | 'small';

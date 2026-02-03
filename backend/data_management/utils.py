@@ -629,6 +629,37 @@ class DataTransformer:
         
         return transformed
 
+    @classmethod
+    def transform_user(cls, row: Dict) -> Dict:
+        """Transform a row of user account data"""
+        transformed = {}
+        
+        field_mappings = {
+            'email': ['email', 'email_id', 'username', 'user_id', 'login_id'],
+            'password': ['password', 'pwd', 'pass'],
+            'first_name': ['first_name', 'firstname', 'fname', 'given_name', 'name', 'full_name'],
+            'last_name': ['last_name', 'lastname', 'lname', 'surname'],
+            'role': ['role', 'user_role', 'type', 'user_type'],
+            'admission_number': ['admission_number', 'admission_no', 'adm_no', 'student_id', 'student_admission_number'],
+            'employee_id': ['employee_id', 'emp_id', 'staff_id', 'employee_code'],
+        }
+        
+        for target_field, source_fields in field_mappings.items():
+            for source in source_fields:
+                if source in row and row[source]:
+                    transformed[target_field] = row[source]
+                    break
+        
+        # Clean email
+        if 'email' in transformed:
+            transformed['email'] = EmailValidator.clean(transformed['email'])
+            
+        # Normalize role
+        if 'role' in transformed:
+            transformed['role'] = str(transformed['role']).strip().upper()
+            
+        return transformed
+
 
 class DataValidator:
     """

@@ -1,6 +1,25 @@
 fee_type,class_name,amount,frequency,due_day,is_mandatory,description,academic_year
-Tuition Fee,Class 10,5000,MONTHLY,10,true,Monthly tuition fee,2024-25
-Transport Fee,Class 10,1200,MONTHLY,10,false,Bus transport fee,2024-25
-Lab Fee,Class 9,2000,TERM,10,true,Science lab fee,2024-25
-Sports Fee,Class 8,1500,YEARLY,10,false,Annual sports fee,2024-25
-Admission Fee,Class 10,8000,ONE_TIME,10,true,One-time admission fee,2024-25
+Tuition Fee,Grade 1,3200,TERM,10,true,Tuition for Grade 1,
+Transport Fee,Grade 1,810,MONTHLY,15,false,Transport for Grade 1,
+Tuition Fee,Grade 2,3400,YEARLY,10,true,Tuition for Grade 2,
+Transport Fee,Grade 2,820,MONTHLY,15,false,Transport for Grade 2,
+Tuition Fee,Grade 3,3600,MONTHLY,10,true,Tuition for Grade 3,
+Transport Fee,Grade 3,830,MONTHLY,15,false,Transport for Grade 3,
+Tuition Fee,Grade 4,3800,MONTHLY,10,true,Tuition for Grade 4,
+Transport Fee,Grade 4,840,MONTHLY,15,false,Transport for Grade 4,
+Tuition Fee,Grade 5,4000,TERM,10,true,Tuition for Grade 5,
+Transport Fee,Grade 5,850,MONTHLY,15,false,Transport for Grade 5,
+Tuition Fee,Grade 6,4200,YEARLY,10,true,Tuition for Grade 6,
+Transport Fee,Grade 6,860,MONTHLY,15,false,Transport for Grade 6,
+Tuition Fee,Grade 7,4400,TERM,10,true,Tuition for Grade 7,
+Transport Fee,Grade 7,870,MONTHLY,15,false,Transport for Grade 7,
+Tuition Fee,Grade 8,4600,YEARLY,10,true,Tuition for Grade 8,
+Transport Fee,Grade 8,880,MONTHLY,15,false,Transport for Grade 8,
+Tuition Fee,Grade 9,4800,MONTHLY,10,true,Tuition for Grade 9,
+Transport Fee,Grade 9,890,MONTHLY,15,false,Transport for Grade 9,
+Tuition Fee,Grade 10,5000,YEARLY,10,true,Tuition for Grade 10,
+Transport Fee,Grade 10,900,MONTHLY,15,false,Transport for Grade 10,
+Tuition Fee,Grade 11,5200,MONTHLY,10,true,Tuition for Grade 11,
+Transport Fee,Grade 11,910,MONTHLY,15,false,Transport for Grade 11,
+Tuition Fee,Grade 12,5400,MONTHLY,10,true,Tuition for Grade 12,
+Transport Fee,Grade 12,920,MONTHLY,15,false,Transport for Grade 12,

@@ -5,7 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import api from '@/services/api';
+import ExportButton from '@/components/common/ExportButton';
+import { ExportColumn } from '@/utils/exportUtils';
+import { useAuth } from '@/contexts/AuthContext';
 import {
     TrendingUp,
     TrendingDown,
@@ -13,7 +16,6 @@ import {
     DollarSign,
     Calendar,
     BookOpen,
-    Download,
     Filter,
     RefreshCw,
     ChevronDown,
@@ -82,22 +84,75 @@ type Period = 'week' | 'month' | 'quarter' | 'year';
 
 const AnalyticsDashboard: React.FC = () => {
     const { t } = useTranslation();
+    const { isRole, user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [period, setPeriod] = useState<Period>('month');
     const [refreshing, setRefreshing] = useState(false);
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+    const [alertRules, setAlertRules] = useState<any[]>([]);
+    const [alertEvents, setAlertEvents] = useState<any[]>([]);
+    const [grades, setGrades] = useState<any[]>([]);
+    const [sections, setSections] = useState<any[]>([]);
+    const [alertForm, setAlertForm] = useState({
+        name: '',
+        metric: 'ATTENDANCE_RATE',
+        comparator: 'LT',
+        threshold_value: '80',
+        window_days: '30',
+        severity: 'MEDIUM',
+        scope: 'ALL',
+        grade_level: '',
+        section: '',
+        gender: ''
+    });
+    const [alertsRefreshing, setAlertsRefreshing] = useState(false);
+    const [autoRefreshAlerts, setAutoRefreshAlerts] = useState(true);
 
     useEffect(() => {
         fetchAnalytics();
-    }, [period]);
+    }, [period, startDate, endDate]);
+
+    useEffect(() => {
+        fetchAlertData();
+        fetchAlertFilters();
+    }, []);
+
+    useEffect(() => {
+        if (!autoRefreshAlerts) return undefined;
+        const interval = setInterval(() => {
+            fetchAlertData();
+        }, 60000);
+        return () => clearInterval(interval);
+    }, [autoRefreshAlerts]);
 
     const fetchAnalytics = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/dashboard/analytics/stats/', {
-                params: { period }
+            const params: Record<string, string> = { period };
+            if (startDate) params.start_date = startDate;
+            if (endDate) params.end_date = endDate;
+
+            const response = await api.get('/dashboard/analytics/stats/', { params });
+
+            const mock = getMockData();
+            const payload = response.data || {};
+            const overview = payload.overview || {
+                total_students: payload.total_students ?? mock.overview.total_students,
+                total_staff: payload.total_staff ?? mock.overview.total_staff,
+                attendance_rate: payload.attendance_rate ?? payload.today_attendance_rate ?? mock.overview.attendance_rate,
+                fee_collection_rate: payload.fee_collection_rate ?? mock.overview.fee_collection_rate,
+                student_change: payload.student_change ?? mock.overview.student_change,
+                attendance_change: payload.attendance_change ?? mock.overview.attendance_change,
+                collection_change: payload.collection_change ?? mock.overview.collection_change
+            };
+
+            setData({
+                ...mock,
+                ...payload,
+                overview
             });
-            setData(response.data);
         } catch (error) {
             console.error('Failed to fetch analytics:', error);
             // Use mock data for demo
@@ -110,7 +165,7 @@ const AnalyticsDashboard: React.FC = () => {
     const handleRefresh = async () => {
         setRefreshing(true);
         try {
-            await axios.post('/api/dashboard/invalidate_cache/');
+            await api.post('/dashboard/analytics/invalidate_cache/');
             await fetchAnalytics();
         } catch (error) {
             console.error('Failed to refresh:', error);
@@ -119,15 +174,77 @@ const AnalyticsDashboard: React.FC = () => {
         }
     };
 
-    const handleExport = () => {
-        // Export analytics data
-        const exportData = JSON.stringify(data, null, 2);
-        const blob = new Blob([exportData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `analytics-${period}-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
+    const fetchAlertFilters = async () => {
+        try {
+            const [gradesRes, sectionsRes] = await Promise.all([
+                api.get('/tenants/grades/'),
+                api.get('/tenants/sections/')
+            ]);
+            setGrades(gradesRes.data.results || gradesRes.data);
+            setSections(sectionsRes.data.results || sectionsRes.data);
+        } catch (error) {
+            console.error('Failed to load alert filters:', error);
+        }
+    };
+
+    const fetchAlertData = async () => {
+        try {
+            setAlertsRefreshing(true);
+            const [rulesResponse, eventsResponse] = await Promise.all([
+                api.get('/analytics/alert-rules/'),
+                api.get('/analytics/alert-events/', { params: { status: 'OPEN' } })
+            ]);
+            setAlertRules(rulesResponse.data.results || rulesResponse.data);
+            setAlertEvents(eventsResponse.data.results || eventsResponse.data);
+        } catch (error) {
+            console.error('Failed to load alerts:', error);
+        } finally {
+            setAlertsRefreshing(false);
+        }
+    };
+
+    const handleCreateRule = async () => {
+        try {
+            const payload = {
+                ...alertForm,
+                threshold_value: Number(alertForm.threshold_value),
+                window_days: Number(alertForm.window_days)
+            };
+            await api.post('/analytics/alert-rules/', payload);
+            setAlertForm({
+                name: '',
+                metric: 'ATTENDANCE_RATE',
+                comparator: 'LT',
+                threshold_value: '80',
+                window_days: '30',
+                severity: 'MEDIUM',
+                scope: 'ALL',
+                grade_level: '',
+                section: '',
+                gender: ''
+            });
+            fetchAlertData();
+        } catch (error) {
+            console.error('Failed to create alert rule:', error);
+        }
+    };
+
+    const handleEvaluateRules = async () => {
+        try {
+            await api.post('/analytics/alert-rules/evaluate/');
+            fetchAlertData();
+        } catch (error) {
+            console.error('Failed to evaluate alert rules:', error);
+        }
+    };
+
+    const handleResolveEvent = async (eventId: string | number) => {
+        try {
+            await api.post(`/analytics/alert-events/${eventId}/resolve/`);
+            fetchAlertData();
+        } catch (error) {
+            console.error('Failed to resolve alert event:', error);
+        }
     };
 
     const getMockData = (): AnalyticsData => ({
@@ -197,6 +314,25 @@ const AnalyticsDashboard: React.FC = () => {
 
     if (!data) return null;
 
+    const canViewFinance = Boolean(user?.is_platform_admin) || isRole('accountant') || isRole('finance') || isRole('admin');
+
+    const exportSummaryData = [
+        { metric: 'Total Students', value: data.overview.total_students, change: data.overview.student_change },
+        { metric: 'Total Staff', value: data.overview.total_staff, change: 0 },
+        { metric: 'Attendance Rate', value: data.overview.attendance_rate, change: data.overview.attendance_change },
+        ...(canViewFinance ? [{
+            metric: 'Fee Collection Rate',
+            value: data.overview.fee_collection_rate,
+            change: data.overview.collection_change
+        }] : [])
+    ];
+
+    const exportColumns: ExportColumn[] = [
+        { key: 'metric', label: 'Metric' },
+        { key: 'value', label: 'Value' },
+        { key: 'change', label: 'Change (%)' }
+    ];
+
     const metrics: MetricCard[] = [
         {
             label: 'Total Students',
@@ -214,14 +350,16 @@ const AnalyticsDashboard: React.FC = () => {
             icon: <Calendar size={24} />,
             color: '#22c55e'
         },
-        {
-            label: 'Fee Collection',
-            value: `${data.overview.fee_collection_rate}%`,
-            change: data.overview.collection_change,
-            changeLabel: 'vs last period',
-            icon: <DollarSign size={24} />,
-            color: '#f59e0b'
-        },
+        ...(canViewFinance ? [
+            {
+                label: 'Fee Collection',
+                value: `${data.overview.fee_collection_rate}%`,
+                change: data.overview.collection_change,
+                changeLabel: 'vs last period',
+                icon: <DollarSign size={24} />,
+                color: '#f59e0b'
+            }
+        ] : []),
         {
             label: 'Total Staff',
             value: data.overview.total_staff,
@@ -256,6 +394,26 @@ const AnalyticsDashboard: React.FC = () => {
 
 
                     />
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="border rounded px-2 py-1 text-xs"
+                        />
+                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>to</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="border rounded px-2 py-1 text-xs"
+                        />
+                        {(startDate || endDate) && (
+                            <Button variant="ghost" size="small" onClick={() => { setStartDate(''); setEndDate(''); }}>
+                                Clear
+                            </Button>
+                        )}
+                    </div>
                     <Button
                         variant="ghost"
                         iconLeft={RefreshCw}
@@ -264,13 +422,14 @@ const AnalyticsDashboard: React.FC = () => {
                     >
                         Refresh
                     </Button>
-                    <Button
-                        variant="ghost"
-                        iconLeft={Download}
-                        onClick={handleExport}
-                    >
-                        Export
-                    </Button>
+                    <ExportButton
+                        data={exportSummaryData}
+                        filename={`analytics_summary_${period}`}
+                        title="Analytics Summary"
+                        columns={exportColumns}
+                        variant="secondary"
+                        size="small"
+                    />
                 </div>
             </div>
 
@@ -310,17 +469,19 @@ const AnalyticsDashboard: React.FC = () => {
                 </Card>
 
                 {/* Fee Collection Trend */}
-                <Card className="chart-card">
-                    <div className="chart-header">
-                        <h3>
-                            <DollarSign size={18} />
-                            Fee Collection Trend
-                        </h3>
-                    </div>
-                    <div className="chart-body">
-                        <SimpleBarChart data={data.fee_trend} color="#22c55e" formatValue={formatCurrency} />
-                    </div>
-                </Card>
+                {canViewFinance && (
+                    <Card className="chart-card">
+                        <div className="chart-header">
+                            <h3>
+                                <DollarSign size={18} />
+                                Fee Collection Trend
+                            </h3>
+                        </div>
+                        <div className="chart-body">
+                            <SimpleBarChart data={data.fee_trend} color="#22c55e" formatValue={formatCurrency} />
+                        </div>
+                    </Card>
+                )}
             </div>
 
             {/* Performance Tables */}
@@ -387,7 +548,7 @@ const AnalyticsDashboard: React.FC = () => {
                                     <th>Class</th>
                                     <th>Attendance</th>
                                     <th>Avg Score</th>
-                                    <th>Fee %</th>
+                                    {canViewFinance && <th>Fee %</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -400,11 +561,13 @@ const AnalyticsDashboard: React.FC = () => {
                                             </Badge>
                                         </td>
                                         <td>{cls.avg_score}%</td>
-                                        <td>
-                                            <Badge variant={cls.fee_collection >= 90 ? 'success' : cls.fee_collection >= 80 ? 'warning' : 'error'}>
-                                                {cls.fee_collection}%
-                                            </Badge>
-                                        </td>
+                                        {canViewFinance && (
+                                            <td>
+                                                <Badge variant={cls.fee_collection >= 90 ? 'success' : cls.fee_collection >= 80 ? 'warning' : 'error'}>
+                                                    {cls.fee_collection}%
+                                                </Badge>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
@@ -444,6 +607,209 @@ const AnalyticsDashboard: React.FC = () => {
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            </Card>
+
+            {/* Alerts Dashboard */}
+            <Card className="chart-card full-width" style={{ marginTop: '2rem' }}>
+                <div className="chart-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3>
+                        <Activity size={18} />
+                        Alerts Dashboard
+                    </h3>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={autoRefreshAlerts}
+                                onChange={(e) => setAutoRefreshAlerts(e.target.checked)}
+                            />
+                            Auto refresh
+                        </label>
+                        <Button variant="outline" iconLeft={RefreshCw} onClick={fetchAlertData} loading={alertsRefreshing}>
+                            Refresh Alerts
+                        </Button>
+                        <Button variant="primary" iconLeft={Target} onClick={handleEvaluateRules}>
+                            Evaluate Rules
+                        </Button>
+                    </div>
+                </div>
+                <div className="chart-body">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-600 mb-3">Active Alerts</h4>
+                            <div className="overflow-x-auto">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Rule</th>
+                                            <th>Value</th>
+                                            <th>Triggered</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {alertEvents.length === 0 && (
+                                            <tr>
+                                                <td colSpan={4} style={{ padding: '12px', textAlign: 'center', color: '#6b7280' }}>
+                                                    No active alerts
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {alertEvents.map((event) => (
+                                            <tr key={event.id}>
+                                                <td>{event.rule_name}</td>
+                                                <td>{event.current_value}</td>
+                                                <td>{new Date(event.triggered_at).toLocaleDateString()}</td>
+                                                <td>
+                                                    <Button variant="ghost" size="small" onClick={() => handleResolveEvent(event.id)}>
+                                                        Resolve
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-600 mb-3">Create Alert Rule</h4>
+                            <div className="grid grid-cols-1 gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Rule name"
+                                    value={alertForm.name}
+                                    onChange={(e) => setAlertForm({ ...alertForm, name: e.target.value })}
+                                    className="border rounded px-3 py-2 text-sm"
+                                />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <select
+                                        value={alertForm.metric}
+                                        onChange={(e) => setAlertForm({ ...alertForm, metric: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="ATTENDANCE_RATE">Attendance Rate</option>
+                                        <option value="FEE_DELINQUENCY">Fee Delinquency</option>
+                                        <option value="FEE_COLLECTION_RATE">Fee Collection Rate</option>
+                                    </select>
+                                    <select
+                                        value={alertForm.comparator}
+                                        onChange={(e) => setAlertForm({ ...alertForm, comparator: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="LT">Less Than</option>
+                                        <option value="LTE">Less Than or Equal</option>
+                                        <option value="GT">Greater Than</option>
+                                        <option value="GTE">Greater Than or Equal</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input
+                                        type="number"
+                                        placeholder="Threshold"
+                                        value={alertForm.threshold_value}
+                                        onChange={(e) => setAlertForm({ ...alertForm, threshold_value: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Window days"
+                                        value={alertForm.window_days}
+                                        onChange={(e) => setAlertForm({ ...alertForm, window_days: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <select
+                                        value={alertForm.severity}
+                                        onChange={(e) => setAlertForm({ ...alertForm, severity: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="LOW">Low</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="CRITICAL">Critical</option>
+                                    </select>
+                                    <select
+                                        value={alertForm.scope}
+                                        onChange={(e) => setAlertForm({ ...alertForm, scope: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="GRADE">Grade</option>
+                                        <option value="SECTION">Section</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <select
+                                        value={alertForm.grade_level}
+                                        onChange={(e) => setAlertForm({ ...alertForm, grade_level: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="">All Grades</option>
+                                        {grades.map((grade) => (
+                                            <option key={grade.id} value={grade.id}>{grade.name}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={alertForm.section}
+                                        onChange={(e) => setAlertForm({ ...alertForm, section: e.target.value })}
+                                        className="border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sections.map((section) => (
+                                            <option key={section.id} value={section.id}>{section.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <select
+                                    value={alertForm.gender}
+                                    onChange={(e) => setAlertForm({ ...alertForm, gender: e.target.value })}
+                                    className="border rounded px-3 py-2 text-sm"
+                                >
+                                    <option value="">All Genders</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                                <Button variant="primary" iconLeft={Target} onClick={handleCreateRule}>
+                                    Create Rule
+                                </Button>
+                            </div>
+                            <div style={{ marginTop: '1.25rem' }}>
+                                <h4 className="text-sm font-semibold text-gray-600 mb-3">Existing Rules</h4>
+                                <div className="overflow-x-auto">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Metric</th>
+                                                <th>Threshold</th>
+                                                <th>Severity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {alertRules.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={4} style={{ padding: '12px', textAlign: 'center', color: '#6b7280' }}>
+                                                        No alert rules configured
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {alertRules.map((rule) => (
+                                                <tr key={rule.id}>
+                                                    <td>{rule.name}</td>
+                                                    <td>{rule.metric}</td>
+                                                    <td>{rule.comparator} {rule.threshold_value}</td>
+                                                    <td>{rule.severity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Card>

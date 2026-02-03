@@ -15,6 +15,7 @@ from .views_enhanced import (
     RollbackImportView,
     ExportDataView,
     FullBackupView,
+    OverrideDuplicatesView,
 )
 from .migration_views import (
     # Migration Run Management
@@ -69,6 +70,7 @@ urlpatterns = [
     path('import/<uuid:job_id>/status/', ImportJobStatusView.as_view(), name='import-job-status'),
     path('import/<uuid:job_id>/rollback/', RollbackImportView.as_view(), name='rollback-import'),
     path('import/history/', ImportJobHistoryView.as_view(), name='import-history'),
+    path('override-duplicates/', OverrideDuplicatesView.as_view(), name='override-duplicates'),
     
     # Export
     path('export/<str:module>/', ExportDataView.as_view(), name='export-data'),

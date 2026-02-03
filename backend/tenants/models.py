@@ -245,10 +245,22 @@ class Tenant(BaseModel):
             })
 
 
+def branding_upload_path(instance, filename):
+    """
+    Generate upload path for branding images.
+    Images are stored in tenant-isolated directories with date-based paths.
+    Pattern: branding/{tenant_id}/{year}/{month}/{day}/{filename}
+    """
+    from django.utils import timezone
+    now = timezone.now()
+    return f'branding/{instance.tenant_id}/{now.year}/{now.month:02d}/{now.day:02d}/{filename}'
+
+
 class TenantBranding(BaseModel):
     """
     Tenant branding configuration.
     Stores logos, colors, fonts, and gallery images for customization.
+    Supports multiple logo sizes and banner images for different use cases.
     """
     
     RECEIPT_COPIES_CHOICES = [
@@ -325,21 +337,81 @@ class TenantBranding(BaseModel):
         help_text="School email for documents"
     )
     
-    # Logo and visual assets
+    # =========================================================================
+    # LOGO IMAGES (File uploads with different sizes for different use cases)
+    # =========================================================================
+    
+    # Small Logo: For sidebar and top headers (optimized for height ~40px)
+    small_logo = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Small logo for sidebar and headers (recommended: 160x40px)"
+    )
+    
+    # Large Logo: For login screens, landing pages, and reports (high resolution)
+    large_logo = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Large logo for login, landing, and reports (recommended: 400x100px or larger)"
+    )
+    
+    # Square Logo: For favicons and circular profile placeholders
+    square_logo = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Square logo for favicons and profile placeholders (recommended: 512x512px)"
+    )
+    
+    # =========================================================================
+    # BANNER IMAGES (File uploads for different page sections)
+    # =========================================================================
+    
+    # Login Banner: High-resolution hero image or background for the login page
+    login_banner = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Login page banner/hero image (recommended: 1920x1080px)"
+    )
+    
+    # Dashboard Banner: Wide aspect-ratio banner for the user's dashboard welcome section
+    dashboard_banner = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Dashboard welcome banner (recommended: 1200x300px)"
+    )
+    
+    # Report Header: Branding banner used at the top of generated PDFs/Receipts
+    report_header = models.ImageField(
+        upload_to=branding_upload_path,
+        blank=True,
+        null=True,
+        help_text="Report/Receipt header banner (recommended: 800x100px)"
+    )
+    
+    # =========================================================================
+    # LEGACY URL FIELDS (kept for backward compatibility)
+    # =========================================================================
+    
+    # Logo and visual assets (legacy URL-based fields)
     logo_url = models.URLField(
         max_length=500,
         blank=True,
-        help_text="URL to the school logo"
+        help_text="URL to the school logo (legacy - use small_logo or large_logo instead)"
     )
     favicon_url = models.URLField(
         max_length=500,
         blank=True,
-        help_text="URL to the favicon"
+        help_text="URL to the favicon (legacy - use square_logo instead)"
     )
     login_background_url = models.URLField(
         max_length=500,
         blank=True,
-        help_text="URL to the login page background image"
+        help_text="URL to the login page background image (legacy - use login_banner instead)"
     )
     email_header_image = models.URLField(
         max_length=500,
@@ -1529,6 +1601,19 @@ class TenantSettings(BaseModel):
         default=False,
         help_text="Whether 2FA is required for all users"
     )
+
+    # API Versioning Settings
+    api_default_version = models.CharField(
+        max_length=10,
+        default='v1',
+        help_text="Default API version for this tenant (e.g., 'v1' or 'v2')"
+    )
+
+    api_module_versions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-module API version overrides (e.g., {'students': 'v2', 'fees': 'v1'})"
+    )
     
     # Backup Settings
     auto_backup_enabled = models.BooleanField(
@@ -1598,4 +1683,19 @@ class TenantSettings(BaseModel):
                 'enabled': self.whatsapp_enabled,
             },
         }
+
+    def get_api_version_for_module(self, module_key, allowed_versions=None, default_version=None):
+        """
+        Resolve API version for a module using tenant overrides.
+        """
+        if not module_key:
+            return default_version or self.api_default_version
+
+        module_versions = self.api_module_versions or {}
+        version = module_versions.get(module_key) or self.api_default_version
+
+        if allowed_versions and version not in allowed_versions:
+            return default_version or self.api_default_version
+
+        return version
 

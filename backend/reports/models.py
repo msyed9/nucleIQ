@@ -154,6 +154,15 @@ class GeneratedReport(TenantAwareModel):
         null=True,
         blank=True
     )
+    celery_task_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_('Celery task id for async generation')
+    )
+    is_async = models.BooleanField(
+        default=False,
+        help_text=_('Whether report was generated asynchronously')
+    )
     file_size = models.IntegerField(
         default=0,
         help_text=_('File size in bytes')

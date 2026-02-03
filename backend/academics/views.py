@@ -5,7 +5,8 @@ Academics Views
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
@@ -20,6 +21,58 @@ from .serializers import (
     StudentSubmissionSerializer
 )
 from core.middleware import get_current_tenant
+from core.permissions import IsTenantUser, IsTenantAdmin
+
+
+def _get_staff_profile(user):
+    if not user or not user.is_authenticated:
+        return None
+    return getattr(user, 'staff_profile', None)
+
+
+def _get_student_profile(user, student_id=None):
+    if not user or not user.is_authenticated:
+        return None
+
+    # Direct student profile (if available)
+    direct_student = getattr(user, 'student_profile', None)
+    if direct_student:
+        return direct_student
+
+    # Parent portal: select student from linked accounts
+    parent_profile = getattr(user, 'parent_profile', None)
+    if parent_profile:
+        students_qs = parent_profile.students.filter(is_deleted=False)
+        if student_id:
+            return students_qs.filter(id=student_id).first()
+        if students_qs.count() == 1:
+            return students_qs.first()
+
+    return None
+
+
+class IsTeacherOrAdmin(BasePermission):
+    """Allow only teachers or admins to perform the action."""
+
+    message = "Only teachers or administrators can perform this action."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_platform_admin or request.user.is_superuser or request.user.is_staff:
+            return True
+
+        if IsTenantAdmin().has_permission(request, view):
+            return True
+
+        if hasattr(request.user, 'roles') and request.user.roles.filter(
+            code__in=['teacher'],
+            is_active=True
+        ).exists():
+            return True
+
+        return False
 
 
 class AssignmentViewSet(viewsets.ModelViewSet):
@@ -33,7 +86,7 @@ class AssignmentViewSet(viewsets.ModelViewSet):
     """
     
     serializer_class = AssignmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['academic_year', 'subject', 'section', 'teacher', 'status', 'assignment_type']
     search_fields = ['title', 'description']
@@ -63,6 +116,11 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return AssignmentCreateSerializer
         return AssignmentSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'close']:
+            return [IsAuthenticated(), IsTenantUser(), IsTeacherOrAdmin()]
+        return [IsAuthenticated(), IsTenantUser()]
     
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
@@ -173,7 +231,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     """
     
     serializer_class = SubmissionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTenantUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['assignment', 'student', 'status', 'is_late']
     search_fields = ['student__first_name', 'student__last_name', 'assignment__title']
@@ -204,6 +262,11 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         elif self.action == 'my_submissions':
             return StudentSubmissionSerializer
         return SubmissionSerializer
+
+    def get_permissions(self):
+        if self.action in ['grade', 'pending_grading']:
+            return [IsAuthenticated(), IsTenantUser(), IsTeacherOrAdmin()]
+        return [IsAuthenticated(), IsTenantUser()]
     
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):
@@ -263,10 +326,9 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get graded_by from request user
-        # Note: You'll need to get the staff instance from the user
-        # For now, using the assignment's teacher
-        graded_by = submission.assignment.teacher
+        graded_by = _get_staff_profile(request.user)
+        if not graded_by:
+            raise PermissionDenied("Only staff members can grade submissions.")
         
         submission.grade(
             marks=marks,
@@ -289,11 +351,14 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         
         GET /api/academics/submissions/my_submissions/
         """
-        # Note: You'll need to get the student instance from the request user
-        # For now, returning all submissions
-        # In production, filter by: student=request.user.student
-        
-        submissions = self.get_queryset()
+        student_id = request.query_params.get('student_id')
+        student = _get_student_profile(request.user, student_id=student_id)
+        if not student:
+            raise PermissionDenied(
+                "Student profile not linked. Provide a valid student_id or link a student account."
+            )
+
+        submissions = self.get_queryset().filter(student=student)
         
         # Optional filters
         assignment_id = request.query_params.get('assignment')

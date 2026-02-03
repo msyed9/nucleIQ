@@ -1335,22 +1335,21 @@ class WidgetDataService:
     
     def _get_recent_payments(self, config):
         """Get recent fee payments."""
-        from fees.models import FeePayment
+        from fees.models import FeeTransaction
         
         limit = config.get('limit', 10)
         
-        payments = FeePayment.objects.filter(
-            tenant=self.tenant,
-            status='COMPLETED'
-        ).select_related('student').order_by('-payment_date')[:limit]
+        payments = FeeTransaction.objects.filter(
+            tenant=self.tenant
+        ).select_related('invoice__student').order_by('-transaction_date')[:limit]
         
         return {
             'payments': [
                 {
                     'id': p.id,
-                    'student_name': p.student.get_full_name(),
+                    'student_name': p.invoice.student.get_full_name() if p.invoice and p.invoice.student else 'Unknown',
                     'amount': float(p.amount),
-                    'payment_date': p.payment_date.isoformat(),
+                    'payment_date': p.transaction_date.isoformat(),
                     'payment_mode': p.payment_mode,
                     'receipt_number': p.receipt_number
                 }

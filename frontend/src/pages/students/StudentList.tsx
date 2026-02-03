@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     Plus,
@@ -12,7 +12,8 @@ import {
     Download,
     Eye,
     Edit,
-    Trash2
+    Trash2,
+    Power
 } from 'lucide-react';
 import { Button, Card, Input, Badge, Select, Checkbox, Modal } from '@/design-system';
 import Loading from '../../components/common/Loading';
@@ -47,12 +48,20 @@ const StudentList: React.FC = () => {
     const { t } = useTranslation();
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') || '');
     const [classFilter, setClassFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [genderFilter, setGenderFilter] = useState('');
-    const [sectionFilter, setSectionFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'all');
+    const [genderFilter, setGenderFilter] = useState(() => searchParams.get('gender') || '');
+    const [sectionFilter, setSectionFilter] = useState(() => searchParams.get('section') || '');
     const [sections, setSections] = useState<any[]>([]);
+    const [page, setPage] = useState<number>(() => parseInt(searchParams.get('page') || '1', 10));
+    const [pageSize, setPageSize] = useState<number | 'all'>(() => {
+        const s = searchParams.get('page_size');
+        if (!s) return 25;
+        return s === 'all' ? 'all' : Number(s);
+    });
+    const [total, setTotal] = useState<number>(0);
     const [sortBy, setSortBy] = useState('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -62,7 +71,22 @@ const StudentList: React.FC = () => {
     useEffect(() => {
         fetchStudents();
         fetchSections();
-    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder]);
+    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder, page, pageSize]);
+
+    // Keep URL in sync with current filters so navigation preserves state
+    useEffect(() => {
+        const params: any = {};
+        if (searchTerm) params.search = searchTerm;
+        if (sectionFilter) params.section = sectionFilter;
+        if (genderFilter) params.gender = genderFilter;
+        if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+        if (sortBy) params.sort = sortBy;
+        if (sortOrder) params.order = sortOrder;
+        if (page) params.page = String(page);
+        if (pageSize) params.page_size = pageSize === 'all' ? 'all' : String(pageSize);
+
+        setSearchParams(params, { replace: true });
+    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder, page, pageSize, setSearchParams]);
 
     const fetchStudents = async () => {
         try {
@@ -74,7 +98,20 @@ const StudentList: React.FC = () => {
             else if (statusFilter === 'inactive') params.is_active = false;
             if (sortBy) params.ordering = sortOrder === 'desc' ? `-${sortBy}` : sortBy;
 
+            const isAll = pageSize === 'all';
+            if (!isAll) {
+                params.page = page;
+                params.page_size = pageSize as number;
+            } else {
+                // Request a large page_size to try to fetch all items. If server caps it,
+                // it'll return as many as allowed; we also fall back to total when known.
+                params.page_size = total || 1000000;
+            }
+
             const response = await api.get('/students/students/', { params });
+            // Debug: log raw response so we can verify what the browser receives
+            // (helps diagnose mismatches between `results` and `count`)
+            console.debug('students API response', { data: response.data, headers: response.headers, params });
             let studentData: any[] = [];
 
             if (Array.isArray(response.data)) {
@@ -82,6 +119,14 @@ const StudentList: React.FC = () => {
             } else if (response.data.results && Array.isArray(response.data.results)) {
                 studentData = response.data.results;
             }
+
+            // Determine total count: prefer DRF `count`, then header `x-total-count`, then fall back to lengths
+            const headerTotal = response.headers && (response.headers['x-total-count'] || response.headers['X-Total-Count']);
+            const countFromBody = response.data && typeof response.data.count !== 'undefined' ? Number(response.data.count) : undefined;
+            const resolvedTotal = countFromBody ?? (headerTotal ? Number(headerTotal) : studentData.length);
+            setTotal(resolvedTotal);
+
+            setStudents(studentData);
 
             setStudents(studentData);
             setSelectedStudents(new Set());
@@ -189,6 +234,21 @@ const StudentList: React.FC = () => {
             } catch (error) {
                 console.error('Error deleting student:', error);
             }
+        }
+    };
+
+    const handleToggleActive = async (student: Student) => {
+        const nextState = !student.is_active;
+        const actionLabel = nextState ? 'activate' : 'deactivate';
+        if (!confirm(`Are you sure you want to ${actionLabel} ${student.full_name}?`)) return;
+
+        try {
+            await api.patch(`/students/students/${student.id}/`, { is_active: nextState });
+            // Refresh list so filters, counts, and status badge are accurate
+            fetchStudents();
+        } catch (error) {
+            console.error('Failed to update student status:', error);
+            alert('Failed to update student status');
         }
     };
 
@@ -552,6 +612,13 @@ const StudentList: React.FC = () => {
                                                     aria-label="Edit student"
                                                 />
                                                 <Button
+                                                    variant={student.is_active ? 'outline' : 'primary'}
+                                                    size="sm"
+                                                    iconOnly={Power}
+                                                    onClick={() => handleToggleActive(student)}
+                                                    aria-label={student.is_active ? 'Deactivate student' : 'Activate student'}
+                                                />
+                                                <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     iconOnly={Trash2}
@@ -587,13 +654,30 @@ const StudentList: React.FC = () => {
                     flexWrap: 'wrap',
                     gap: '1rem'
                 }}>
-                    <p style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary)',
-                        margin: 0
-                    }}>
-                        Showing {students.length} students
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <p style={{
+                            fontSize: '0.875rem',
+                            color: 'var(--color-text-secondary)',
+                            margin: 0
+                        }}>
+                            Showing {students.length} of {total} students
+                        </p>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Rows:</label>
+                            <select value={pageSize} onChange={(e) => { const v = e.target.value; if (v === 'all') { setPageSize(total || 100000); setPage(1); } else { setPageSize(Number(v)); setPage(1); } }} style={{ padding: '0.375rem' }}>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '0.5rem 0.75rem' }}>Previous</button>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Page {page}</span>
+                        <button onClick={() => setPage(p => p + 1)} disabled={pageSize === 'all' || page * (typeof pageSize === 'number' ? pageSize : total) >= total} style={{ padding: '0.5rem 0.75rem' }}>Next</button>
+                    </div>
                 </div>
             </Card>
 

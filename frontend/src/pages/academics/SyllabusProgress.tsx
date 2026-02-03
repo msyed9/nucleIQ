@@ -3,8 +3,9 @@
  * Track syllabus coverage and chapter completion across subjects
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import './SyllabusProgress.css';
 
@@ -98,6 +99,7 @@ const getMockSyllabi = (): Syllabus[] => [
 ];
 
 const SyllabusProgress: React.FC = () => {
+    const [searchParams] = useSearchParams();
     const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
@@ -122,18 +124,29 @@ const SyllabusProgress: React.FC = () => {
         return '#EF4444';
     };
 
-    const overallProgress = syllabi.length > 0
-        ? Math.round(syllabi.reduce((acc: number, s: Syllabus) => acc + s.completion_percentage, 0) / syllabi.length)
-        : 0;
-
-    const totalChapters = syllabi.reduce((acc: number, s: Syllabus) => acc + s.total_chapters, 0);
-    const completedChapters = syllabi.reduce((acc: number, s: Syllabus) => acc + s.completed_chapters, 0);
+    const subjectFilter = searchParams.get('subject');
+    const visibleSyllabi = subjectFilter
+        ? syllabi.filter((syllabus) => String(syllabus.subject_id) === String(subjectFilter))
+        : syllabi;
 
     const openSyllabusDetail = (syllabus: Syllabus) => {
         setSelectedSyllabus(syllabus);
         setExpandedChapters([]);
         setShowModal(true);
     };
+
+    useEffect(() => {
+        if (subjectFilter && visibleSyllabi.length === 1) {
+            openSyllabusDetail(visibleSyllabi[0]);
+        }
+    }, [subjectFilter, visibleSyllabi]);
+
+    const overallProgress = visibleSyllabi.length > 0
+        ? Math.round(visibleSyllabi.reduce((acc: number, s: Syllabus) => acc + s.completion_percentage, 0) / visibleSyllabi.length)
+        : 0;
+
+    const totalChapters = visibleSyllabi.reduce((acc: number, s: Syllabus) => acc + s.total_chapters, 0);
+    const completedChapters = visibleSyllabi.reduce((acc: number, s: Syllabus) => acc + s.completed_chapters, 0);
 
     const toggleChapter = (chapterId: number) => {
         setExpandedChapters(prev =>
@@ -182,7 +195,7 @@ const SyllabusProgress: React.FC = () => {
                 </div>
                 <div className="progress-stats">
                     <div className="stat-item">
-                        <span className="stat-number">{syllabi.length}</span>
+                        <span className="stat-number">{visibleSyllabi.length}</span>
                         <span className="stat-label">Subjects</span>
                     </div>
                     <div className="stat-item">
@@ -198,7 +211,7 @@ const SyllabusProgress: React.FC = () => {
 
             {/* Subject Syllabus List */}
             <div className="syllabus-grid">
-                {syllabi.map((syllabus: Syllabus) => {
+                {visibleSyllabi.map((syllabus: Syllabus) => {
                     const color = getSubjectColor(syllabus.subject_name);
                     const progressColor = getProgressColor(syllabus.completion_percentage);
 
