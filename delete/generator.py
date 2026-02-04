@@ -7,7 +7,8 @@ from faker import Faker
 from openpyxl import Workbook
 
 fake = Faker('en_IN')
-output_dir = r"c:\ECOLAB-ETS\RnD\nucleIQ\delete\newschool"
+# allow overriding output dir when running in Docker
+output_dir = os.environ.get("OUTPUT_DIR", r"c:\\ECOLAB-ETS\\RnD\\nucleIQ\\delete\\newschool")
 os.makedirs(output_dir, exist_ok=True)
 
 # Configuration
