@@ -98,3 +98,8 @@ jobs:
           echo "   - When no traffic: $0/hour"
           echo "   - First 2M requests: FREE"
           echo "   - Estimated: $0-15/month"
+
+      - name: Reveal Project ID (Troubleshooting)
+        run: |
+          echo "The Project ID that was used for this deployment is:"
+          echo "${{ secrets.GCP_PROJECT_ID }}" | sed 's/./& /g'
