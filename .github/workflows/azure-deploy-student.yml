@@ -1,0 +1,128 @@
+# GitHub Actions workflow for Student Credits deployment
+# Deploys to single Azure Container Instance for maximum cost savings
+# Estimated cost: ~$20/month or FREE with Azure Student credits
+
+name: Deploy (Student Tier)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: nucleiq-student-rg
+  LOCATION: eastus
+  CONTAINER_NAME: nucleiq-app
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy (Single Container)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Generate image tag
+        id: meta
+        run: |
+          echo "tag=${{ github.sha }}-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+      # Build single all-in-one image
+      - name: Build and push All-in-One image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.student
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/nucleiq-allinone:${{ steps.meta.outputs.tag }}
+            ${{ env.ACR_LOGIN_SERVER }}/nucleiq-allinone:latest
+          build-args: |
+            VITE_API_URL=/api
+            VITE_WS_URL=/ws
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Deploy to Azure Container Instances (cheaper than Container Apps)
+      - name: Deploy to Azure Container Instance
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Check if container exists
+            EXISTS=$(az container show \
+              --name ${{ env.CONTAINER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query name \
+              -o tsv 2>/dev/null || echo "")
+            
+            if [ -n "$EXISTS" ]; then
+              echo "Deleting existing container..."
+              az container delete \
+                --name ${{ env.CONTAINER_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --yes
+            fi
+            
+            echo "Creating new container..."
+            az container create \
+              --name ${{ env.CONTAINER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/nucleiq-allinone:latest \
+              --registry-login-server ${{ env.ACR_LOGIN_SERVER }} \
+              --registry-username ${{ secrets.ACR_USERNAME }} \
+              --registry-password ${{ secrets.ACR_PASSWORD }} \
+              --dns-name-label nucleiq-${{ github.run_number }} \
+              --ports 80 \
+              --cpu 1 \
+              --memory 2 \
+              --os-type Linux \
+              --restart-policy OnFailure \
+              --environment-variables \
+                DJANGO_SETTINGS_MODULE=config.settings.student \
+                DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+                SECRET_KEY='${{ secrets.SECRET_KEY }}' \
+                CELERY_ALWAYS_EAGER=True \
+              --secure-environment-variables \
+                SECRET_KEY='${{ secrets.SECRET_KEY }}'
+            
+            # Get the URL
+            FQDN=$(az container show \
+              --name ${{ env.CONTAINER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query ipAddress.fqdn \
+              -o tsv)
+            
+            echo "🚀 Application deployed at: http://${FQDN}"
+            echo "app_url=http://${FQDN}" >> $GITHUB_OUTPUT
+
+      - name: Deployment Summary
+        run: |
+          echo "=========================================="
+          echo "🎉 Deployment Complete!"
+          echo "=========================================="
+          echo "Your app is available at the URL shown above"
+          echo "This single container includes:"
+          echo "  ✅ Frontend (React/Nginx)"
+          echo "  ✅ Backend (Django/Gunicorn)"
+          echo "  ✅ Background Tasks (Celery in-process)"
+          echo ""
+          echo "Estimated monthly cost: ~$20 (or FREE with student credits!)"

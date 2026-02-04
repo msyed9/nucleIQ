@@ -1,0 +1,121 @@
+# =============================================================================
+# All-in-One Dockerfile for Azure Student Credits
+# Combines: Nginx (Frontend) + Django (Backend) + Celery (In-process)
+# Target: Single container deployment for maximum cost savings
+# Estimated: $15-30/month or FREE with student credits
+# =============================================================================
+
+# Stage 1: Build Frontend
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production=false
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build arguments for API URL
+ARG VITE_API_URL=/api
+ARG VITE_WS_URL=/ws
+
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_WS_URL=${VITE_WS_URL}
+
+# Build production bundle
+RUN npm run build
+
+# Stage 2: Build Backend Dependencies
+FROM python:3.12-slim AS backend-builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /wheels
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    python3-dev \
+    libpq-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libjpeg-dev \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and build wheels
+COPY backend/requirements/prod.txt ./requirements.txt
+
+# Remove heavy packages for student tier (face recognition not needed for demo)
+RUN sed -i '/face_recognition/d' requirements.txt && \
+    sed -i '/dlib/d' requirements.txt
+
+RUN pip wheel -r requirements.txt --wheel-dir /wheels
+
+# Stage 3: Final All-in-One Image
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_SETTINGS_MODULE=config.settings.student
+
+WORKDIR /app
+
+# Install runtime dependencies + Nginx + Supervisor
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    supervisor \
+    postgresql-client \
+    libpq5 \
+    libopenblas0 \
+    liblapack3 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libglib2.0-0 \
+    libharfbuzz0b \
+    curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages from wheels
+COPY --from=backend-builder /wheels /wheels
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --no-index --find-links=/wheels -r /wheels/requirements.txt && \
+    pip install --no-cache-dir gunicorn && \
+    rm -rf /wheels
+
+# Copy backend code
+COPY backend/ /app/backend/
+WORKDIR /app/backend
+
+# Copy built frontend to Nginx serving directory
+COPY --from=frontend-builder /app/frontend/dist /var/www/html
+
+# Create directories
+RUN mkdir -p /app/backend/staticfiles /app/backend/media /app/data /var/log/supervisor
+
+# Copy configuration files
+COPY deploy/student/nginx.conf /etc/nginx/sites-available/default
+COPY deploy/student/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY deploy/student/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Expose ports (Nginx on 80, Django on 8000 for internal)
+EXPOSE 80 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/health || curl -f http://localhost:8000/api/health/ || exit 1
+
+# Start with supervisor (manages nginx + gunicorn)
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

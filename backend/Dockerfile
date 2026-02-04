@@ -116,6 +116,10 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY . /app/backend/
 
+# Copy and make entrypoint executable
+COPY docker-entrypoint.prod.sh /app/backend/
+RUN chmod +x /app/backend/docker-entrypoint.prod.sh
+
 # Create necessary directories and non-root user
 RUN mkdir -p /app/backend/staticfiles /app/backend/media && \
     useradd -m -u 1000 nucleiq && \

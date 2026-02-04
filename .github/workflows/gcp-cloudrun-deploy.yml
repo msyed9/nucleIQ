@@ -1,0 +1,100 @@
+# GitHub Actions for Google Cloud Run Deployment
+# Cost: ~$0-15/month (or FREE with $300 credits)
+# Scale to zero = pay only when app is used!
+
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-south1  # Mumbai region - closest to India
+  SERVICE_NAME: nucleiq
+  IMAGE_NAME: nucleiq-app
+
+jobs:
+  deploy:
+    name: Build & Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Setup gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # Configure Docker for GCR
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # Build and push image
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          
+          docker build \
+            -f Dockerfile.cloudrun \
+            -t $IMAGE_TAG \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest \
+            .
+          
+          docker push $IMAGE_TAG
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest
+          
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # Deploy to Cloud Run
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE_TAG }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --timeout 300 \
+            --concurrency 80 \
+            --allow-unauthenticated \
+            --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.cloudrun" \
+            --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}"
+
+      # Get service URL
+      - name: Get Service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          
+          echo "=========================================="
+          echo "🚀 Deployment Complete!"
+          echo "=========================================="
+          echo "Your app is live at: $URL"
+          echo ""
+          echo "💰 Cost Info:"
+          echo "   - Scale to zero: ✅ Enabled"
+          echo "   - When no traffic: $0/hour"
+          echo "   - First 2M requests: FREE"
+          echo "   - Estimated: $0-15/month"

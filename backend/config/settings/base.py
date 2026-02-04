@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'simple_history',  # Audit trail
+    'storages',  # Cloud storage backends (Azure, S3, etc.)
     
     # Local apps
     'core',

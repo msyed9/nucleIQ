@@ -1,0 +1,64 @@
+# Student Credits Optimized Docker Compose
+# Single container deployment with all services combined
+# Estimated Cost: ~$15-30/month (FREE with Azure Student $100 credits)
+
+version: '3.9'
+
+services:
+  # All-in-One Container: Frontend + Backend + Celery
+  nucleiq:
+    build:
+      context: .
+      dockerfile: Dockerfile.student
+    image: ${ACR_LOGIN_SERVER:-nucleiqacr.azurecr.io}/nucleiq-allinone:${IMAGE_TAG:-latest}
+    container_name: nucleiq_allinone
+    ports:
+      - "80:80"
+      - "8000:8000"
+    environment:
+      # Database - Use Azure PostgreSQL Free Tier
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///db.sqlite3}
+      - DJANGO_SETTINGS_MODULE=config.settings.student
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=*
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+      # Use SQLite-based cache instead of Redis to save costs
+      - CACHE_BACKEND=django.core.cache.backends.locmem.LocMemCache
+      # Celery runs in-process (no separate worker needed)
+      - CELERY_ALWAYS_EAGER=True
+      - DEBUG=False
+    volumes:
+      - nucleiq_data:/app/data
+      - nucleiq_media:/app/backend/media
+      - nucleiq_static:/app/backend/staticfiles
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # PostgreSQL - Can use Azure Database for PostgreSQL Flexible Server FREE tier
+  # OR run in same container for maximum cost savings
+  db:
+    image: postgres:16-alpine
+    container_name: nucleiq_db
+    environment:
+      POSTGRES_DB: nucleiq
+      POSTGRES_USER: nucleiq_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nucleiq_dev_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U nucleiq_user -d nucleiq" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nucleiq_data:
+  nucleiq_media:
+  nucleiq_static:
+  postgres_data:

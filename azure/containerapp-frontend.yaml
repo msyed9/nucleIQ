@@ -1,0 +1,76 @@
+# Azure Container Apps configuration for nucleIQ Frontend
+# Deploy using: az containerapp create --yaml containerapp-frontend.yaml
+#
+# Replace placeholders:
+#   - {{ACR_LOGIN_SERVER}}: Your ACR login server (e.g., nucleiqacr.azurecr.io)
+#   - {{IMAGE_TAG}}: Docker image tag
+
+type: Microsoft.App/containerApps
+name: nucleiq-frontend
+location: eastus
+properties:
+  managedEnvironmentId: /subscriptions/<subscription-id>/resourceGroups/nucleiq-rg/providers/Microsoft.App/managedEnvironments/nucleiq-env
+  
+  configuration:
+    activeRevisionsMode: Single
+    
+    # Container registry configuration
+    registries:
+      - server: {{ACR_LOGIN_SERVER}}
+        username: {{ACR_USERNAME}}
+        passwordSecretRef: acr-password
+    
+    # Secret references
+    secrets:
+      - name: acr-password
+        value: {{ACR_PASSWORD}}
+    
+    # Ingress configuration
+    ingress:
+      external: true
+      targetPort: 80
+      transport: Auto
+      traffic:
+        - weight: 100
+          latestRevision: true
+  
+  template:
+    # Container configuration
+    containers:
+      - image: {{ACR_LOGIN_SERVER}}/nucleiq-frontend:{{IMAGE_TAG}}
+        name: nucleiq-frontend
+        
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+        
+        probes:
+          # Liveness probe
+          - type: liveness
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Readiness probe
+          - type: readiness
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+    
+    # Scaling configuration
+    scale:
+      minReplicas: 1
+      maxReplicas: 3
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "100"

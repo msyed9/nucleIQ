@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+echo "========================================"
+echo " nucleIQ - Cloud Run Startup"
+echo "========================================"
+
+cd /app/backend
+
+# Cloud Run sets PORT environment variable
+export PORT=${PORT:-8080}
+
+# Database migration (if using Cloud SQL)
+if [[ -n "$DATABASE_URL" ]]; then
+    echo "🔄 Running database migrations..."
+    python manage.py migrate --no-input || echo "Migration skipped"
+fi
+
+# Collect static files
+echo "📦 Collecting static files..."
+python manage.py collectstatic --no-input --clear 2>/dev/null || true
+
+# Create cache table
+python manage.py createcachetable 2>/dev/null || true
+
+echo "========================================"
+echo "🚀 Starting on port $PORT..."
+echo "========================================"
+
+exec "$@"

@@ -1,0 +1,133 @@
+# Azure Container Apps configuration for nucleIQ Backend
+# Deploy using: az containerapp create --yaml containerapp-backend.yaml
+#
+# Replace placeholders:
+#   - {{ACR_LOGIN_SERVER}}: Your ACR login server (e.g., nucleiqacr.azurecr.io)
+#   - {{IMAGE_TAG}}: Docker image tag
+#   - {{DATABASE_URL}}: PostgreSQL connection string
+#   - {{REDIS_URL}}: Redis connection string
+#   - {{SECRET_KEY}}: Django secret key
+
+type: Microsoft.App/containerApps
+name: nucleiq-backend
+location: eastus
+properties:
+  managedEnvironmentId: /subscriptions/<subscription-id>/resourceGroups/nucleiq-rg/providers/Microsoft.App/managedEnvironments/nucleiq-env
+  
+  configuration:
+    activeRevisionsMode: Single
+    
+    # Container registry configuration
+    registries:
+      - server: {{ACR_LOGIN_SERVER}}
+        username: {{ACR_USERNAME}}
+        passwordSecretRef: acr-password
+    
+    # Secret references
+    secrets:
+      - name: acr-password
+        value: {{ACR_PASSWORD}}
+      - name: database-url
+        value: {{DATABASE_URL}}
+      - name: redis-url
+        value: {{REDIS_URL}}
+      - name: secret-key
+        value: {{SECRET_KEY}}
+      - name: azure-storage-key
+        value: {{AZURE_STORAGE_ACCOUNT_KEY}}
+    
+    # Ingress configuration
+    ingress:
+      external: true
+      targetPort: 8000
+      transport: Auto
+      traffic:
+        - weight: 100
+          latestRevision: true
+      corsPolicy:
+        allowedOrigins:
+          - "https://*.azurecontainerapps.io"
+          - "https://nucleiq.io"
+          - "https://www.nucleiq.io"
+        allowedMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "OPTIONS"
+        allowedHeaders:
+          - "*"
+        allowCredentials: true
+        maxAge: 3600
+  
+  template:
+    # Container configuration
+    containers:
+      - image: {{ACR_LOGIN_SERVER}}/nucleiq-backend:{{IMAGE_TAG}}
+        name: nucleiq-backend
+        
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        
+        env:
+          - name: DJANGO_SETTINGS_MODULE
+            value: config.settings.production
+          - name: DATABASE_URL
+            secretRef: database-url
+          - name: REDIS_URL
+            secretRef: redis-url
+          - name: CELERY_BROKER_URL
+            secretRef: redis-url
+          - name: SECRET_KEY
+            secretRef: secret-key
+          - name: ALLOWED_HOSTS
+            value: "*"
+          - name: AZURE_STORAGE_ACCOUNT_NAME
+            value: {{AZURE_STORAGE_ACCOUNT_NAME}}
+          - name: AZURE_STORAGE_ACCOUNT_KEY
+            secretRef: azure-storage-key
+          - name: AZURE_STORAGE_CONTAINER_NAME
+            value: media
+        
+        probes:
+          # Liveness probe
+          - type: liveness
+            httpGet:
+              path: /api/health/
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          
+          # Readiness probe
+          - type: readiness
+            httpGet:
+              path: /api/health/
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Startup probe
+          - type: startup
+            httpGet:
+              path: /api/health/
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+    
+    # Scaling configuration
+    scale:
+      minReplicas: 1
+      maxReplicas: 5
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "50"
