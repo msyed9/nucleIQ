@@ -11,7 +11,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: asia-south1  # Mumbai region - closest to India
+  REGION: us-central1
   SERVICE_NAME: nucleiq
   IMAGE_NAME: nucleiq-app
 
