@@ -790,7 +790,7 @@ const DataMigration: React.FC = () => {
                 </div>
             )}
 
-            {importResult && (() => {
+            {importResult ? (() => {
                 const successCount = typeof importResult.success === 'number'
                     ? importResult.success
                     : (importResult.success_count || 0);
@@ -807,18 +807,22 @@ const DataMigration: React.FC = () => {
                         <button onClick={() => setImportResult(null)}><X size={16} /></button>
                     </div>
                 );
-            })()}
+            })() : null}
 
-            {importResult?.errors?.length > 0 && (
-                <div className="error-list">
-                    <h5>Import Errors</h5>
-                    <ul>
-                        {importResult.errors.map((err, i) => (
-                            <li key={i}>{err}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+            {(() => {
+                const errors = importResult?.errors ?? [];
+                if (errors.length === 0) return null;
+                return (
+                    <div className="error-list">
+                        <h5>Import Errors</h5>
+                        <ul>
+                            {errors.map((err, i) => (
+                                <li key={i}>{err}</li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            })()}
 
             {/* Tabs */}
             <div className="tabs">
@@ -1330,19 +1334,23 @@ const DataMigration: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {importResult.errors.length > 0 && (
-                                        <div className="errors-section">
-                                            <h4>Errors ({importResult.errors.length})</h4>
-                                            <ul className="error-list">
-                                                {importResult.errors.slice(0, 10).map((err, idx) => (
-                                                    <li key={idx}>{err}</li>
-                                                ))}
-                                                {importResult.errors.length > 10 && (
-                                                    <li className="more">...and {importResult.errors.length - 10} more</li>
-                                                )}
-                                            </ul>
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const errors = importResult?.errors ?? [];
+                                        if (errors.length === 0) return null;
+                                        return (
+                                            <div className="errors-section">
+                                                <h4>Errors ({errors.length})</h4>
+                                                <ul className="error-list">
+                                                    {errors.slice(0, 10).map((err, idx) => (
+                                                        <li key={idx}>{err}</li>
+                                                    ))}
+                                                    {errors.length > 10 && (
+                                                        <li className="more">...and {errors.length - 10} more</li>
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        );
+                                    })()}
 
                                     <div className="result-actions">
                                         <Button variant="primary" onClick={clearSelection}>

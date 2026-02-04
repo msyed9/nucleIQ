@@ -1,0 +1,128 @@
+```apexlog
+
+   RBAC PERMISSIONS MATRIX - QUICK REFERENCE CARD            
+
+
+ SETUP COMMANDS
+
+1. Run Migrations:
+   cd backend
+   python manage.py makemigrations users
+   python manage.py migrate users
+
+2. Seed Permissions:
+   python manage.py seed_permissions
+   
+3. Create Test Roles (Optional):
+   python manage.py shell < scripts/setup_test_roles.py
+
+ ACCESS
+
+Frontend URL: /settings/permissions
+Required Role: Platform Admin or School Admin
+
+ API ENDPOINTS
+
+GET    /api/users/permissions-matrix/
+        Fetch matrix data (groups + roles)
+       
+PATCH  /api/users/permissions-matrix/bulk_update/
+       Body: { "role_id": "uuid", "permission_ids": ["uuid1",...] }
+        Bulk update role permissions
+
+ UI FEATURES
+
+ Dark theme (gray-900 bg, red-600 checkboxes)
+ Search & filter permissions
+ Expand/collapse groups
+ Bulk select (row/column)
+ Auto-save all changes
+ Responsive table with sticky headers
+
+ PERMISSIONS BREAKDOWN
+
+Dashboard       14 permissions
+Website         32 permissions  
+Students        6 permissions
+Staff           5 permissions
+Attendance      5 permissions
+Fees            7 permissions
+Exams           7 permissions
+Library         6 permissions
+Transport       7 permissions
+Hostel          6 permissions
+HR              6 permissions
+Inventory       6 permissions
+Reports         3 permissions
+Settings        7 permissions
+Communication   4 permissions
+
+TOTAL: 160+ permissions
+
+ SECURITY
+
+ Self-downgrade prevention
+ Tenant isolation
+ Platform admin override
+ Validated bulk updates
+ Transaction atomicity
+
+ KEY FILES
+
+Backend:
+   backend/users/models.py
+   backend/users/serializers.py
+   backend/users/views.py
+   backend/users/urls.py
+   backend/users/management/commands/seed_permissions.py
+
+Frontend:
+   frontend/src/components/permissions/PermissionsMatrix.tsx
+   frontend/src/pages/settings/PermissionsMatrix.tsx
+   frontend/src/App.tsx
+
+Documentation:
+   PERMISSIONS_MATRIX_IMPLEMENTATION.md
+   PERMISSIONS_MATRIX_COMPLETE.md
+   backend/scripts/setup_test_roles.py
+
+ TESTING CHECKLIST
+
+ Migrations applied successfully
+ Permissions seeded (160+ created)
+ Test roles created
+ Backend API responds at /api/users/permissions-matrix/
+ Frontend loads at /settings/permissions
+ Search filters permissions correctly
+ Groups expand/collapse properly
+ Checkboxes toggle permissions
+ Bulk select works (rows & columns)
+ Save button updates permissions
+ Success message appears after save
+ No console errors in browser
+
+ COMMON ISSUES & FIXES
+
+Issue: "No module named xlsxwriter"
+Fix: pip install xlsxwriter
+
+Issue: Permissions not showing
+Fix: Run python manage.py seed_permissions
+
+Issue: Cannot save permissions
+Fix: Verify user has admin role and proper authentication
+
+Issue: Frontend not loading
+Fix: Check npm run dev is running and API is accessible
+
+ QUICK SUPPORT
+
+Check Django logs for backend errors
+Check browser console for frontend errors
+Verify authentication token is valid
+Ensure tenant context is correct
+
+ IMPLEMENTATION STATUS: COMPLETE
+
+
+```

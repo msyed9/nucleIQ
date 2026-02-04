@@ -5,12 +5,13 @@ interface ButtonProps {
     children: React.ReactNode;
     onClick?: () => void;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'outline';
+    variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'outline' | 'ghost';
     size?: 'small' | 'medium' | 'large';
     disabled?: boolean;
     loading?: boolean;
     fullWidth?: boolean;
     className?: string;
+    title?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({

@@ -204,12 +204,15 @@ interface LoadingSpinnerProps {
     size?: 'small' | 'medium' | 'large';
     text?: string;
     fullPage?: boolean;
+    // legacy prop name used across the codebase
+    fullScreen?: boolean;
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     size = 'medium',
     text,
     fullPage = false,
+    fullScreen = false,
 }) => {
     const spinner = (
         <div className={`loading-spinner loading-spinner-${size}`}>
@@ -218,7 +221,9 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         </div>
     );
 
-    if (fullPage) {
+    // support legacy `fullScreen` prop while keeping `fullPage` as canonical
+    const useFull = fullPage || fullScreen;
+    if (useFull) {
         return <div className="loading-fullpage">{spinner}</div>;
     }
 

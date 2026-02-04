@@ -85,6 +85,18 @@
     color: white;
 }
 
+/* Ghost variant: subtle transparent button used for inline actions */
+.btn-ghost {
+    background: transparent;
+    color: #374151;
+    border: 1px solid transparent;
+    box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background: rgba(55, 65, 81, 0.06);
+}
+
 /* Loading spinner */
 .btn-spinner {
     width: 16px;
