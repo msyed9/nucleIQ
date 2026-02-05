@@ -4,6 +4,7 @@
 # Creates minimal resources to maximize credit usage
 # ============================================================================
 
+
 param(
     [string]$ResourceGroup = "nucleiq-student-rg",
     [string]$Location = "eastus",
