@@ -30,13 +30,18 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 if DATABASE_URL:
     import dj_database_url
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
     
-    # Cloud SQL uses Unix socket
-    if '/cloudsql/' in DATABASE_URL:
-        # Format: postgresql://user:pass@/dbname?host=/cloudsql/project:region:instance
-        pass
+    # Cloud SQL requires special handling for Unix sockets in some environments
+    if '/cloudsql/' in DATABASE_URL and 'OPTIONS' not in DATABASES['default']:
+        DATABASES['default']['OPTIONS'] = {
+            'target_session_attrs': 'read-write',
+        }
 else:
     # SQLite for testing/demo
     DATABASES = {
