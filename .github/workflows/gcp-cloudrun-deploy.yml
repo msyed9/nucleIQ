@@ -79,7 +79,11 @@ jobs:
             --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.cloudrun" \
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
             --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}"
+            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
+            --set-env-vars "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" \
+            --set-env-vars "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
+            --set-env-vars "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" \
+            --add-cloudsql-instances "${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
 
       # Get service URL
       - name: Get Service URL
