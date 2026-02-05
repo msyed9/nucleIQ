@@ -64,7 +64,8 @@ jobs:
       # Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
+          # Build the base command
+          DEPLOY_CMD="gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${{ env.IMAGE_TAG }} \
             --region ${{ env.REGION }} \
             --platform managed \
@@ -76,14 +77,30 @@ jobs:
             --timeout 300 \
             --concurrency 80 \
             --allow-unauthenticated \
-            --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.cloudrun" \
-            --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
-            --set-env-vars "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" \
-            --set-env-vars "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
-            --set-env-vars "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" \
-            --add-cloudsql-instances "${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
+            --set-env-vars DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
+            --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }}"
+          
+          # Add optional variables
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }}"
+          fi
+          
+          if [ -n "${{ secrets.ADMIN_USERNAME }}" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}"
+            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
+            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}"
+          fi
+          
+          if [ -n "${{ secrets.GCS_BUCKET_NAME }}" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}"
+          fi
+          
+          if [ -n "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances ${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
+          fi
+          
+          # Execute
+          eval $DEPLOY_CMD
 
       # Get service URL
       - name: Get Service URL
