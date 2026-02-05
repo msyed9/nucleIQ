@@ -12,8 +12,9 @@ export PORT=${PORT:-8080}
 
 # Database migration (if using Cloud SQL)
 if [[ -n "$DATABASE_URL" ]]; then
-    echo "🔄 Running database migrations..."
-    python manage.py migrate --no-input || echo "Migration skipped"
+    echo "🔄 Attempting database migrations..."
+    # We use a subshell so if it fails, the script continues
+    (python manage.py migrate --no-input) || echo "⚠️ Migration failed, but starting server anyway..."
 fi
 
 # Collect static files
