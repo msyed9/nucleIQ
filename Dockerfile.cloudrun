@@ -57,11 +57,12 @@ COPY --from=frontend-builder /app/frontend/dist /app/backend/frontend_dist
 
 EXPOSE 8080
 
-# Simple direct start - gunicorn binds to 8080 directly
-CMD ["gunicorn", "config.wsgi:application", \
-    "--bind", "0.0.0.0:8080", \
-    "--workers", "2", \
-    "--timeout", "120", \
-    "--access-logfile", "-", \
-    "--error-logfile", "-", \
-    "--log-level", "info"]
+# Create a simple entrypoint that just starts gunicorn
+RUN echo '#!/bin/bash' > /start.sh && \
+    echo 'echo "=========================================="' >> /start.sh && \
+    echo 'echo "NEW SIMPLIFIED IMAGE - v2 - $(date)"' >> /start.sh && \
+    echo 'echo "=========================================="' >> /start.sh && \
+    echo 'exec gunicorn config.wsgi:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --access-logfile - --error-logfile - --log-level info' >> /start.sh && \
+    chmod +x /start.sh
+
+CMD ["/start.sh"]

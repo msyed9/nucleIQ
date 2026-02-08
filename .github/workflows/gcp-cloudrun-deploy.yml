@@ -49,7 +49,7 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # Build and push image with CACHE support
+      # Build and push image - NO CACHE to force fresh build
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -59,8 +59,7 @@ jobs:
           tags: |
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Set IMAGE_TAG env
         run: echo "IMAGE_TAG=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_ENV
