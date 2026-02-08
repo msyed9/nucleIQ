@@ -82,6 +82,10 @@ COPY --from=frontend-builder /app/frontend/dist /var/www/html
 # Create directories
 RUN mkdir -p /app/backend/staticfiles /app/backend/media /var/log/supervisor
 
+# Run collectstatic during build to speed up startup
+RUN SECRET_KEY=build-time-only-dummy-key \
+    python manage.py collectstatic --no-input --clear --no-post-process
+
 # Copy configs
 COPY deploy/gcp/nginx.conf /etc/nginx/sites-available/default
 COPY deploy/gcp/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
