@@ -103,9 +103,9 @@ jobs:
             DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances ${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
           fi
           
-          # Add startup probe for longer initialization time
+          # Add startup optimizations
           DEPLOY_CMD="$DEPLOY_CMD --no-cpu-throttling"
-          DEPLOY_CMD="$DEPLOY_CMD --startup-cpu-boost"
+          DEPLOY_CMD="$DEPLOY_CMD --cpu-boost"
           
           # Execute
           eval $DEPLOY_CMD
