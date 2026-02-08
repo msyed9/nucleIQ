@@ -99,9 +99,10 @@ jobs:
             DEPLOY_CMD="$DEPLOY_CMD --set-env-vars GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}"
           fi
           
-          if [ -n "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" ]; then
-            DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances ${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
-          fi
+          # Temporarily disabled for testing
+          # if [ -n "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" ]; then
+          #   DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances ${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
+          # fi
           
           # Add startup optimizations
           DEPLOY_CMD="$DEPLOY_CMD --no-cpu-throttling"

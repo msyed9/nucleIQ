@@ -91,7 +91,7 @@ RUN DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
 # Copy configs
 COPY deploy/gcp/nginx.conf /etc/nginx/sites-available/default
 COPY deploy/gcp/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY deploy/gcp/entrypoint.sh /app/entrypoint.sh
+COPY deploy/gcp/entrypoint-minimal.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Cloud Run uses PORT environment variable (default 8080)
