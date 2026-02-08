@@ -277,19 +277,25 @@ class TenantBrandingViewSet(viewsets.ModelViewSet):
     Allows tenant admins to customize their branding.
     Supports multipart/form-data for file uploads.
     """
-    permission_classes = [IsAuthenticated, IsTenantUser]
+    permission_classes = [IsAuthenticated]
     serializer_class = TenantBrandingSerializer
     # Enable multipart form data parsing for file uploads
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     http_method_names = ['get', 'put', 'patch', 'delete']  # Allow read, update, and delete-image
     
     def get_queryset(self):
+        # Platform admins don't have a tenant
+        if not self.request.user.tenant:
+            return TenantBranding.objects.none()
         return TenantBranding.objects.filter(tenant=self.request.user.tenant)
     
     def get_object(self):
         """
         Get or create tenant branding for the current tenant.
         """
+        # Platform admins don't have a tenant
+        if not self.request.user.tenant:
+            return None
         branding, created = TenantBranding.objects.get_or_create(
             tenant=self.request.user.tenant
         )
@@ -305,9 +311,20 @@ class TenantBrandingViewSet(viewsets.ModelViewSet):
         """
         Override list to return single branding object instead of array.
         """
+        # Platform admins get empty branding
+        if not request.user.tenant:
+            return Response({
+                'primary_color': '#1976d2',
+                'secondary_color': '#dc004e',
+                'sidebar_color': '#1e1e2d',
+                'font_family': 'Inter',
+                'icon_theme': 'modern_gradient',
+                'icon_set': 'lucide',
+            })
         branding = self.get_object()
         serializer = self.get_serializer(branding)
         return Response(serializer.data)
+
     
     def update(self, request, *args, **kwargs):
         """
