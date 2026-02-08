@@ -5,8 +5,9 @@ name: Deploy to Cloud Run
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
+
 
 env:
   PROJECT_ID: nucleiq-7839
