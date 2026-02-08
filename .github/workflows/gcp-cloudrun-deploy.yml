@@ -84,25 +84,8 @@ jobs:
             --set-env-vars DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
             --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }}"
           
-          # Add optional variables
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }}"
-          fi
-          
-          if [ -n "${{ secrets.ADMIN_USERNAME }}" ]; then
-            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}"
-            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
-            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}"
-          fi
-          
-          if [ -n "${{ secrets.GCS_BUCKET_NAME }}" ]; then
-            DEPLOY_CMD="$DEPLOY_CMD --set-env-vars GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}"
-          fi
-          
-          # Temporarily disabled for testing
-          # if [ -n "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" ]; then
-          #   DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances ${{ secrets.CLOUDSQL_CONNECTION_NAME }}"
-          # fi
+          # TEMPORARILY REMOVED ALL DATABASE VARS TO GET CONTAINER STARTING
+          # Will add back once we confirm basic startup works
           
           # Add startup optimizations
           DEPLOY_CMD="$DEPLOY_CMD --no-cpu-throttling"
