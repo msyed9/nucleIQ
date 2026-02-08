@@ -148,11 +148,13 @@ urlpatterns = [
     # Health check (no authentication required)
     path('api/health/', health_check, name='health-check'),
     
-    # Root URL - Redirect to Admin (Platform Owner access)
-    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    # Root URL - Redirect to frontend (not admin)
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
     
-    # Admin - Using custom admin site
-    path('admin/', admin_site.urls),
+    # Admin - Using obscured URL for security
+    # Access at: /nq-admin-panel/
+    path('nq-admin-panel/', admin_site.urls),
+
     
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

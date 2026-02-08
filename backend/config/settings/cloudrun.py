@@ -93,8 +93,15 @@ SECURE_SSL_REDIRECT = False  # Cloud Run redirects automatically
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+# CSRF trusted origins for Cloud Run
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.run.app',
+    'https://*.a.run.app',
+]
+
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
 
 # =============================================================================
 # LOGGING
