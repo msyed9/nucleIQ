@@ -1,17 +1,19 @@
-# Ultra-simple Cloud Run Dockerfile
-# Just Python + Gunicorn, no Nginx/Supervisord complexity
+# ==============================================================================
+# NucleiQ Cloud Run Production Dockerfile
+# Clean, simple, production-ready deployment
+# ==============================================================================
 
 # Stage 1: Build Frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install --no-audit --no-fund --prefer-offline --no-progress
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
-# Stage 2: Build Python wheels
+# Stage 2: Build Python Dependencies
 FROM python:3.12-slim AS backend-builder
 ENV PIP_NO_CACHE_DIR=1
 WORKDIR /wheels
@@ -20,11 +22,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev libjpeg-dev cmake \
     && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements/prod.txt ./requirements.txt
+# Remove problematic packages that aren't needed for Cloud Run
 RUN sed -i '/face_recognition/d' requirements.txt && sed -i '/dlib/d' requirements.txt
 RUN pip wheel -r requirements.txt --wheel-dir /wheels
 
-# Stage 3: Final minimal image
+# Stage 3: Final Production Image
 FROM python:3.12-slim
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
@@ -32,14 +36,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app/backend
 
-# Minimal runtime deps
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx supervisor \
     postgresql-client libpq5 curl \
     libcairo2 libpango-1.0-0 libpangocairo-1.0-0 \
     libgdk-pixbuf-2.0-0 libglib2.0-0 libharfbuzz0b \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python packages
+# Install Python packages from wheels
 COPY --from=backend-builder /wheels /wheels
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir --no-index --find-links=/wheels -r /wheels/requirements.txt && \
@@ -49,20 +54,29 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy backend code
 COPY backend/ /app/backend/
 
-# Create directories
-RUN mkdir -p /app/backend/staticfiles /app/backend/media
+# Copy frontend build
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# Copy frontend build for whitenoise to serve
-COPY --from=frontend-builder /app/frontend/dist /app/backend/frontend_dist
+# Create necessary directories
+RUN mkdir -p /app/backend/staticfiles /app/backend/media /var/log/supervisor
+
+# Collect static files (using SQLite temporarily during build)
+RUN DATABASE_URL=sqlite:///tmp/build.db python manage.py collectstatic --noinput --clear 2>/dev/null || true
+
+# Copy deployment configs
+COPY deploy/gcp/nginx.conf /etc/nginx/sites-available/default
+COPY deploy/gcp/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create entrypoint script
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'set -e' >> /entrypoint.sh && \
+    echo 'echo "=========================================="' >> /entrypoint.sh && \
+    echo 'echo "NucleiQ Cloud Run Starting..."' >> /entrypoint.sh && \
+    echo 'echo "=========================================="' >> /entrypoint.sh && \
+    echo 'cd /app/backend' >> /entrypoint.sh && \
+    echo 'exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 EXPOSE 8080
 
-# Create a simple entrypoint that just starts gunicorn
-RUN echo '#!/bin/bash' > /start.sh && \
-    echo 'echo "=========================================="' >> /start.sh && \
-    echo 'echo "NEW SIMPLIFIED IMAGE - v2 - $(date)"' >> /start.sh && \
-    echo 'echo "=========================================="' >> /start.sh && \
-    echo 'exec gunicorn config.wsgi:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --access-logfile - --error-logfile - --log-level info' >> /start.sh && \
-    chmod +x /start.sh
-
-CMD ["/start.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

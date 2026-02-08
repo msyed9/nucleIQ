@@ -1,7 +1,6 @@
 """
 Google Cloud Run Settings for nucleIQ
-Optimized for serverless, scale-to-zero deployment.
-Cost: ~$0-15/month (scale to zero = FREE when not used!)
+Production-ready settings with Cloud SQL PostgreSQL
 """
 
 import os
@@ -13,47 +12,36 @@ from .base import *
 # CORE SETTINGS
 # =============================================================================
 
+print("✅ Cloud Run settings loaded - Scale to Zero enabled!")
+
 DEBUG = False
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'temporary-insecure-key-for-testing-only-change-in-production')
-if SECRET_KEY == 'temporary-insecure-key-for-testing-only-change-in-production':
-    import warnings
-    warnings.warn("Using insecure SECRET_KEY! Set SECRET_KEY environment variable in production!")
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is required!")
 
 ALLOWED_HOSTS = ['*']  # Cloud Run handles SSL/host verification
 
 # =============================================================================
-# DATABASE - Cloud SQL (PostgreSQL) or SQLite
+# DATABASE - Cloud SQL (PostgreSQL) - REQUIRED
 # =============================================================================
 
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL:
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-    
-    # Cloud SQL requires special handling for Unix sockets in some environments
-    if '/cloudsql/' in DATABASE_URL and 'OPTIONS' not in DATABASES['default']:
-        DATABASES['default']['OPTIONS'] = {
-            'target_session_attrs': 'read-write',
-        }
-else:
-    # SQLite for testing/demo
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': Path('/tmp/db.sqlite3'),  # Cloud Run has /tmp writable
-        }
-    }
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required for Cloud Run!")
+
+import dj_database_url
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 # =============================================================================
-# CACHE - In-Memory (no Redis needed)
+# CACHE - In-Memory (no Redis needed for MVP)
 # =============================================================================
 
 CACHES = {
@@ -66,8 +54,7 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # =============================================================================
-# CELERY - Synchronous (no separate worker)
-# For async, use Cloud Tasks instead
+# CELERY - Synchronous (no separate worker for MVP)
 # =============================================================================
 
 CELERY_TASK_ALWAYS_EAGER = True
@@ -110,31 +97,38 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # =============================================================================
-# CLOUD RUN OPTIMIZATIONS
+# LOGGING
 # =============================================================================
 
-# Reduce memory usage
-REST_FRAMEWORK['PAGE_SIZE'] = 25
-
-# Optimize for cold starts
-CONN_MAX_AGE = 0  # Don't persist connections (Cloud Run may scale down)
-
-# Logging (Cloud Run captures stdout)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
 }
-
-# Disable heavy features
-FACE_RECOGNITION_ENABLED = False
-
-print("✅ Cloud Run settings loaded - Scale to Zero enabled!")
