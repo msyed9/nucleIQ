@@ -40,26 +40,30 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      # Configure Docker for GCR
+      # Set up Docker Buildx (required for caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # Build and push image
+      # Build and push image with CACHE support
       - name: Build and push Docker image
-        run: |
-          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          
-          docker build \
-            -f Dockerfile.cloudrun \
-            -t $IMAGE_TAG \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest \
-            .
-          
-          docker push $IMAGE_TAG
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest
-          
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.cloudrun
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set IMAGE_TAG env
+        run: echo "IMAGE_TAG=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/nucleiq/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_ENV
 
       # Deploy to Cloud Run
       - name: Deploy to Cloud Run
@@ -74,7 +78,7 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
-            --timeout 300 \
+            --timeout 600 \
             --concurrency 80 \
             --allow-unauthenticated \
             --set-env-vars DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
