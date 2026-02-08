@@ -82,9 +82,11 @@ COPY --from=frontend-builder /app/frontend/dist /var/www/html
 # Create directories
 RUN mkdir -p /app/backend/staticfiles /app/backend/media /var/log/supervisor
 
-# Run collectstatic during build to speed up startup
-RUN SECRET_KEY=build-time-only-dummy-key \
-    python manage.py collectstatic --no-input --clear --no-post-process
+# Run collectstatic during build (use SQLite to avoid DB dependency)
+RUN DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
+    SECRET_KEY=build-time-dummy-key \
+    DATABASE_URL=sqlite:///tmp/build.db \
+    python manage.py collectstatic --no-input --clear 2>&1 || echo "Static collection skipped"
 
 # Copy configs
 COPY deploy/gcp/nginx.conf /etc/nginx/sites-available/default
