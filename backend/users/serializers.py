@@ -86,11 +86,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         clear_login_failures(tenant_id, identifier)
 
+        # MFA only required if explicitly enabled by user or tenant
         mfa_required = (
             security_settings['two_factor_auth_required'] or
-            getattr(user, 'is_2fa_enabled', False) or
-            getattr(user, 'is_platform_admin', False) or
-            getattr(user, 'is_superuser', False)
+            getattr(user, 'is_2fa_enabled', False)
         )
 
         if mfa_required:
@@ -786,11 +785,10 @@ class UnifiedLoginSerializer(serializers.Serializer):
             })
 
         security_settings = get_tenant_security_settings(user.tenant or tenant)
+        # MFA only required if explicitly enabled by user or tenant
         mfa_required = (
             security_settings['two_factor_auth_required'] or
-            getattr(user, 'is_2fa_enabled', False) or
-            getattr(user, 'is_platform_admin', False) or
-            getattr(user, 'is_superuser', False)
+            getattr(user, 'is_2fa_enabled', False)
         )
 
         if mfa_required:
