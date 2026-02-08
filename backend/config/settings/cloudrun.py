@@ -87,17 +87,24 @@ else:
 # SECURITY
 # =============================================================================
 
-# Cloud Run handles HTTPS
+# Cloud Run handles HTTPS - trust proxy headers
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False  # Cloud Run redirects automatically
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# CSRF trusted origins for Cloud Run
+# Trust X-Forwarded headers from reverse proxy
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# CSRF trusted origins for Cloud Run and custom domains
 CSRF_TRUSTED_ORIGINS = [
     'https://*.run.app',
     'https://*.a.run.app',
+    'https://syed.nucleiq.io',
+    'https://*.nucleiq.io',
 ]
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
