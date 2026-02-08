@@ -74,12 +74,13 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --port 8080 \
-            --memory 1Gi \
-            --cpu 1 \
+            --memory 2Gi \
+            --cpu 2 \
             --min-instances 0 \
             --max-instances 3 \
-            --timeout 600 \
+            --timeout 900 \
             --concurrency 80 \
+            --execution-environment gen2 \
             --allow-unauthenticated \
             --set-env-vars DJANGO_SETTINGS_MODULE=config.settings.cloudrun \
             --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }}"

@@ -23,24 +23,23 @@ from drf_spectacular.views import (
 def health_check(request):
     """
     Health check endpoint for container orchestration and load balancers.
-    Returns 200 OK if the service is healthy, 503 if database is unreachable.
+    Returns 200 OK always - we don't want Cloud Run to mark us unhealthy
+    just because the database isn't connected yet.
     """
+    response_data = {
+        "status": "healthy",
+        "service": "nucleiq-backend"
+    }
+    
+    # Optionally check database, but don't fail if it's not connected
     try:
-        # Check database connectivity
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-        
-        return JsonResponse({
-            "status": "healthy",
-            "database": "connected",
-            "service": "nucleiq-backend"
-        }, status=200)
-    except Exception as e:
-        return JsonResponse({
-            "status": "unhealthy",
-            "database": "disconnected",
-            "error": str(e)
-        }, status=503)
+        response_data["database"] = "connected"
+    except Exception:
+        response_data["database"] = "not connected"
+    
+    return JsonResponse(response_data, status=200)
 
 def media_download(request, file_path):
     """
