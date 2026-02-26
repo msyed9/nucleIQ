@@ -19,6 +19,7 @@ class SubscriptionEnforcementMiddleware:
         '/api/auth/',
         '/api/billing/',
         '/admin/',
+        '/nq-admin-panel/',
         '/api/docs/',
         '/api/schema/',
     ]

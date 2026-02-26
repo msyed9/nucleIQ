@@ -39,6 +39,7 @@ class RoleCheckMiddleware(MiddlewareMixin):
     # Paths that don't require role checking
     EXEMPT_PATHS = [
         '/admin/',
+        '/nq-admin-panel/',
         '/api/auth/login/',
         '/api/auth/logout/',
         '/api/auth/register/',

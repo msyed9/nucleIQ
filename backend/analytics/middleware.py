@@ -15,6 +15,7 @@ class UsageLoggingMiddleware(MiddlewareMixin):
 
     EXCLUDED_PREFIXES = (
         '/admin/',
+        '/nq-admin-panel/',
         '/static/',
         '/media/',
         '/health',

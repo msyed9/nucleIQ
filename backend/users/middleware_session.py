@@ -24,7 +24,7 @@ class AdminSessionTimeoutMiddleware(MiddlewareMixin):
         Process the request and set session timeout if applicable.
         """
         # Only apply to authenticated users in Django admin
-        if not request.path.startswith('/admin/'):
+        if not request.path.startswith('/admin/') and not request.path.startswith('/nq-admin-panel/'):
             return None
         
         if not request.user.is_authenticated:

@@ -79,7 +79,7 @@ class TenantMiddleware(MiddlewareMixin):
 
         # Skip tenant detection for Django admin to allow platform admin login
         try:
-            if request.path.startswith('/admin/'):
+            if request.path.startswith('/nq-admin-panel/') or request.path.startswith('/admin/'):
                 # Ensure no tenant context is set for admin
                 set_current_tenant(None)
                 request.tenant = None
