@@ -64,10 +64,9 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # STATIC & MEDIA FILES
 # =============================================================================
 
-# Static files served by WhiteNoise
-MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-WHITENOISE_MANIFEST_STRICT = False
+# Static files - served by nginx directly (no WhiteNoise needed)
+# nginx handles /static/ -> /app/backend/staticfiles/
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
