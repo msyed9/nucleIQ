@@ -158,12 +158,16 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'put', 'patch']  # Only allow read and update, not create/delete
     
     def get_queryset(self):
+        if not self.request.user.tenant:
+            return TenantSettings.objects.none()
         return TenantSettings.objects.filter(tenant=self.request.user.tenant)
     
     def get_object(self):
         """
         Get or create tenant settings for the current tenant.
         """
+        if not self.request.user.tenant:
+            return None
         settings, created = TenantSettings.objects.get_or_create(
             tenant=self.request.user.tenant
         )
@@ -173,6 +177,8 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
         """
         Override list to return single settings object instead of array.
         """
+        if not request.user.tenant:
+            return Response({})
         settings = self.get_object()
         serializer = self.get_serializer(settings)
         return Response(serializer.data)
@@ -214,6 +220,12 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
         Get current tenant settings combined with branding data.
         This endpoint provides all tenant configuration including receipt settings.
         """
+        if not request.user.tenant:
+            return Response({
+                'school_name': 'NucleiQ Platform Admin',
+                'auto_generate_admission_number': False,
+            })
+            
         settings = self.get_object()
         settings_data = self.get_serializer(settings).data
         
@@ -251,6 +263,13 @@ class TenantSettingsViewSet(viewsets.ModelViewSet):
         """
         from students.utils import get_next_admission_number_preview
         
+        if not request.user.tenant:
+            return Response({
+                'auto_generate': False,
+                'admission_number': None,
+                'message': 'Platform Admins do not generate admission numbers.'
+            })
+            
         settings = self.get_object()
         
         if not settings.auto_generate_admission_number:

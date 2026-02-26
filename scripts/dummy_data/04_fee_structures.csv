@@ -1,0 +1,226 @@
+﻿fee_type,class_name,amount,frequency,due_day,is_mandatory,description,academic_year
+Tuition Fee,Nursery,2000,MONTHLY,10,true,Tuition Fee for Nursery,2023-24
+Annual Fee,Nursery,5000,YEARLY,10,true,Annual Fee for Nursery,2023-24
+Library Fee,Nursery,500,YEARLY,10,true,Library Fee for Nursery,2023-24
+Sports Fee,Nursery,1000,YEARLY,10,true,Sports Fee for Nursery,2023-24
+Exam Fee,Nursery,500,HALF_YEARLY,10,true,Exam Fee for Nursery,2023-24
+Tuition Fee,LKG,2000,MONTHLY,10,true,Tuition Fee for LKG,2023-24
+Annual Fee,LKG,5000,YEARLY,10,true,Annual Fee for LKG,2023-24
+Library Fee,LKG,500,YEARLY,10,true,Library Fee for LKG,2023-24
+Sports Fee,LKG,1000,YEARLY,10,true,Sports Fee for LKG,2023-24
+Exam Fee,LKG,500,HALF_YEARLY,10,true,Exam Fee for LKG,2023-24
+Tuition Fee,UKG,2000,MONTHLY,10,true,Tuition Fee for UKG,2023-24
+Annual Fee,UKG,5000,YEARLY,10,true,Annual Fee for UKG,2023-24
+Library Fee,UKG,500,YEARLY,10,true,Library Fee for UKG,2023-24
+Sports Fee,UKG,1000,YEARLY,10,true,Sports Fee for UKG,2023-24
+Exam Fee,UKG,500,HALF_YEARLY,10,true,Exam Fee for UKG,2023-24
+Tuition Fee,Class 1,3000,MONTHLY,10,true,Tuition Fee for Class 1,2023-24
+Annual Fee,Class 1,6000,YEARLY,10,true,Annual Fee for Class 1,2023-24
+Lab Fee,Class 1,1000,YEARLY,10,true,Lab Fee for Class 1,2023-24
+Library Fee,Class 1,500,YEARLY,10,true,Library Fee for Class 1,2023-24
+Sports Fee,Class 1,1000,YEARLY,10,true,Sports Fee for Class 1,2023-24
+Exam Fee,Class 1,750,HALF_YEARLY,10,true,Exam Fee for Class 1,2023-24
+Tuition Fee,Class 2,3000,MONTHLY,10,true,Tuition Fee for Class 2,2023-24
+Annual Fee,Class 2,6000,YEARLY,10,true,Annual Fee for Class 2,2023-24
+Lab Fee,Class 2,1000,YEARLY,10,true,Lab Fee for Class 2,2023-24
+Library Fee,Class 2,500,YEARLY,10,true,Library Fee for Class 2,2023-24
+Sports Fee,Class 2,1000,YEARLY,10,true,Sports Fee for Class 2,2023-24
+Exam Fee,Class 2,750,HALF_YEARLY,10,true,Exam Fee for Class 2,2023-24
+Tuition Fee,Class 3,3000,MONTHLY,10,true,Tuition Fee for Class 3,2023-24
+Annual Fee,Class 3,6000,YEARLY,10,true,Annual Fee for Class 3,2023-24
+Lab Fee,Class 3,1000,YEARLY,10,true,Lab Fee for Class 3,2023-24
+Library Fee,Class 3,500,YEARLY,10,true,Library Fee for Class 3,2023-24
+Sports Fee,Class 3,1000,YEARLY,10,true,Sports Fee for Class 3,2023-24
+Exam Fee,Class 3,750,HALF_YEARLY,10,true,Exam Fee for Class 3,2023-24
+Tuition Fee,Class 4,3000,MONTHLY,10,true,Tuition Fee for Class 4,2023-24
+Annual Fee,Class 4,6000,YEARLY,10,true,Annual Fee for Class 4,2023-24
+Lab Fee,Class 4,1000,YEARLY,10,true,Lab Fee for Class 4,2023-24
+Library Fee,Class 4,500,YEARLY,10,true,Library Fee for Class 4,2023-24
+Sports Fee,Class 4,1000,YEARLY,10,true,Sports Fee for Class 4,2023-24
+Exam Fee,Class 4,750,HALF_YEARLY,10,true,Exam Fee for Class 4,2023-24
+Tuition Fee,Class 5,3000,MONTHLY,10,true,Tuition Fee for Class 5,2023-24
+Annual Fee,Class 5,6000,YEARLY,10,true,Annual Fee for Class 5,2023-24
+Lab Fee,Class 5,1000,YEARLY,10,true,Lab Fee for Class 5,2023-24
+Library Fee,Class 5,500,YEARLY,10,true,Library Fee for Class 5,2023-24
+Sports Fee,Class 5,1000,YEARLY,10,true,Sports Fee for Class 5,2023-24
+Exam Fee,Class 5,750,HALF_YEARLY,10,true,Exam Fee for Class 5,2023-24
+Tuition Fee,Class 6,4000,MONTHLY,10,true,Tuition Fee for Class 6,2023-24
+Annual Fee,Class 6,8000,YEARLY,10,true,Annual Fee for Class 6,2023-24
+Lab Fee,Class 6,2000,YEARLY,10,true,Lab Fee for Class 6,2023-24
+Library Fee,Class 6,1000,YEARLY,10,true,Library Fee for Class 6,2023-24
+Sports Fee,Class 6,1500,YEARLY,10,true,Sports Fee for Class 6,2023-24
+Exam Fee,Class 6,1000,HALF_YEARLY,10,true,Exam Fee for Class 6,2023-24
+Tuition Fee,Class 7,4000,MONTHLY,10,true,Tuition Fee for Class 7,2023-24
+Annual Fee,Class 7,8000,YEARLY,10,true,Annual Fee for Class 7,2023-24
+Lab Fee,Class 7,2000,YEARLY,10,true,Lab Fee for Class 7,2023-24
+Library Fee,Class 7,1000,YEARLY,10,true,Library Fee for Class 7,2023-24
+Sports Fee,Class 7,1500,YEARLY,10,true,Sports Fee for Class 7,2023-24
+Exam Fee,Class 7,1000,HALF_YEARLY,10,true,Exam Fee for Class 7,2023-24
+Tuition Fee,Class 8,4000,MONTHLY,10,true,Tuition Fee for Class 8,2023-24
+Annual Fee,Class 8,8000,YEARLY,10,true,Annual Fee for Class 8,2023-24
+Lab Fee,Class 8,2000,YEARLY,10,true,Lab Fee for Class 8,2023-24
+Library Fee,Class 8,1000,YEARLY,10,true,Library Fee for Class 8,2023-24
+Sports Fee,Class 8,1500,YEARLY,10,true,Sports Fee for Class 8,2023-24
+Exam Fee,Class 8,1000,HALF_YEARLY,10,true,Exam Fee for Class 8,2023-24
+Tuition Fee,Class 9,4000,MONTHLY,10,true,Tuition Fee for Class 9,2023-24
+Annual Fee,Class 9,8000,YEARLY,10,true,Annual Fee for Class 9,2023-24
+Lab Fee,Class 9,2000,YEARLY,10,true,Lab Fee for Class 9,2023-24
+Library Fee,Class 9,1000,YEARLY,10,true,Library Fee for Class 9,2023-24
+Sports Fee,Class 9,1500,YEARLY,10,true,Sports Fee for Class 9,2023-24
+Exam Fee,Class 9,1000,HALF_YEARLY,10,true,Exam Fee for Class 9,2023-24
+Tuition Fee,Class 10,4000,MONTHLY,10,true,Tuition Fee for Class 10,2023-24
+Annual Fee,Class 10,8000,YEARLY,10,true,Annual Fee for Class 10,2023-24
+Lab Fee,Class 10,2000,YEARLY,10,true,Lab Fee for Class 10,2023-24
+Library Fee,Class 10,1000,YEARLY,10,true,Library Fee for Class 10,2023-24
+Sports Fee,Class 10,1500,YEARLY,10,true,Sports Fee for Class 10,2023-24
+Exam Fee,Class 10,1000,HALF_YEARLY,10,true,Exam Fee for Class 10,2023-24
+Tuition Fee,Nursery,2000,MONTHLY,10,true,Tuition Fee for Nursery,2024-25
+Annual Fee,Nursery,5000,YEARLY,10,true,Annual Fee for Nursery,2024-25
+Library Fee,Nursery,500,YEARLY,10,true,Library Fee for Nursery,2024-25
+Sports Fee,Nursery,1000,YEARLY,10,true,Sports Fee for Nursery,2024-25
+Exam Fee,Nursery,500,HALF_YEARLY,10,true,Exam Fee for Nursery,2024-25
+Tuition Fee,LKG,2000,MONTHLY,10,true,Tuition Fee for LKG,2024-25
+Annual Fee,LKG,5000,YEARLY,10,true,Annual Fee for LKG,2024-25
+Library Fee,LKG,500,YEARLY,10,true,Library Fee for LKG,2024-25
+Sports Fee,LKG,1000,YEARLY,10,true,Sports Fee for LKG,2024-25
+Exam Fee,LKG,500,HALF_YEARLY,10,true,Exam Fee for LKG,2024-25
+Tuition Fee,UKG,2000,MONTHLY,10,true,Tuition Fee for UKG,2024-25
+Annual Fee,UKG,5000,YEARLY,10,true,Annual Fee for UKG,2024-25
+Library Fee,UKG,500,YEARLY,10,true,Library Fee for UKG,2024-25
+Sports Fee,UKG,1000,YEARLY,10,true,Sports Fee for UKG,2024-25
+Exam Fee,UKG,500,HALF_YEARLY,10,true,Exam Fee for UKG,2024-25
+Tuition Fee,Class 1,3000,MONTHLY,10,true,Tuition Fee for Class 1,2024-25
+Annual Fee,Class 1,6000,YEARLY,10,true,Annual Fee for Class 1,2024-25
+Lab Fee,Class 1,1000,YEARLY,10,true,Lab Fee for Class 1,2024-25
+Library Fee,Class 1,500,YEARLY,10,true,Library Fee for Class 1,2024-25
+Sports Fee,Class 1,1000,YEARLY,10,true,Sports Fee for Class 1,2024-25
+Exam Fee,Class 1,750,HALF_YEARLY,10,true,Exam Fee for Class 1,2024-25
+Tuition Fee,Class 2,3000,MONTHLY,10,true,Tuition Fee for Class 2,2024-25
+Annual Fee,Class 2,6000,YEARLY,10,true,Annual Fee for Class 2,2024-25
+Lab Fee,Class 2,1000,YEARLY,10,true,Lab Fee for Class 2,2024-25
+Library Fee,Class 2,500,YEARLY,10,true,Library Fee for Class 2,2024-25
+Sports Fee,Class 2,1000,YEARLY,10,true,Sports Fee for Class 2,2024-25
+Exam Fee,Class 2,750,HALF_YEARLY,10,true,Exam Fee for Class 2,2024-25
+Tuition Fee,Class 3,3000,MONTHLY,10,true,Tuition Fee for Class 3,2024-25
+Annual Fee,Class 3,6000,YEARLY,10,true,Annual Fee for Class 3,2024-25
+Lab Fee,Class 3,1000,YEARLY,10,true,Lab Fee for Class 3,2024-25
+Library Fee,Class 3,500,YEARLY,10,true,Library Fee for Class 3,2024-25
+Sports Fee,Class 3,1000,YEARLY,10,true,Sports Fee for Class 3,2024-25
+Exam Fee,Class 3,750,HALF_YEARLY,10,true,Exam Fee for Class 3,2024-25
+Tuition Fee,Class 4,3000,MONTHLY,10,true,Tuition Fee for Class 4,2024-25
+Annual Fee,Class 4,6000,YEARLY,10,true,Annual Fee for Class 4,2024-25
+Lab Fee,Class 4,1000,YEARLY,10,true,Lab Fee for Class 4,2024-25
+Library Fee,Class 4,500,YEARLY,10,true,Library Fee for Class 4,2024-25
+Sports Fee,Class 4,1000,YEARLY,10,true,Sports Fee for Class 4,2024-25
+Exam Fee,Class 4,750,HALF_YEARLY,10,true,Exam Fee for Class 4,2024-25
+Tuition Fee,Class 5,3000,MONTHLY,10,true,Tuition Fee for Class 5,2024-25
+Annual Fee,Class 5,6000,YEARLY,10,true,Annual Fee for Class 5,2024-25
+Lab Fee,Class 5,1000,YEARLY,10,true,Lab Fee for Class 5,2024-25
+Library Fee,Class 5,500,YEARLY,10,true,Library Fee for Class 5,2024-25
+Sports Fee,Class 5,1000,YEARLY,10,true,Sports Fee for Class 5,2024-25
+Exam Fee,Class 5,750,HALF_YEARLY,10,true,Exam Fee for Class 5,2024-25
+Tuition Fee,Class 6,4000,MONTHLY,10,true,Tuition Fee for Class 6,2024-25
+Annual Fee,Class 6,8000,YEARLY,10,true,Annual Fee for Class 6,2024-25
+Lab Fee,Class 6,2000,YEARLY,10,true,Lab Fee for Class 6,2024-25
+Library Fee,Class 6,1000,YEARLY,10,true,Library Fee for Class 6,2024-25
+Sports Fee,Class 6,1500,YEARLY,10,true,Sports Fee for Class 6,2024-25
+Exam Fee,Class 6,1000,HALF_YEARLY,10,true,Exam Fee for Class 6,2024-25
+Tuition Fee,Class 7,4000,MONTHLY,10,true,Tuition Fee for Class 7,2024-25
+Annual Fee,Class 7,8000,YEARLY,10,true,Annual Fee for Class 7,2024-25
+Lab Fee,Class 7,2000,YEARLY,10,true,Lab Fee for Class 7,2024-25
+Library Fee,Class 7,1000,YEARLY,10,true,Library Fee for Class 7,2024-25
+Sports Fee,Class 7,1500,YEARLY,10,true,Sports Fee for Class 7,2024-25
+Exam Fee,Class 7,1000,HALF_YEARLY,10,true,Exam Fee for Class 7,2024-25
+Tuition Fee,Class 8,4000,MONTHLY,10,true,Tuition Fee for Class 8,2024-25
+Annual Fee,Class 8,8000,YEARLY,10,true,Annual Fee for Class 8,2024-25
+Lab Fee,Class 8,2000,YEARLY,10,true,Lab Fee for Class 8,2024-25
+Library Fee,Class 8,1000,YEARLY,10,true,Library Fee for Class 8,2024-25
+Sports Fee,Class 8,1500,YEARLY,10,true,Sports Fee for Class 8,2024-25
+Exam Fee,Class 8,1000,HALF_YEARLY,10,true,Exam Fee for Class 8,2024-25
+Tuition Fee,Class 9,4000,MONTHLY,10,true,Tuition Fee for Class 9,2024-25
+Annual Fee,Class 9,8000,YEARLY,10,true,Annual Fee for Class 9,2024-25
+Lab Fee,Class 9,2000,YEARLY,10,true,Lab Fee for Class 9,2024-25
+Library Fee,Class 9,1000,YEARLY,10,true,Library Fee for Class 9,2024-25
+Sports Fee,Class 9,1500,YEARLY,10,true,Sports Fee for Class 9,2024-25
+Exam Fee,Class 9,1000,HALF_YEARLY,10,true,Exam Fee for Class 9,2024-25
+Tuition Fee,Class 10,4000,MONTHLY,10,true,Tuition Fee for Class 10,2024-25
+Annual Fee,Class 10,8000,YEARLY,10,true,Annual Fee for Class 10,2024-25
+Lab Fee,Class 10,2000,YEARLY,10,true,Lab Fee for Class 10,2024-25
+Library Fee,Class 10,1000,YEARLY,10,true,Library Fee for Class 10,2024-25
+Sports Fee,Class 10,1500,YEARLY,10,true,Sports Fee for Class 10,2024-25
+Exam Fee,Class 10,1000,HALF_YEARLY,10,true,Exam Fee for Class 10,2024-25
+Tuition Fee,Nursery,2000,MONTHLY,10,true,Tuition Fee for Nursery,2025-26
+Annual Fee,Nursery,5000,YEARLY,10,true,Annual Fee for Nursery,2025-26
+Library Fee,Nursery,500,YEARLY,10,true,Library Fee for Nursery,2025-26
+Sports Fee,Nursery,1000,YEARLY,10,true,Sports Fee for Nursery,2025-26
+Exam Fee,Nursery,500,HALF_YEARLY,10,true,Exam Fee for Nursery,2025-26
+Tuition Fee,LKG,2000,MONTHLY,10,true,Tuition Fee for LKG,2025-26
+Annual Fee,LKG,5000,YEARLY,10,true,Annual Fee for LKG,2025-26
+Library Fee,LKG,500,YEARLY,10,true,Library Fee for LKG,2025-26
+Sports Fee,LKG,1000,YEARLY,10,true,Sports Fee for LKG,2025-26
+Exam Fee,LKG,500,HALF_YEARLY,10,true,Exam Fee for LKG,2025-26
+Tuition Fee,UKG,2000,MONTHLY,10,true,Tuition Fee for UKG,2025-26
+Annual Fee,UKG,5000,YEARLY,10,true,Annual Fee for UKG,2025-26
+Library Fee,UKG,500,YEARLY,10,true,Library Fee for UKG,2025-26
+Sports Fee,UKG,1000,YEARLY,10,true,Sports Fee for UKG,2025-26
+Exam Fee,UKG,500,HALF_YEARLY,10,true,Exam Fee for UKG,2025-26
+Tuition Fee,Class 1,3000,MONTHLY,10,true,Tuition Fee for Class 1,2025-26
+Annual Fee,Class 1,6000,YEARLY,10,true,Annual Fee for Class 1,2025-26
+Lab Fee,Class 1,1000,YEARLY,10,true,Lab Fee for Class 1,2025-26
+Library Fee,Class 1,500,YEARLY,10,true,Library Fee for Class 1,2025-26
+Sports Fee,Class 1,1000,YEARLY,10,true,Sports Fee for Class 1,2025-26
+Exam Fee,Class 1,750,HALF_YEARLY,10,true,Exam Fee for Class 1,2025-26
+Tuition Fee,Class 2,3000,MONTHLY,10,true,Tuition Fee for Class 2,2025-26
+Annual Fee,Class 2,6000,YEARLY,10,true,Annual Fee for Class 2,2025-26
+Lab Fee,Class 2,1000,YEARLY,10,true,Lab Fee for Class 2,2025-26
+Library Fee,Class 2,500,YEARLY,10,true,Library Fee for Class 2,2025-26
+Sports Fee,Class 2,1000,YEARLY,10,true,Sports Fee for Class 2,2025-26
+Exam Fee,Class 2,750,HALF_YEARLY,10,true,Exam Fee for Class 2,2025-26
+Tuition Fee,Class 3,3000,MONTHLY,10,true,Tuition Fee for Class 3,2025-26
+Annual Fee,Class 3,6000,YEARLY,10,true,Annual Fee for Class 3,2025-26
+Lab Fee,Class 3,1000,YEARLY,10,true,Lab Fee for Class 3,2025-26
+Library Fee,Class 3,500,YEARLY,10,true,Library Fee for Class 3,2025-26
+Sports Fee,Class 3,1000,YEARLY,10,true,Sports Fee for Class 3,2025-26
+Exam Fee,Class 3,750,HALF_YEARLY,10,true,Exam Fee for Class 3,2025-26
+Tuition Fee,Class 4,3000,MONTHLY,10,true,Tuition Fee for Class 4,2025-26
+Annual Fee,Class 4,6000,YEARLY,10,true,Annual Fee for Class 4,2025-26
+Lab Fee,Class 4,1000,YEARLY,10,true,Lab Fee for Class 4,2025-26
+Library Fee,Class 4,500,YEARLY,10,true,Library Fee for Class 4,2025-26
+Sports Fee,Class 4,1000,YEARLY,10,true,Sports Fee for Class 4,2025-26
+Exam Fee,Class 4,750,HALF_YEARLY,10,true,Exam Fee for Class 4,2025-26
+Tuition Fee,Class 5,3000,MONTHLY,10,true,Tuition Fee for Class 5,2025-26
+Annual Fee,Class 5,6000,YEARLY,10,true,Annual Fee for Class 5,2025-26
+Lab Fee,Class 5,1000,YEARLY,10,true,Lab Fee for Class 5,2025-26
+Library Fee,Class 5,500,YEARLY,10,true,Library Fee for Class 5,2025-26
+Sports Fee,Class 5,1000,YEARLY,10,true,Sports Fee for Class 5,2025-26
+Exam Fee,Class 5,750,HALF_YEARLY,10,true,Exam Fee for Class 5,2025-26
+Tuition Fee,Class 6,4000,MONTHLY,10,true,Tuition Fee for Class 6,2025-26
+Annual Fee,Class 6,8000,YEARLY,10,true,Annual Fee for Class 6,2025-26
+Lab Fee,Class 6,2000,YEARLY,10,true,Lab Fee for Class 6,2025-26
+Library Fee,Class 6,1000,YEARLY,10,true,Library Fee for Class 6,2025-26
+Sports Fee,Class 6,1500,YEARLY,10,true,Sports Fee for Class 6,2025-26
+Exam Fee,Class 6,1000,HALF_YEARLY,10,true,Exam Fee for Class 6,2025-26
+Tuition Fee,Class 7,4000,MONTHLY,10,true,Tuition Fee for Class 7,2025-26
+Annual Fee,Class 7,8000,YEARLY,10,true,Annual Fee for Class 7,2025-26
+Lab Fee,Class 7,2000,YEARLY,10,true,Lab Fee for Class 7,2025-26
+Library Fee,Class 7,1000,YEARLY,10,true,Library Fee for Class 7,2025-26
+Sports Fee,Class 7,1500,YEARLY,10,true,Sports Fee for Class 7,2025-26
+Exam Fee,Class 7,1000,HALF_YEARLY,10,true,Exam Fee for Class 7,2025-26
+Tuition Fee,Class 8,4000,MONTHLY,10,true,Tuition Fee for Class 8,2025-26
+Annual Fee,Class 8,8000,YEARLY,10,true,Annual Fee for Class 8,2025-26
+Lab Fee,Class 8,2000,YEARLY,10,true,Lab Fee for Class 8,2025-26
+Library Fee,Class 8,1000,YEARLY,10,true,Library Fee for Class 8,2025-26
+Sports Fee,Class 8,1500,YEARLY,10,true,Sports Fee for Class 8,2025-26
+Exam Fee,Class 8,1000,HALF_YEARLY,10,true,Exam Fee for Class 8,2025-26
+Tuition Fee,Class 9,4000,MONTHLY,10,true,Tuition Fee for Class 9,2025-26
+Annual Fee,Class 9,8000,YEARLY,10,true,Annual Fee for Class 9,2025-26
+Lab Fee,Class 9,2000,YEARLY,10,true,Lab Fee for Class 9,2025-26
+Library Fee,Class 9,1000,YEARLY,10,true,Library Fee for Class 9,2025-26
+Sports Fee,Class 9,1500,YEARLY,10,true,Sports Fee for Class 9,2025-26
+Exam Fee,Class 9,1000,HALF_YEARLY,10,true,Exam Fee for Class 9,2025-26
+Tuition Fee,Class 10,4000,MONTHLY,10,true,Tuition Fee for Class 10,2025-26
+Annual Fee,Class 10,8000,YEARLY,10,true,Annual Fee for Class 10,2025-26
+Lab Fee,Class 10,2000,YEARLY,10,true,Lab Fee for Class 10,2025-26
+Library Fee,Class 10,1000,YEARLY,10,true,Library Fee for Class 10,2025-26
+Sports Fee,Class 10,1500,YEARLY,10,true,Sports Fee for Class 10,2025-26
+Exam Fee,Class 10,1000,HALF_YEARLY,10,true,Exam Fee for Class 10,2025-26

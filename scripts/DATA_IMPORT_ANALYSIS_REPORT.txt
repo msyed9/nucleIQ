@@ -1,0 +1,485 @@
+================================================================================
+  nucleIQ DATA IMPORT SYSTEM - COMPREHENSIVE ANALYSIS REPORT
+  Generated: 2026-02-26
+================================================================================
+
+
+================================================================================
+  SECTION 1: ARCHITECTURE OVERVIEW
+================================================================================
+
+The nucleIQ data import system is built on the following stack:
+
+  Backend:
+  - Django REST Framework API views in `backend/data_management/views_enhanced.py`
+  - Template definitions in `backend/data_management/templates.py`
+  - File parsing utilities in `backend/data_management/utils.py`
+  - URL routes at: `/api/data-management/`
+
+  Frontend:
+  - React component at `frontend/src/pages/admin/DataManagement.tsx`
+  - Upload flow: Select Module -> Download Template -> Fill Data -> Upload File ->
+    Validate -> Import
+
+  Key API Endpoints:
+  - GET  /api/data-management/modules/              -> List all importable modules
+  - GET  /api/data-management/modules/<module>/fields/  -> Field specs for a module
+  - GET  /api/data-management/template/<module>/     -> Download template (xlsx/csv)
+  - POST /api/data-management/validate/              -> Validate file (preview)
+  - POST /api/data-management/import/                -> Import data
+  - GET  /api/data-management/export/<module>/       -> Export data
+  - GET  /api/data-management/import/<job_id>/status/ -> Job status
+
+  Supported File Formats: CSV, XLSX, XLS
+  Max File Size: 10 MB
+  Max Rows Per Import: 5000
+
+
+================================================================================
+  SECTION 2: STRICT SEQUENTIAL UPLOAD ORDER (28 Modules)
+================================================================================
+
+The following is the ABSOLUTE order in which templates must be uploaded,
+based on foreign key dependencies in the database schema:
+
+  PHASE 1: FOUNDATION DATA (No Dependencies)
+  --------------------------------------------------------------------------
+  1.  classes           -> Creates GradeLevel + Section (tenants.GradeLevel, tenants.Section)
+  2.  staff             -> Creates Staff records (staff.Staff)
+
+  PHASE 2: ACADEMIC STRUCTURE (Depends on Phase 1)
+  --------------------------------------------------------------------------
+  3.  subjects          -> Creates Subjects + links to grades via ClassSubject
+                           Dependency: GradeLevel must exist
+  4.  fee_structures    -> Creates FeeCategory + FeeStructure
+                           Dependency: GradeLevel and AcademicYear must exist
+
+  PHASE 3: STUDENT DATA (Depends on Phase 1)
+  --------------------------------------------------------------------------
+  5.  students          -> Creates Student records + auto-creates enrollment
+                           Dependency: GradeLevel, Section must exist (if class/section columns used)
+  6.  student_enrollments -> Creates/updates enrollment records
+                           Dependency: Students, GradeLevel, Section must exist
+  7.  parents           -> Updates parent info on existing students
+                           Dependency: Students must exist
+
+  PHASE 4: STAFF & USER ACCOUNTS (Depends on Phase 1, 3)
+  --------------------------------------------------------------------------
+  8.  user_accounts     -> Creates login credentials (users.User)
+                           Dependency: Students (for PARENT/STUDENT roles) or Staff (for STAFF/TEACHER roles)
+
+  PHASE 5: FEE TRANSACTIONS (Depends on Phase 3, 4)
+  --------------------------------------------------------------------------
+  9.  fee_allocations   -> Links fee structures to students
+                           Dependency: Students, FeeCategory/FeeStructure must exist
+  10. fee_invoices      -> Creates fee invoices
+                           Dependency: Students must exist
+  11. fee_payments      -> Creates payment transactions
+                           Dependency: Fee Invoices must exist
+  12. fee_discounts     -> Applies discounts/scholarships
+                           Dependency: Students must exist
+
+  PHASE 6: ATTENDANCE & EXAMS (Depends on Phase 3)
+  --------------------------------------------------------------------------
+  13. attendance        -> Creates attendance records
+                           Dependency: Students must exist
+  14. exam_results      -> Creates exam result marks
+                           Dependency: Students, Subjects must exist
+  15. exam_schedule     -> Creates exam timetable
+                           Dependency: GradeLevel, Subjects must exist
+
+  PHASE 7: ACADEMIC OPERATIONS (Depends on Phase 1-3)
+  --------------------------------------------------------------------------
+  16. timetable         -> Creates class timetable
+                           Dependency: GradeLevel, Section, Subjects, Staff must exist
+  17. library_books     -> Creates library book catalog
+                           Dependency: None (standalone)
+  18. library_transactions -> Creates issue/return records
+                           Dependency: Students, Books must exist
+
+  PHASE 8: SUPPLEMENTARY DATA (Various Dependencies)
+  --------------------------------------------------------------------------
+  19. transport         -> Creates transport allocations
+                           Dependency: Students, Routes, Stops must exist
+  20. hostel_allocations -> Creates hostel room assignments
+                           Dependency: Students must exist
+  21. payroll_payments  -> Creates salary payment records
+                           Dependency: Staff must exist
+  22. inventory_items   -> Creates inventory/asset records
+                           Dependency: None (standalone)
+  23. certificates_issued -> Creates certificate records
+                           Dependency: Students must exist
+  24. finance_journal_entries -> Creates journal entries
+                           Dependency: None (standalone)
+  25. helpdesk_tickets  -> Creates support tickets
+                           Dependency: Students or Staff must exist
+  26. lms_courses       -> Creates LMS courses
+                           Dependency: GradeLevel, Subjects must exist
+  27. lms_enrollments   -> Creates LMS enrollments
+                           Dependency: LMS Courses, Students must exist
+  28. idcards           -> Creates ID card records
+                           Dependency: Students or Staff must exist
+
+  PHASE 9: PHOTOS (Upload Last)
+  --------------------------------------------------------------------------
+  29. student_photos    -> Uploads student photos (ZIP file)
+                           Dependency: Students must exist (matched by admission number)
+
+
+================================================================================
+  SECTION 3: DETAILED TEMPLATE BREAKDOWN
+================================================================================
+
+  NOTE: Academic Years are NOT imported via templates. They must be created
+  via the admin panel or automatically created by the system. The import
+  system will use the "active" academic year or create a fallback if none exists.
+
+  --------------------------------------------------------------------------
+  3.1) classes - Classes & Sections
+  --------------------------------------------------------------------------
+  Target Model:  tenants.GradeLevel + tenants.Section
+  Unique Field:  None (composite key: class_name + section_name)
+  
+  MANDATORY COLUMNS:
+    class_name     (STRING, max 50)  - e.g., "Class 10", "Nursery", "LKG"
+    section_name   (STRING, max 50)  - e.g., "A", "B", "C"
+
+  OPTIONAL COLUMNS:
+    room_number    (STRING, max 50)  - e.g., "101"
+    capacity       (INTEGER)         - e.g., 40 (default: 40)
+    academic_year  (STRING, max 20)  - e.g., "2024-25" (defaults to current)
+
+  NOTES:
+  - Each row creates ONE grade + ONE section
+  - Same class with multiple sections = multiple rows
+  - The import uses get_or_create, so duplicates are safely handled
+
+  --------------------------------------------------------------------------
+  3.2) staff - Staff / Employees
+  --------------------------------------------------------------------------
+  Target Model:  staff.Staff
+  Unique Field:  employee_id
+  
+  MANDATORY COLUMNS:
+    first_name     (STRING, max 100)
+    last_name      (STRING, max 100)
+    employee_id    (STRING, max 50)   - must be unique
+    joining_date   (DATE)             - DD-MM-YYYY
+    designation    (CHOICE)           - See values below
+
+  OPTIONAL COLUMNS:
+    middle_name, email, phone, alternate_phone, date_of_birth,
+    gender (MALE/FEMALE/OTHER), blood_group,
+    employment_type (PERMANENT/CONTRACT/TEMPORARY/PART_TIME),
+    department, address, city, state, postal_code,
+    aadhar_number, pan_number, salary, bank_account_number,
+    bank_name, bank_ifsc, emergency_contact_name,
+    emergency_contact_phone, experience_years
+
+  DESIGNATION VALUES:
+    PRINCIPAL, VICE_PRINCIPAL, HEAD_TEACHER, TEACHER, ASSISTANT_TEACHER,
+    LIBRARIAN, LAB_ASSISTANT, COUNSELOR, ACCOUNTANT, CLERK,
+    RECEPTIONIST, SECURITY, PEON, DRIVER, OTHER
+
+  --------------------------------------------------------------------------
+  3.3) subjects - Subjects
+  --------------------------------------------------------------------------
+  Target Model:  tenants.Subject + tenants.ClassSubject (auto-linked)
+  Unique Field:  subject_code
+  
+  MANDATORY COLUMNS:
+    subject_name   (STRING, max 100) - e.g., "Mathematics"
+    subject_code   (STRING, max 20)  - e.g., "MATH10" (must be unique)
+    class_name     (FK -> GradeLevel) - Class this subject belongs to
+
+  OPTIONAL COLUMNS:
+    credit_hours   (INTEGER)  - weekly teaching hours
+    is_elective    (BOOLEAN)  - true/false
+    max_marks      (INTEGER)  - e.g., 100
+
+  --------------------------------------------------------------------------
+  3.4) fee_structures - Fee Structures
+  --------------------------------------------------------------------------
+  Target Model:  fees.FeeCategory + fees.FeeStructure
+  Unique Field:  None
+  
+  MANDATORY COLUMNS:
+    fee_type       (STRING, max 100) - e.g., "Tuition Fee"
+    class_name     (FK -> GradeLevel)
+    amount         (DECIMAL)
+    frequency      (CHOICE: ONE_TIME/MONTHLY/TERM/QUARTERLY/HALF_YEARLY/YEARLY)
+
+  OPTIONAL COLUMNS:
+    due_day, is_mandatory, description, academic_year
+
+  --------------------------------------------------------------------------
+  3.5) students - Students
+  --------------------------------------------------------------------------
+  Target Model:  students.Student + students.StudentEnrollment (auto-created)
+  Unique Field:  admission_number
+  
+  MANDATORY COLUMNS:
+    first_name       (STRING, max 100)
+    admission_number (STRING, max 50)  - must be unique per tenant
+    date_of_birth    (DATE)            - DD-MM-YYYY
+    gender           (CHOICE: M/F/O)
+    father_name      (STRING, max 100)
+    mother_name      (STRING, max 100)
+    father_phone     (PHONE, 10 digits)
+
+  OPTIONAL COLUMNS:
+    middle_name, last_name, admission_date, email, phone,
+    address, blood_group, mother_phone, father_email, mother_email,
+    father_occupation, mother_occupation, guardian_name, guardian_phone,
+    guardian_relation, aadhar_number, pen_number, nationality, religion,
+    caste, class_name (FK), section_name (FK), roll_number,
+    previous_school_name, transfer_certificate_number, notes
+
+  NOTES:
+  - If class_name is provided, the student is auto-enrolled
+  - Parent portal accounts are auto-created from father/mother details
+
+  --------------------------------------------------------------------------
+  3.6) student_enrollments - Student Enrollments
+  --------------------------------------------------------------------------
+  Target Model:  students.StudentEnrollment
+  Unique Field:  None
+  
+  MANDATORY COLUMNS:
+    admission_number (FK -> Student)
+    class_name       (FK -> GradeLevel)
+    section_name     (FK -> Section)
+
+  OPTIONAL COLUMNS:
+    roll_number, enrollment_date, academic_year
+
+  --------------------------------------------------------------------------
+  3.7) fee_invoices - Fee Invoices
+  --------------------------------------------------------------------------
+  Target Model:  fees.FeeInvoice
+  Unique Field:  invoice_number
+  
+  MANDATORY COLUMNS:
+    invoice_number   (STRING, max 50)
+    admission_number (FK -> Student)
+    fee_type         (STRING)
+    amount           (DECIMAL)
+    due_date         (DATE)
+
+  OPTIONAL COLUMNS:
+    invoice_date, academic_year
+
+  --------------------------------------------------------------------------
+  3.8) fee_payments - Fee Payments
+  --------------------------------------------------------------------------
+  Target Model:  fees.FeeTransaction
+  Unique Field:  receipt_number
+  
+  MANDATORY COLUMNS:
+    receipt_number   (STRING, max 50)
+    invoice_number   (FK -> FeeInvoice)
+    amount_paid      (DECIMAL)
+    payment_date     (DATE)
+    payment_mode     (CHOICE: CASH/CHEQUE/ONLINE/BANK_TRANSFER/UPI/OTHER)
+
+  OPTIONAL COLUMNS:
+    remarks
+
+  --------------------------------------------------------------------------
+  3.9) attendance - Attendance Records
+  --------------------------------------------------------------------------
+  Target Model:  attendance.AttendanceRecord
+  Unique Field:  None
+  
+  MANDATORY COLUMNS:
+    admission_number (FK -> Student)
+    date             (DATE)
+    status           (CHOICE: PRESENT/ABSENT/LATE/HALF_DAY/LEAVE)
+
+  OPTIONAL COLUMNS:
+    remarks
+
+  --------------------------------------------------------------------------
+  3.10) exam_results - Exam Results
+  --------------------------------------------------------------------------
+  Target Model:  exams.ExamResult
+  Unique Field:  None
+  
+  MANDATORY COLUMNS:
+    admission_number (FK -> Student)
+    exam_name        (STRING)
+    subject_code     (STRING)
+    max_marks        (INTEGER)
+    marks_obtained   (DECIMAL)
+
+  OPTIONAL COLUMNS:
+    grade, exam_date, academic_year
+
+  --------------------------------------------------------------------------
+  3.11) user_accounts - User Accounts (Logins)
+  --------------------------------------------------------------------------
+  Target Model:  users.User
+  Unique Field:  email
+  
+  MANDATORY COLUMNS:
+    email        (EMAIL)
+    first_name   (STRING)
+    role         (CHOICE: PARENT/STAFF/TEACHER/STUDENT)
+
+  OPTIONAL COLUMNS:
+    password (auto-generated if empty), last_name,
+    admission_number (links to student), employee_id (links to staff)
+
+
+================================================================================
+  SECTION 4: STUDENT PHOTO UPLOAD MECHANISM
+================================================================================
+
+  4.1) HOW IT WORKS
+  --------------------------------------------------------------------------
+  The student photo system uses a special ZIP upload path that is separate
+  from the standard CSV/XLSX import flow.
+
+  When module = "student_photos" and file extension = ".zip":
+  - The ValidateDataView skips normal CSV parsing and calls _validate_photo_zip()
+  - The ImportDataView skips normal CSV parsing and calls _process_photo_zip()
+
+  4.2) EXPECTED FORMAT
+  --------------------------------------------------------------------------
+  - File: A .ZIP file containing student photo images
+  - Image Formats: .jpg, .jpeg, .png
+  - Naming Convention: Filename MUST be the student's admission_number
+    
+    Example ZIP contents:
+      student_photos.zip
+      ├── STU2024001.jpg
+      ├── STU2024002.jpg
+      ├── STU2024003.png
+      └── STU2024004.jpeg
+    
+  - Subdirectories inside the ZIP are also handled (last path component is used)
+  - System files (starting with '.') are ignored
+
+  4.3) MATCHING LOGIC (from _process_photo_zip)
+  --------------------------------------------------------------------------
+  For each image file in the ZIP:
+    1. Extract the filename: e.g., "STU2024001.jpg"
+    2. Strip extension to get admission_number: "STU2024001"
+    3. Look up: Student.objects.filter(tenant=tenant, admission_number="STU2024001", is_deleted=False)
+    4. If found: Save to student.photo field using ContentFile
+    5. If NOT found: Record error "Student STU2024001 not found"
+
+  4.4) STEP-BY-STEP USER FLOW
+  --------------------------------------------------------------------------
+  1. Navigate to Data Management page
+  2. Select "Student Photos" module
+  3. Select a .ZIP file containing photos named by admission number
+  4. Click "Validate" (system checks file validiy + matches students)
+  5. Review validation results (matched vs unmatched)
+  6. Click "Import" to apply photos to student records
+
+  4.5) GENERATING DUMMY PHOTOS
+  --------------------------------------------------------------------------
+  To generate dummy photos, create a Python script that:
+    1. Reads the student admission numbers from the generated CSV
+    2. Creates simple placeholder images (colored squares or avatar PNGs)
+    3. Saves them as {admission_number}.jpg
+    4. Packs all images into a ZIP file
+    
+  See the generate_dummy_data.py script for an automated implementation.
+
+
+================================================================================
+  SECTION 5: DEPENDENCY MAP (Foreign Key Graph)
+================================================================================
+
+  AcademicYear (manual/auto)
+       │
+       ├──> GradeLevel (classes template)
+       │        │
+       │        ├──> Section (classes template, same row)
+       │        │        │
+       │        │        ├──> StudentEnrollment (enrollments template)
+       │        │        └──> TimetableSlot (timetable template)
+       │        │
+       │        ├──> Subject (subjects template, via ClassSubject)
+       │        │        │
+       │        │        ├──> ExamResult (exam_results template)
+       │        │        ├──> ExamSchedule (exam_schedule template)
+       │        │        └──> TimetableSlot (timetable template)
+       │        │
+       │        └──> FeeStructure (fee_structures template)
+       │                  │
+       │                  └──> FeeAllocation (fee_allocations template)
+       │
+       ├──> Student (students template)
+       │        │
+       │        ├──> StudentEnrollment (auto-created or enrollments template)
+       │        ├──> FeeInvoice (fee_invoices template)
+       │        │        │
+       │        │        └──> FeeTransaction (fee_payments template)
+       │        │
+       │        ├──> AttendanceRecord (attendance template)
+       │        ├──> ExamResult (exam_results template)
+       │        ├──> StudentTransport (transport template)
+       │        ├──> HostelAllocation (hostel_allocations template)
+       │        ├──> BookIssue (library_transactions template)
+       │        ├──> CertificateRequest (certificates_issued template)
+       │        └──> ParentUser (auto-created during student import)
+       │
+       └──> Staff (staff template)
+                │
+                ├──> SalaryPayment (payroll_payments template)
+                ├──> TimetableSlot (timetable template) 
+                └──> User (user_accounts template)
+
+
+================================================================================
+  SECTION 6: VALIDATION RULES
+================================================================================
+
+  6.1) Built-in Validators (from utils.py)
+  --------------------------------------------------------------------------
+  - DateParser: Handles DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, Excel serial numbers
+  - PhoneValidator: Strips +91/0 prefix, validates 10-digit Indian mobile
+  - EmailValidator: Standard email format validation
+  - DataTransformer: Module-specific transformations (e.g., gender normalization)
+  - DataValidator: Module-specific row validation (students, staff, classes)
+
+  6.2) Import Flow Validation
+  --------------------------------------------------------------------------
+  Step 1: FileParser.parse() - Parse CSV/XLSX/XLS into dict rows
+  Step 2: DataTransformer - Normalize/clean data fields
+  Step 3: DataValidator - Validate required fields, formats, choices
+  Step 4: Duplicate check - Via unique_field against existing DB records
+  Step 5: If errors found -> Block import, return errors
+  Step 6: If only duplicates -> Require confirmation (skip/update)
+  Step 7: Process import row by row with savepoints
+
+  6.3) Error Handling
+  --------------------------------------------------------------------------
+  - Each row is processed in its own transaction savepoint
+  - A failing row does NOT rollback other successful rows
+  - All errors are collected and returned (limited to 50)
+  - IntegrityError handling with duplicate fallback logic
+
+
+================================================================================
+  SECTION 7: QUICK REFERENCE - MINIMUM VIABLE IMPORT
+================================================================================
+
+  For getting a school system up and running, the minimum uploads needed are:
+
+  1. classes.csv          -> Define grade levels and sections
+  2. staff.csv            -> Define teachers and staff
+  3. subjects.csv         -> Define subjects linked to grades
+  4. students.csv         -> Define students (with class/section for auto-enrollment)
+  5. fee_structures.csv   -> Define fee structures per grade
+  
+  That's it for basic setup! Everything else (attendance, exams, fees, etc.)
+  is supplementary transactional data.
+
+
+================================================================================
+  END OF ANALYSIS REPORT
+================================================================================
