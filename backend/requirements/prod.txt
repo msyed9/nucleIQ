@@ -13,7 +13,7 @@ djangorestframework-simplejwt==5.3.1
 django-allauth==65.3.0
 argon2-cffi==23.1.0
 cryptography==42.0.5
-setuptools  # Required for razorpay
+setuptools<81  # Pin <81: setuptools 82+ removed pkg_resources which razorpay needs
 
 # Celery & Background Tasks
 celery==5.4.0
