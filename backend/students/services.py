@@ -207,12 +207,11 @@ class Student360Service:
             enrollment = self.student.get_current_enrollment()
             academic_year = enrollment.academic_year if enrollment else None
             
+            # Query lifetime invoices to match KPI balances
             invoice_qs = FeeInvoice.objects.filter(
                 tenant=self.student.tenant,
                 student=self.student,
             )
-            if academic_year:
-                invoice_qs = invoice_qs.filter(academic_year=academic_year)
             
             totals = invoice_qs.aggregate(
                 total=Sum('total_amount'),
@@ -420,11 +419,10 @@ class Student360Service:
                 avg_discount=Avg('scholarship_percentage')
             )['avg_discount'] or 0
             
-            # Get invoices
+            # Get all invoices across all academic years to match overall KPI balance
             invoices = FeeInvoice.objects.filter(
                 tenant=self.student.tenant,
-                student=self.student,
-                academic_year=academic_year
+                student=self.student
             )
             
             total_amount = invoices.aggregate(
