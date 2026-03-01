@@ -7,7 +7,9 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm install --no-audit --no-fund --maxsockets 5 || \
+    (sleep 5 && npm install --no-audit --no-fund --maxsockets 5) || \
+    (sleep 10 && npm install --no-audit --no-fund --maxsockets 5)
 COPY frontend/ ./
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
