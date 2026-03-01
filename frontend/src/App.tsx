@@ -109,6 +109,7 @@ import OnlineExamination from './pages/exams/OnlineExamination';
 import NoticeBoard from './pages/communication/NoticeBoard';
 import MessageComposer from './pages/communication/MessageComposer';
 import LeadConversion from './pages/crm/LeadConversion';
+import OnlineAdmissionForm from './pages/crm/OnlineAdmissionForm';
 import PlacementApplication from './pages/placement/PlacementApplication';
 import PayrollDashboard from './pages/payroll/PayrollDashboard';
 import RouteOptimization from './pages/transport/RouteOptimization';
@@ -252,6 +253,7 @@ function App() {
                         {/* Public Routes - No authentication required */}
                         <Route path="/login" element={<Login />} />
                         <Route path="/parent/login" element={<ParentLogin />} />
+                        <Route path="/admissions/apply" element={<OnlineAdmissionForm />} />
                         <Route path="/" element={<Login />} />
 
                         {/* Protected Routes - Single PreferencesProvider wrapper */}

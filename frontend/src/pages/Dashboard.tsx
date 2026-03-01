@@ -251,7 +251,7 @@ export const Dashboard: React.FC = () => {
                         value={`₹${((stats.pending_fees || 0) / 100000).toFixed(1)}L`}
                         trend={{ value: 15, direction: 'up' }}
                         colorScheme="orange"
-                        onClick={() => navigate('/fees')}
+                        onClick={() => navigate('/fees/configure')}
                     />
                 </div>
             )}

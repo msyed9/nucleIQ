@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from rest_framework import serializers
+from users.login_tracking import record_login_activity
 
 from .models import ParentUser
 from .parent_portal import ParentPortalService
@@ -116,6 +117,9 @@ class ParentTokenObtainPairSerializer(TokenObtainPairSerializer):
             # Update last login
             parent_profile.last_login_at = timezone.now()
             parent_profile.save(update_fields=['last_login_at'])
+
+            request = self.context.get('request')
+            record_login_activity(self.user, request=request, login_method='parent_portal')
             
         except ParentUser.DoesNotExist:
             raise PermissionDenied(

@@ -14,7 +14,7 @@ from config.admin import admin_site
 
 from .models import (
     User, UserPreference, Role, Permission,
-    RolePermission, UserRole, ImpersonationLog
+    RolePermission, UserRole, ImpersonationLog, LoginActivityLog
 )
 
 
@@ -197,3 +197,54 @@ class RoleAdmin(admin.ModelAdmin):
 # - RolePermission
 # - UserRole
 # - ImpersonationLog
+
+
+@admin.register(LoginActivityLog, site=admin_site)
+class LoginActivityLogAdmin(admin.ModelAdmin):
+    """Admin interface for login activity logs."""
+
+    list_display = [
+        'login_at', 'email_snapshot', 'tenant', 'ip_address',
+        'city', 'region', 'country', 'login_method'
+    ]
+    list_filter = ['login_method', 'country', 'tenant', 'login_at']
+    search_fields = ['email_snapshot', 'ip_address', 'city', 'region', 'country', 'user__email']
+    readonly_fields = [
+        'user', 'tenant', 'email_snapshot', 'ip_address', 'forwarded_for',
+        'country', 'region', 'city', 'latitude', 'longitude', 'user_agent',
+        'login_method', 'login_at', 'created_at', 'updated_at'
+    ]
+    ordering = ['-login_at']
+
+    fieldsets = (
+        (_('Login Context'), {
+            'fields': ('user', 'tenant', 'email_snapshot', 'login_method', 'login_at')
+        }),
+        (_('Network'), {
+            'fields': ('ip_address', 'forwarded_for', 'user_agent')
+        }),
+        (_('Location'), {
+            'fields': ('country', 'region', 'city', 'latitude', 'longitude')
+        }),
+        (_('Audit'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related('user', 'tenant')
+        if request.user.is_platform_admin or request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'tenant') and request.user.tenant:
+            return qs.filter(tenant=request.user.tenant)
+        return qs.none()

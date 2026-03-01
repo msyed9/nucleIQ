@@ -30,7 +30,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
             return savedMode;
         }
-        return 'system';
+        return 'light';
     };
 
     const [themeMode, setThemeModeState] = useState<'light' | 'dark' | 'system'>(getInitialThemeMode);
@@ -44,7 +44,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     // Update theme mode when user preference loads (but only if not already set in localStorage)
     useEffect(() => {
-        if (userThemeMode && !localStorage.getItem('nucleiq_theme_mode')) {
+        if (userThemeMode && userThemeMode !== 'system' && !localStorage.getItem('nucleiq_theme_mode')) {
             setThemeModeState(userThemeMode);
         }
     }, [userThemeMode]);

@@ -651,3 +651,68 @@ class ImpersonationLog(BaseModel):
     
     def __str__(self):
         return f"{self.impersonator.email} -> {self.impersonated_user.email} ({self.started_at})"
+
+
+class LoginActivityLog(BaseModel):
+    """Tracks successful login events for audit and security visibility."""
+
+    LOGIN_METHOD_CHOICES = [
+        ('legacy_jwt', 'Legacy JWT Login'),
+        ('unified_login', 'Unified Login'),
+        ('parent_portal', 'Parent Portal Login'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='login_activities',
+        db_index=True,
+    )
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='login_activities',
+        db_index=True,
+    )
+    email_snapshot = models.EmailField(
+        blank=True,
+        help_text=_('User email at login time'),
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text=_('Client IP address'),
+    )
+    forwarded_for = models.TextField(
+        blank=True,
+        help_text=_('Raw X-Forwarded-For header if present'),
+    )
+    country = models.CharField(max_length=100, blank=True)
+    region = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    latitude = models.CharField(max_length=50, blank=True)
+    longitude = models.CharField(max_length=50, blank=True)
+    user_agent = models.TextField(blank=True)
+    login_method = models.CharField(
+        max_length=30,
+        choices=LOGIN_METHOD_CHOICES,
+        default='legacy_jwt',
+        db_index=True,
+    )
+    login_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'login_activity_logs'
+        verbose_name = _('Login Activity Log')
+        verbose_name_plural = _('Login Activity Logs')
+        ordering = ['-login_at']
+        indexes = [
+            models.Index(fields=['tenant', '-login_at']),
+            models.Index(fields=['user', '-login_at']),
+            models.Index(fields=['ip_address']),
+        ]
+
+    def __str__(self):
+        return f"{self.email_snapshot or self.user.email} @ {self.login_at}"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Docker Entrypoint Script for NucleiQ Backend
-# ==============================================
+# =============================================
 # This script handles automated startup tasks for the Django backend.
 # It should be used as the entrypoint in docker-compose.yml
 #

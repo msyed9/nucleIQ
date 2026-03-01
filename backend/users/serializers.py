@@ -18,6 +18,7 @@ from .utils import (
     clear_login_failures,
     verify_totp
 )
+from .login_tracking import record_login_activity
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -109,6 +110,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
             data['refresh'] = str(refresh_token)
             data['access'] = str(refresh_token.access_token)
+
+        request = self.context.get('request')
+        record_login_activity(user, request=request, login_method='legacy_jwt')
 
         return data
 
@@ -851,6 +855,9 @@ class UnifiedLoginSerializer(serializers.Serializer):
         
         # Store user for later use (e.g., updating last login)
         self._user = user
+
+        request = self.context.get('request')
+        record_login_activity(user, request=request, login_method='unified_login')
         
         return data
     
