@@ -23,12 +23,16 @@ class FeeStructureSerializer(serializers.ModelSerializer):
     """Serializer for Fee Structures."""
     
     category_name = serializers.CharField(source='category.name', read_only=True)
+    # class_level is a CharField on the model, so it's already the name
+    class_level_name = serializers.CharField(source='class_level', read_only=True)
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
     
     class Meta:
         model = FeeStructure
         fields = [
             'id', 'tenant', 'academic_year', 'class_level', 'category',
-            'category_name', 'amount', 'annual_amount', 'frequency', 'due_day',
+            'category_name', 'class_level_name', 'academic_year_name',
+            'amount', 'annual_amount', 'frequency', 'due_day',
             'number_of_terms', 'term_months', 'installment_amounts',
             'is_mandatory', 'is_active', 'created_at', 'updated_at'
         ]

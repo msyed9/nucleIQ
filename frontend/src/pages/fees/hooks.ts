@@ -294,7 +294,7 @@ export function useFeeData() {
 
     const fetchGradeLevels = useCallback(async () => {
         try {
-            const response = await api.get('/academics/grade-levels/');
+            const response = await api.get('/tenants/grades/');
             setData(prev => ({ ...prev, gradeLevels: response.data.results || response.data }));
         } catch (error) {
             console.error('Failed to fetch grade levels:', error);
@@ -303,7 +303,7 @@ export function useFeeData() {
 
     const fetchAcademicYears = useCallback(async () => {
         try {
-            const response = await api.get('/academics/academic-years/');
+            const response = await api.get('/tenants/years/');
             setData(prev => ({ ...prev, academicYears: response.data.results || response.data }));
         } catch (error) {
             console.error('Failed to fetch academic years:', error);

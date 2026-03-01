@@ -37,7 +37,7 @@ from students.models import Student, StudentEnrollment, ParentUser
 from staff.models import Staff
 from users.models import User
 from tenants.models import GradeLevel, Section, Subject, AcademicYear, Department, ClassSubject
-from fees.models import FeeCategory, FeeStructure, FeeAllocation
+from fees.models import FeeCategory, FeeStructure, FeeAllocation, FeeInvoice
 from attendance.models import AttendanceRecord
 from decimal import Decimal, InvalidOperation
 from transport.models import Route, Stop, StudentTransport
@@ -1837,6 +1837,7 @@ class ImportDataView(APIView):
             'students': Student,
             'staff': Staff,
             'subjects': Subject,
+            'fee_invoices': FeeInvoice,
         }
         model = models.get(module)
         if model:
@@ -1915,6 +1916,7 @@ class ImportDataView(APIView):
             'subjects': self._create_subject,
             'fee_structures': self._create_fee_structure,
             'fee_allocations': self._create_fee_allocation,
+            'fee_invoices': self._create_fee_invoice,
             'fee_payments': self._create_fee_payment,
             'student_enrollments': self._create_enrollment,
             'parents': self._update_parent,
@@ -2012,6 +2014,93 @@ class ImportDataView(APIView):
             logger.warning(f"Failed to ensure parent accounts for student {student.id}: {e}")
         
         return student
+
+    def _create_fee_invoice(self, data, tenant):
+        """Create a fee invoice record from imported data."""
+        invoice_number = data.get('invoice_number') or data.get('invoice_no') or data.get('bill_no')
+        admission_number = data.get('admission_number') or data.get('student_id')
+        fee_type = data.get('fee_type') or data.get('category')
+        amount = data.get('amount')
+        due_date = DateParser.parse(data.get('due_date'))
+        invoice_date = DateParser.parse(data.get('invoice_date')) or due_date or date.today()
+        academic_year_name = data.get('academic_year')
+        remarks = data.get('remarks') or ''
+
+        if not invoice_number:
+            raise ValueError('Invoice number is required')
+        if not admission_number:
+            raise ValueError('Admission number is required')
+
+        # Look up student
+        student = Student.objects.filter(
+            tenant=tenant,
+            admission_number__iexact=str(admission_number).strip(),
+            is_deleted=False
+        ).first()
+        if not student:
+            raise ValueError(f"Student '{admission_number}' not found")
+
+        # Resolve academic year
+        academic_year = self._get_academic_year(tenant, academic_year_name)
+        if not academic_year:
+            raise ValueError(f"Academic year not found (tried: {academic_year_name or 'active year'})")
+
+        # Parse amount
+        try:
+            total_amount = Decimal(str(amount).strip()) if amount is not None and str(amount).strip() != '' else Decimal('0.00')
+        except Exception:
+            try:
+                total_amount = Decimal(float(amount))
+            except Exception:
+                total_amount = Decimal('0.00')
+
+        # Set due_date default
+        if not due_date:
+            due_date = date.today()
+
+        # Create the invoice
+        invoice = FeeInvoice.objects.create(
+            tenant=tenant,
+            student=student,
+            invoice_number=str(invoice_number).strip(),
+            academic_year=academic_year,
+            invoice_date=invoice_date if isinstance(invoice_date, date) else date.today(),
+            due_date=due_date if isinstance(due_date, date) else date.today(),
+            total_amount=total_amount,
+            paid_amount=Decimal('0.00'),
+            balance_amount=total_amount,
+            status='PENDING',
+            remarks=remarks
+        )
+
+        # Optionally create an invoice item if fee_type is provided
+        if fee_type:
+            from fees.models import FeeInvoiceItem
+            # Try to find a matching fee allocation for this student and fee type
+            fee_category = FeeCategory.objects.filter(
+                tenant=tenant,
+                name__iexact=str(fee_type).strip()
+            ).first()
+
+            # Find allocation for this student with matching category
+            allocation = None
+            if fee_category:
+                allocation = FeeAllocation.objects.filter(
+                    tenant=tenant,
+                    student=student,
+                    fee_structure__category=fee_category,
+                    is_active=True
+                ).first()
+
+            if allocation:
+                FeeInvoiceItem.objects.create(
+                    invoice=invoice,
+                    fee_allocation=allocation,
+                    description=str(fee_type).strip(),
+                    amount=total_amount
+                )
+
+        return invoice
 
     def _create_fee_payment(self, data, tenant):
         """Create a fee payment transaction linked to an existing invoice."""
