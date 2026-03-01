@@ -62,12 +62,12 @@ class StudentBasicSerializer(serializers.ModelSerializer):
             allocations = FeeAllocation.objects.filter(
                 tenant=obj.tenant,
                 student=obj,
-                academic_year=academic_year,
+                fee_structure__academic_year=academic_year,
                 is_active=True
             )
             
             discount_amount = sum(
-                allocation.amount - allocation.get_final_amount()
+                float(allocation.fee_structure.amount) - float(allocation.get_final_amount())
                 for allocation in allocations
             ) if allocations.exists() else 0
             

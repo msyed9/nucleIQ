@@ -359,6 +359,65 @@ class StudentViewSet(viewsets.ModelViewSet):
         return response
 
     @action(detail=True, methods=['get'])
+    def remarks(self, request, pk=None):
+        """Get all remarks for a student."""
+        student = self.get_object()
+        remarks = StudentRemark.objects.filter(student=student).order_by('-created_at')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            remarks = remarks.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                remarks = remarks.filter(academic_year=active_year)
+
+        remark_type = request.query_params.get('type')
+        if remark_type:
+            remarks = remarks.filter(remark_type=remark_type)
+
+        category = request.query_params.get('category')
+        if category:
+            remarks = remarks.filter(category=category)
+
+        serializer = StudentRemarkSerializer(remarks, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def documents(self, request, pk=None):
+        """Get all documents for a student."""
+        student = self.get_object()
+        documents = StudentDocument.objects.filter(student=student).order_by('-created_at')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            documents = documents.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                documents = documents.filter(academic_year=active_year)
+
+        serializer = StudentDocumentSerializer(documents, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def health_records(self, request, pk=None):
+        """Get health records for a student."""
+        student = self.get_object()
+        records = StudentHealthRecord.objects.filter(student=student).order_by('-date')
+
+        academic_year_id = request.query_params.get('academic_year')
+        if academic_year_id:
+            records = records.filter(academic_year_id=academic_year_id)
+        else:
+            active_year = _get_active_academic_year(request.user.tenant)
+            if active_year:
+                records = records.filter(academic_year=active_year)
+
+        serializer = StudentHealthRecordSerializer(records, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
     def profile_360(self, request, pk=None):
         """
         Get complete 360° profile for a student.

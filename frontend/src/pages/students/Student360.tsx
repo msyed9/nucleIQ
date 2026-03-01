@@ -54,6 +54,10 @@ const Student360: React.FC = () => {
     const [data, setData] = useState<StudentProfileData | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('attendance');
+    const [documents, setDocuments] = useState<any[]>([]);
+    const [documentsLoading, setDocumentsLoading] = useState(false);
+    const [remarks, setRemarks] = useState<any[]>([]);
+    const [remarksLoading, setRemarksLoading] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -69,6 +73,43 @@ const Student360: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Fetch documents when documents tab is active
+    useEffect(() => {
+        if (activeTab === 'documents' && id && documents.length === 0) {
+            const fetchDocuments = async () => {
+                setDocumentsLoading(true);
+                try {
+                    const response = await api.get(`/students/students/${id}/documents/`);
+                    setDocuments(response.data);
+                } catch (error) {
+                    console.error('Error fetching documents:', error);
+                } finally {
+                    setDocumentsLoading(false);
+                }
+            };
+            fetchDocuments();
+        }
+    }, [activeTab, id]);
+
+    // Fetch remarks when remarks tab is active
+    useEffect(() => {
+        if (activeTab === 'remarks' && id && remarks.length === 0) {
+            const fetchRemarks = async () => {
+                setRemarksLoading(true);
+                try {
+                    const response = await api.get(`/students/students/${id}/remarks/`);
+                    setRemarks(response.data);
+                } catch (error) {
+                    console.error('Error fetching remarks:', error);
+                    // Fallback to recent_activity from profile data
+                } finally {
+                    setRemarksLoading(false);
+                }
+            };
+            fetchRemarks();
+        }
+    }, [activeTab, id]);
 
     if (loading) {
         return <Loading fullScreen text={t('loading.profile', { defaultValue: 'Loading 360° Profile...' })} />;
@@ -94,7 +135,7 @@ const Student360: React.FC = () => {
         );
     }
 
-    const { student, kpis, recent_activity, health_summary, attendance_details, fee_details } = data;
+    const { student, kpis, recent_activity, health_summary, attendance_details, fee_details, academic_summary, financial_summary } = data;
 
     const tabs = [
         { id: 'attendance' as TabType, label: t('student.attendance', { defaultValue: 'Attendance' }), icon: CheckCircle },
@@ -811,9 +852,105 @@ const Student360: React.FC = () => {
                             header={<h3 style={{ margin: 0 }}>Academic Performance</h3>}
                             padding="lg"
                         >
-                            <p style={{ color: 'var(--color-text-secondary)' }}>
-                                Academic performance data will be displayed here.
-                            </p>
+                            {academic_summary ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {/* Academic Stats Grid */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                                        gap: '1rem'
+                                    }}>
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-primary-700)'
+                                            }}>
+                                                {academic_summary.subjects_count || 0}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Subjects
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(76, 175, 80, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-success)'
+                                            }}>
+                                                {academic_summary.average_score ?? 'N/A'}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Avg Score
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(33, 150, 243, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '2rem',
+                                                fontWeight: 700,
+                                                color: 'var(--color-info)'
+                                            }}>
+                                                {academic_summary.attendance_percentage || 0}%
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-text-secondary)',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                Attendance
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Academic Performance Note */}
+                                    {academic_summary.average_score === null && (
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(255, 193, 7, 0.1)',
+                                            borderRadius: 'var(--radius-md)',
+                                            borderLeft: '4px solid var(--color-warning)'
+                                        }}>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-warning)',
+                                                fontWeight: 500
+                                            }}>
+                                                ℹ️ No exam scores recorded yet for the current academic year.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)' }}>
+                                    No academic data available.
+                                </p>
+                            )}
                         </Card>
                     )}
 
@@ -842,9 +979,79 @@ const Student360: React.FC = () => {
                             header={<h3 style={{ margin: 0 }}>Documents</h3>}
                             padding="lg"
                         >
-                            <p style={{ color: 'var(--color-text-secondary)' }}>
-                                Student documents will be displayed here.
-                            </p>
+                            {documentsLoading ? (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    Loading documents...
+                                </p>
+                            ) : documents.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {documents.map((doc: any) => (
+                                        <div
+                                            key={doc.id}
+                                            style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-bg-secondary)',
+                                                borderRadius: 'var(--radius-md)',
+                                                borderLeft: '4px solid var(--color-primary-500)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{
+                                                    fontWeight: 600,
+                                                    fontSize: '0.9375rem',
+                                                    color: 'var(--color-text-primary)',
+                                                    marginBottom: '0.25rem'
+                                                }}>
+                                                    <FileText size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                                                    {doc.title || doc.document_type || 'Document'}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--color-text-tertiary)'
+                                                }}>
+                                                    {doc.document_type && <span style={{ marginRight: '1rem' }}>Type: {doc.document_type}</span>}
+                                                    {doc.uploaded_at && <span>Uploaded: {formatDate(doc.uploaded_at || doc.created_at)}</span>}
+                                                </div>
+                                                {doc.description && (
+                                                    <p style={{
+                                                        fontSize: '0.8125rem',
+                                                        color: 'var(--color-text-secondary)',
+                                                        margin: '0.5rem 0 0 0'
+                                                    }}>
+                                                        {doc.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            {doc.file && (
+                                                <a
+                                                    href={doc.file}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        padding: '0.5rem 1rem',
+                                                        background: 'var(--color-primary-50)',
+                                                        color: 'var(--color-primary-700)',
+                                                        borderRadius: 'var(--radius-base)',
+                                                        fontSize: '0.8125rem',
+                                                        fontWeight: 600,
+                                                        textDecoration: 'none',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    No documents uploaded for this student.
+                                </p>
+                            )}
                         </Card>
                     )}
 
@@ -853,9 +1060,13 @@ const Student360: React.FC = () => {
                             header={<h3 style={{ margin: 0 }}>Student Remarks</h3>}
                             padding="lg"
                         >
-                            {recent_activity && recent_activity.length > 0 ? (
+                            {remarksLoading ? (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    Loading remarks...
+                                </p>
+                            ) : (remarks.length > 0 || (recent_activity && recent_activity.length > 0)) ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {recent_activity.map((remark: any) => (
+                                    {(remarks.length > 0 ? remarks : recent_activity).map((remark: any) => (
                                         <div
                                             key={remark.id}
                                             style={{

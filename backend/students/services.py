@@ -161,22 +161,88 @@ class Student360Service:
     
     def _get_academic_summary(self):
         """Get academic performance summary."""
-        # This would query exam/grade models
+        enrollment = self.student.get_current_enrollment()
+        subjects_count = 0
+        average_score = None
+        
+        if enrollment:
+            # Try to get subject count from the grade level
+            try:
+                from tenants.models import Subject
+                subjects_count = Subject.objects.filter(
+                    tenant=self.student.tenant,
+                    grade_levels=enrollment.section.grade_level,
+                    is_active=True
+                ).count()
+            except Exception:
+                subjects_count = 0
+            
+            # Try to get exam scores/average
+            try:
+                from exams.models import ExamScore
+                scores = ExamScore.objects.filter(
+                    student=self.student,
+                    exam__academic_year=enrollment.academic_year
+                )
+                avg = scores.aggregate(avg=Avg('marks_obtained'))['avg']
+                if avg is not None:
+                    average_score = round(float(avg), 2)
+            except Exception:
+                average_score = None
+        
         return {
-            'current_gpa': 0.0,  # Placeholder
-            'rank_in_class': 0,  # Placeholder
-            'subjects_count': 0,  # Placeholder
+            'current_gpa': 0.0,
+            'rank_in_class': 0,
+            'subjects_count': subjects_count,
             'attendance_percentage': self._get_attendance_percentage(),
+            'average_score': average_score,
         }
     
     def _get_financial_summary(self):
         """Get financial summary."""
-        return {
-            'total_fees': 0.0,  # Placeholder
-            'paid': 0.0,  # Placeholder
-            'pending': self._get_fee_balance(),
-            'last_payment_date': None,  # Placeholder
-        }
+        try:
+            from fees.models import FeeInvoice, FeeTransaction
+            from django.db.models import Sum, Max
+            
+            enrollment = self.student.get_current_enrollment()
+            academic_year = enrollment.academic_year if enrollment else None
+            
+            invoice_qs = FeeInvoice.objects.filter(
+                tenant=self.student.tenant,
+                student=self.student,
+            )
+            if academic_year:
+                invoice_qs = invoice_qs.filter(academic_year=academic_year)
+            
+            totals = invoice_qs.aggregate(
+                total=Sum('total_amount'),
+                paid=Sum('paid_amount'),
+            )
+            
+            total_fees = float(totals['total'] or 0)
+            paid = float(totals['paid'] or 0)
+            pending = total_fees - paid
+            
+            # Get last payment date
+            last_payment = FeeTransaction.objects.filter(
+                tenant=self.student.tenant,
+                invoice__student=self.student,
+            ).order_by('-transaction_date').values_list('transaction_date', flat=True).first()
+            
+            return {
+                'total_fees': total_fees,
+                'paid': paid,
+                'pending': pending,
+                'last_payment_date': last_payment.isoformat() if last_payment else None,
+            }
+        except Exception as e:
+            print(f"Error getting financial summary: {e}")
+            return {
+                'total_fees': 0.0,
+                'paid': 0.0,
+                'pending': self._get_fee_balance(),
+                'last_payment_date': None,
+            }
     
     def _get_health_summary(self):
         """Get health summary."""
@@ -339,7 +405,7 @@ class Student360Service:
             allocations = FeeAllocation.objects.filter(
                 tenant=self.student.tenant,
                 student=self.student,
-                academic_year=academic_year,
+                fee_structure__academic_year=academic_year,
                 is_active=True
             )
             
@@ -351,7 +417,7 @@ class Student360Service:
             
             # Get discount percentage (average of all allocations)
             discount_pct = allocations.aggregate(
-                avg_discount=Sum('discount_percentage')
+                avg_discount=Avg('scholarship_percentage')
             )['avg_discount'] or 0
             
             # Get invoices
@@ -377,7 +443,7 @@ class Student360Service:
             
             # Calculate discount amount
             discount_amount = sum(
-                allocation.amount - allocation.get_final_amount()
+                float(allocation.fee_structure.amount) - float(allocation.get_final_amount())
                 for allocation in allocations
             )
             
