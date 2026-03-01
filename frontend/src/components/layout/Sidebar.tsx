@@ -228,6 +228,7 @@ const menuItems: MenuItem[] = [
         label: 'Growth',
         children: [
             { path: '/crm', iconKey: 'trendingUp', labelKey: 'nav.crm', label: 'Lead Board', moduleKey: 'crm' },
+            { path: '/admissions/apply', iconKey: 'userPlus', labelKey: 'nav.online_admission', label: 'Online Admission' },
             { path: '/crm/conversion', iconKey: 'userPlus', labelKey: 'nav.lead_conversion', label: 'Lead Conversion', moduleKey: 'crm' },
             { path: '/crm/followups', iconKey: 'calendar', labelKey: 'nav.followups', label: 'Follow-ups', moduleKey: 'crm' },
             { path: '/alumni/directory', iconKey: 'users', labelKey: 'nav.alumni_directory', label: 'Alumni Directory', moduleKey: 'alumni' },
