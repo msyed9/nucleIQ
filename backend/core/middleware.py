@@ -362,9 +362,21 @@ class ApiVersionRoutingMiddleware(MiddlewareMixin):
 
         if tenant:
             try:
-                from tenants.models import TenantSettings
-                tenant_settings, _ = TenantSettings.objects.get_or_create(tenant=tenant)
-                module_versions = tenant_settings.api_module_versions or {}
+                # Use Django cache to avoid DB hit on every API request
+                from django.core.cache import cache as django_cache
+                cache_key = f"tenant_api_settings_{tenant.id}"
+                cached_settings = django_cache.get(cache_key)
+
+                if cached_settings is None:
+                    from tenants.models import TenantSettings
+                    tenant_settings, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+                    cached_settings = {
+                        'module_versions': tenant_settings.api_module_versions or {},
+                        'default_version': tenant_settings.api_default_version,
+                    }
+                    django_cache.set(cache_key, cached_settings, 300)  # Cache for 5 minutes
+
+                module_versions = cached_settings['module_versions']
 
                 module_version = None
                 if module_key:
@@ -375,7 +387,7 @@ class ApiVersionRoutingMiddleware(MiddlewareMixin):
 
                 resolved_version = (
                     module_version or
-                    tenant_settings.api_default_version or
+                    cached_settings['default_version'] or
                     default_version
                 )
             except Exception:
@@ -388,9 +400,10 @@ class ApiVersionRoutingMiddleware(MiddlewareMixin):
         request.path_info = new_path
         request.META['PATH_INFO'] = new_path
         request.resolved_api_version = resolved_version
-        logger.info(
+        logger.debug(
             "API version resolved: %s (module=%s, path=%s)",
             resolved_version,
             module_key or first_segment,
             path
         )
+

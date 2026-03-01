@@ -190,12 +190,30 @@ const AnalyticsDashboard: React.FC = () => {
     const fetchAlertData = async () => {
         try {
             setAlertsRefreshing(true);
-            const [rulesResponse, eventsResponse] = await Promise.all([
-                api.get('/analytics/alert-rules/'),
-                api.get('/analytics/alert-events/', { params: { status: 'OPEN' } })
-            ]);
-            setAlertRules(rulesResponse.data.results || rulesResponse.data);
-            setAlertEvents(eventsResponse.data.results || eventsResponse.data);
+
+            // Fetch alert rules and events independently so one failure doesn't break both
+            let rules: any[] = [];
+            let events: any[] = [];
+
+            try {
+                const rulesResponse = await api.get('/analytics/alert-rules/');
+                rules = rulesResponse.data.results || rulesResponse.data;
+            } catch (err: any) {
+                if (err.response?.status !== 403) {
+                    console.error('Failed to load alert rules:', err);
+                }
+                // Non-admin users may not have access; degrade gracefully
+            }
+
+            try {
+                const eventsResponse = await api.get('/analytics/alert-events/', { params: { status: 'OPEN' } });
+                events = eventsResponse.data.results || eventsResponse.data;
+            } catch (err: any) {
+                console.error('Failed to load alert events:', err);
+            }
+
+            setAlertRules(rules);
+            setAlertEvents(events);
         } catch (error) {
             console.error('Failed to load alerts:', error);
         } finally {

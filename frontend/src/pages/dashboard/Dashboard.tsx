@@ -46,15 +46,21 @@ const Dashboard: React.FC = () => {
         try {
             setLoading(true);
             const response = await api.get('/dashboard/analytics/stats/');
-            setStats(response.data);
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to load dashboard');
-            // Mock data for development
+            const data = response.data;
             setStats({
-                total_students: 1234,
-                total_staff: 56,
-                pending_fees: 125000,
-                today_attendance: 95,
+                total_students: data.total_students ?? 0,
+                total_staff: data.total_staff ?? 0,
+                pending_fees: data.pending_fees ?? 0,
+                today_attendance: data.today_attendance ?? data.today_attendance_rate ?? 0,
+            });
+        } catch (err: any) {
+            console.error('Failed to load dashboard stats:', err.response?.status, err.response?.data);
+            setError(err.response?.data?.message || 'Failed to load dashboard');
+            setStats({
+                total_students: 0,
+                total_staff: 0,
+                pending_fees: 0,
+                today_attendance: 0,
             });
         } finally {
             setLoading(false);
@@ -68,8 +74,12 @@ const Dashboard: React.FC = () => {
                 pending_count: response.data.pending_count || 0,
                 academic_year: response.data.academic_year
             });
-        } catch (err) {
-            console.error('Failed to fetch pending enrollments', err);
+        } catch (err: any) {
+            console.error(
+                'Failed to fetch pending enrollments:',
+                err.response?.status,
+                err.response?.data?.error || err.response?.data?.detail || err.message
+            );
             setPendingEnrollments({ pending_count: 0 });
         }
     };

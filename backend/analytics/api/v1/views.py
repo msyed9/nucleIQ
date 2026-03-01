@@ -16,7 +16,12 @@ class AlertRuleViewSet(viewsets.ModelViewSet):
 	"""CRUD for tenant analytics alert rules."""
 
 	serializer_class = AlertRuleSerializer
-	permission_classes = [IsAuthenticated, IsTenantAdmin]
+
+	def get_permissions(self):
+		"""Allow read operations for all tenant users, write operations for admins only."""
+		if self.action in ['list', 'retrieve']:
+			return [IsAuthenticated(), IsTenantUser()]
+		return [IsAuthenticated(), IsTenantAdmin()]
 
 	def get_queryset(self):
 		return AlertRule.objects.filter(tenant=self.request.user.tenant)

@@ -50,12 +50,14 @@ class AnalyticsService:
                 next_week = today + timedelta(days=7)
                 thirty_days_ago = today - timedelta(days=30)
 
+                attendance_rate = overview.get('attendance_rate', 0)
                 stats = {
                     'total_students': overview.get('total_students', 0),
                     'total_staff': overview.get('total_staff', 0),
                     'active_classes': Section.objects.filter(tenant=self.tenant, is_active=True).count(),
                     'pending_fees': overview.get('pending_fees', 0),
-                    'today_attendance_rate': overview.get('attendance_rate', 0),
+                    'today_attendance': attendance_rate,
+                    'today_attendance_rate': attendance_rate,
                     'upcoming_exams': ExamSchedule.objects.filter(
                         tenant=self.tenant,
                         exam_date__gte=today,
@@ -75,6 +77,7 @@ class AnalyticsService:
                     'total_staff': 0,
                     'active_classes': 0,
                     'pending_fees': 0,
+                    'today_attendance': 0.0,
                     'today_attendance_rate': 0.0,
                     'upcoming_exams': 0,
                     'recent_admissions': 0,

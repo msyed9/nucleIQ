@@ -47,7 +47,13 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = AttendanceRecord.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related('student', 'staff', 'academic_year', 'student__enrollments')
+        ).select_related(
+            'student', 'staff', 'academic_year'
+        ).prefetch_related(
+            'student__enrollments',
+            'student__enrollments__section',
+            'student__enrollments__section__grade_level'
+        )
         
         # Additional filtering by class and section
         class_name = self.request.query_params.get('class_name')
