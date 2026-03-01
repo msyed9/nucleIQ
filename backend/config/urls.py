@@ -202,6 +202,11 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # In production without GCS, serve media via Django as fallback
+    # (nginx will try local files first, then proxy to Django)
+    if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     
     # Debug toolbar
     if 'debug_toolbar' in settings.INSTALLED_APPS:

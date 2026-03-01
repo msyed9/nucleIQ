@@ -1,4 +1,4 @@
-﻿"""
+"""
 Student 360Â° API Views
 """
 
@@ -633,7 +633,7 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
         class_stats = StudentEnrollment.objects.filter(
             student__tenant=request.user.tenant,
             student__is_active=True,
-            is_current=True
+            status='ACTIVE'
         ).values(
             class_name=models.F('section__grade_level__name')
         ).annotate(count=Count('student', distinct=True)).order_by('class_name')
@@ -948,7 +948,7 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
                     
                     if current_enrollment:
                         # End current enrollment
-                        current_enrollment.is_current = False
+                        current_enrollment.status = 'COMPLETED'
                         current_enrollment.end_date = timezone.now().date()
                         current_enrollment.save()
                     
@@ -980,7 +980,6 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
                             academic_year=target_year,
                             section=new_enrollment_section,
                             enrollment_date=timezone.now().date(),
-                            is_current=True,
                             status='ACTIVE'
                         )
                     

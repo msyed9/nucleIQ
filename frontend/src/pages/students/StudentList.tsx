@@ -68,25 +68,39 @@ const StudentList: React.FC = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 
+    // Ref to track if URL update should be skipped (to prevent infinite loop)
+    const isUpdatingUrl = React.useRef(false);
+
     useEffect(() => {
         fetchStudents();
         fetchSections();
-    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder, page, pageSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    // Keep URL in sync with current filters so navigation preserves state
     useEffect(() => {
-        const params: any = {};
+        // Skip if this is the initial mount (handled above)
+        if (isUpdatingUrl.current) {
+            isUpdatingUrl.current = false;
+            return;
+        }
+
+        fetchStudents();
+
+        // Sync URL params — use replace to avoid polluting browser history
+        const params: Record<string, string> = {};
         if (searchTerm) params.search = searchTerm;
         if (sectionFilter) params.section = sectionFilter;
         if (genderFilter) params.gender = genderFilter;
         if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
         if (sortBy) params.sort = sortBy;
         if (sortOrder) params.order = sortOrder;
-        if (page) params.page = String(page);
-        if (pageSize) params.page_size = pageSize === 'all' ? 'all' : String(pageSize);
+        if (page > 1) params.page = String(page);
+        if (pageSize !== 25) params.page_size = pageSize === 'all' ? 'all' : String(pageSize);
 
+        isUpdatingUrl.current = true;
         setSearchParams(params, { replace: true });
-    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder, page, pageSize, setSearchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchTerm, sectionFilter, genderFilter, statusFilter, sortBy, sortOrder, page, pageSize]);
 
     const fetchStudents = async () => {
         try {

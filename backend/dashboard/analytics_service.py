@@ -592,10 +592,19 @@ class AnalyticsService:
         try:
             return AcademicYear.objects.get(
                 tenant=self.tenant,
-                is_current=True
+                is_active=True
             )
         except AcademicYear.DoesNotExist:
-            return None
+            # Fallback: get most recent academic year
+            return AcademicYear.objects.filter(
+                tenant=self.tenant
+            ).order_by('-start_date').first()
+        except AcademicYear.MultipleObjectsReturned:
+            # If multiple active years, get the latest one
+            return AcademicYear.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).order_by('-start_date').first()
 
 
 class SuperAdminAnalytics:
