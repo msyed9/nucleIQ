@@ -47,7 +47,7 @@ const FeeConfigurationRefactored: React.FC = () => {
     // Initial Data Fetch
     useEffect(() => {
         data.fetchAll();
-    }, [data]);
+    }, [data.fetchAll]);
 
     // Category Handlers
     const handleAddCategory = () => {
@@ -123,10 +123,10 @@ const FeeConfigurationRefactored: React.FC = () => {
 
     // Tabs Configuration
     const tabs = [
-        { id: 'categories', label: t('fees.categories'), icon: <Layers size={18} /> },
-        { id: 'structures', label: t('fees.structures'), icon: <Settings size={18} /> },
-        { id: 'allocations', label: t('fees.allocations'), icon: <UserPlus size={18} /> },
-        { id: 'discounts', label: t('fees.discounts'), icon: <Percent size={18} /> },
+        { id: 'categories', label: t('fees.categories', { defaultValue: 'Categories' }), icon: <Layers size={18} /> },
+        { id: 'structures', label: t('fees.structures', { defaultValue: 'Structures' }), icon: <Settings size={18} /> },
+        { id: 'allocations', label: t('fees.allocations', { defaultValue: 'Allocations' }), icon: <UserPlus size={18} /> },
+        { id: 'discounts', label: t('fees.discounts', { defaultValue: 'Discounts' }), icon: <Percent size={18} /> },
     ];
 
     if (data.loading && data.categories.length === 0) {
@@ -141,7 +141,7 @@ const FeeConfigurationRefactored: React.FC = () => {
                 icon={<Settings size={32} />}
                 actions={[
                     <button key="refresh" className="btn btn-outline" onClick={() => data.fetchAll()}>
-                        <RefreshCw size={16} /> {t('common.refresh')}
+                        <RefreshCw size={16} /> {t('common.refresh', { defaultValue: 'Refresh' })}
                     </button>
                 ]}
             />
@@ -183,18 +183,82 @@ const FeeConfigurationRefactored: React.FC = () => {
                     )}
 
                     {activeTab === 'allocations' && (
-                        <div className="empty-state py-12">
-                            <UserPlus size={48} className="text-muted mb-4" />
-                            <h3>{t('fees.allocationRefactoringInProgress', 'Allocations refactoring in progress')}</h3>
-                            <p className="text-muted">{t('fees.allocationsDescription', 'Manage student-specific fee allocations and variations')}</p>
+                        <div>
+                            {data.loading ? (
+                                <LoadingSpinner text={t('common.loading', { defaultValue: 'Loading...' })} />
+                            ) : data.allocations.length === 0 ? (
+                                <div className="empty-state py-12">
+                                    <UserPlus size={48} className="text-muted mb-4" />
+                                    <h3>{t('fees.noAllocations', { defaultValue: 'No fee allocations found' })}</h3>
+                                    <p className="text-muted">
+                                        {t('fees.allocationsDescription', { defaultValue: 'Manage student-specific fee allocations and variations' })}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('fees.student', { defaultValue: 'Student' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('fees.category', { defaultValue: 'Category' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('fees.class', { defaultValue: 'Class' })}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('fees.finalAmount', { defaultValue: 'Final Amount' })}</th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('fees.discount', { defaultValue: 'Discount' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.status', { defaultValue: 'Status' })}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {data.allocations.map((allocation) => (
+                                                <tr key={allocation.id}>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{allocation.student_name}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{allocation.category_name}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{allocation.class_level_name || '-'}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-right">₹{Number(allocation.final_amount || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-right">₹{Number(allocation.discount_amount || 0).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{allocation.is_active ? t('common.active', { defaultValue: 'Active' }) : t('common.inactive', { defaultValue: 'Inactive' })}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {activeTab === 'discounts' && (
-                        <div className="empty-state py-12">
-                            <Percent size={48} className="text-muted mb-4" />
-                            <h3>{t('fees.discountRefactoringInProgress', 'Discounts refactoring in progress')}</h3>
-                            <p className="text-muted">{t('fees.discountsDescription', 'Configure sibling discounts and scholarship rules')}</p>
+                        <div>
+                            {data.loading ? (
+                                <LoadingSpinner text={t('common.loading', { defaultValue: 'Loading...' })} />
+                            ) : data.discounts.length === 0 ? (
+                                <div className="empty-state py-12">
+                                    <Percent size={48} className="text-muted mb-4" />
+                                    <h3>{t('fees.noDiscounts', { defaultValue: 'No sibling discounts found' })}</h3>
+                                    <p className="text-muted">{t('fees.discountsDescription', { defaultValue: 'Configure sibling discounts and scholarship rules' })}</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.name', { defaultValue: 'Name' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('fees.siblingCount', { defaultValue: 'Sibling Count' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('fees.discountPercentage', { defaultValue: 'Discount %' })}</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.status', { defaultValue: 'Status' })}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {data.discounts.map((discount) => (
+                                                <tr key={discount.id}>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{discount.name}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{discount.sibling_count}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{discount.discount_percentage}%</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">{discount.is_active ? t('common.active', { defaultValue: 'Active' }) : t('common.inactive', { defaultValue: 'Inactive' })}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

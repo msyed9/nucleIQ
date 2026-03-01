@@ -56,7 +56,11 @@ export const Dashboard: React.FC = () => {
 
     const fetchDashboardStats = async () => {
         try {
-            const response = await api.get<DashboardStats>('/dashboard/analytics/stats/');
+            const response = await api.get<DashboardStats>('/dashboard/analytics/stats/', {
+                params: {
+                    _ts: Date.now(),
+                },
+            });
             setStats(response.data);
         } catch (error) {
             console.error('Failed to fetch dashboard stats:', error);
@@ -76,10 +80,14 @@ export const Dashboard: React.FC = () => {
         }
     };
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
         setLoading(true);
-        fetchDashboardStats();
-        api.post('/dashboard/analytics/invalidate_cache/').catch(console.error);
+        try {
+            await api.post('/dashboard/analytics/invalidate_cache/');
+        } catch (error) {
+            console.error('Failed to invalidate dashboard cache:', error);
+        }
+        await fetchDashboardStats();
     };
 
     const handleWidgetAdded = () => {

@@ -52,6 +52,12 @@ const AdvancedAnalytics: React.FC = () => {
     const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
     const [anomalyThreshold, setAnomalyThreshold] = useState<string>('80');
 
+    const toList = (payload: any): any[] => {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.results)) return payload.results;
+        return [];
+    };
+
     useEffect(() => {
         fetchFilters();
     }, []);
@@ -72,8 +78,8 @@ const AdvancedAnalytics: React.FC = () => {
                 api.get('/tenants/grades/'),
                 api.get('/tenants/sections/')
             ]);
-            setGrades(gradesRes.data.results || gradesRes.data);
-            setSections(sectionsRes.data.results || sectionsRes.data);
+            setGrades(toList(gradesRes.data));
+            setSections(toList(sectionsRes.data));
         } catch (error) {
             console.error('Failed to load filters:', error);
         }
@@ -92,7 +98,7 @@ const AdvancedAnalytics: React.FC = () => {
             const anomalyParams = new URLSearchParams(params.toString());
             if (anomalyThreshold) anomalyParams.append('threshold', anomalyThreshold);
 
-            const [perfResponse, attResponse, feeResponse, drillResponse, ageingResponse, anomalyResponse] = await Promise.all([
+            const [perfResponse, attResponse, feeResponse, drillResponse, ageingResponse, anomalyResponse] = await Promise.allSettled([
                 api.get(`/reports/analytics/student_performance/?${params.toString()}`),
                 api.get(`/reports/analytics/attendance_trends/?${params.toString()}`),
                 api.get(`/reports/analytics/fee_collection_trends/?${params.toString()}`),
@@ -101,12 +107,19 @@ const AdvancedAnalytics: React.FC = () => {
                 api.get(`/reports/analytics/attendance_anomalies/?${anomalyParams.toString()}`)
             ]);
 
-            setStudentPerformance(perfResponse.data);
-            setAttendanceTrends(attResponse.data);
-            setFeeTrends(feeResponse.data);
-            setClassDrilldown(drillResponse.data);
-            setFeeAgeingBuckets(ageingResponse.data);
-            setAttendanceAnomalies(anomalyResponse.data);
+            const perfData = perfResponse.status === 'fulfilled' ? perfResponse.value.data : null;
+            const attendanceData = attResponse.status === 'fulfilled' ? toList(attResponse.value.data) : [];
+            const feeData = feeResponse.status === 'fulfilled' ? toList(feeResponse.value.data) : [];
+            const drillData = drillResponse.status === 'fulfilled' ? toList(drillResponse.value.data) : [];
+            const ageingData = ageingResponse.status === 'fulfilled' ? toList(ageingResponse.value.data) : [];
+            const anomalyData = anomalyResponse.status === 'fulfilled' ? toList(anomalyResponse.value.data) : [];
+
+            setStudentPerformance(perfData);
+            setAttendanceTrends(attendanceData);
+            setFeeTrends(feeData);
+            setClassDrilldown(drillData);
+            setFeeAgeingBuckets(ageingData);
+            setAttendanceAnomalies(anomalyData);
 
             if (compareEnabled && startDate && endDate) {
                 const previousRange = getPreviousRange(startDate, endDate);
@@ -117,19 +130,23 @@ const AdvancedAnalytics: React.FC = () => {
                 if (sectionId) compareParams.append('section_id', sectionId);
                 compareParams.append('segment_by', segmentBy);
 
-                const [prevPerf, prevAtt, prevFee] = await Promise.all([
+                const [prevPerf, prevAtt, prevFee] = await Promise.allSettled([
                     api.get(`/reports/analytics/student_performance/?${compareParams.toString()}`),
                     api.get(`/reports/analytics/attendance_trends/?${compareParams.toString()}`),
                     api.get(`/reports/analytics/fee_collection_trends/?${compareParams.toString()}`)
                 ]);
 
-                const prevFeeTotal = (prevFee.data || []).reduce((sum: number, row: any) => sum + parseFloat(row.total_collected || 0), 0);
-                const currFeeTotal = (feeResponse.data || []).reduce((sum: number, row: any) => sum + parseFloat(row.total_collected || 0), 0);
+                const prevPerfData = prevPerf.status === 'fulfilled' ? prevPerf.value.data : null;
+                const previousAttendance = prevAtt.status === 'fulfilled' ? toList(prevAtt.value.data) : [];
+                const previousFee = prevFee.status === 'fulfilled' ? toList(prevFee.value.data) : [];
+
+                const prevFeeTotal = previousFee.reduce((sum: number, row: any) => sum + parseFloat(row.total_collected || 0), 0);
+                const currFeeTotal = feeData.reduce((sum: number, row: any) => sum + parseFloat(row.total_collected || 0), 0);
 
                 setComparison({
-                    average_score_change: calculateDelta(perfResponse.data?.average_score || 0, prevPerf.data?.average_score || 0),
-                    pass_rate_change: calculateDelta(perfResponse.data?.pass_rate || 0, prevPerf.data?.pass_rate || 0),
-                    attendance_rate_change: calculateTrendDelta(attResponse.data, prevAtt.data),
+                    average_score_change: calculateDelta(perfData?.average_score || 0, prevPerfData?.average_score || 0),
+                    pass_rate_change: calculateDelta(perfData?.pass_rate || 0, prevPerfData?.pass_rate || 0),
+                    attendance_rate_change: calculateTrendDelta(attendanceData, previousAttendance),
                     fee_collection_change: calculateDelta(currFeeTotal, prevFeeTotal)
                 });
             } else {
@@ -186,10 +203,6 @@ const AdvancedAnalytics: React.FC = () => {
         ]
     };
 
-    if (loading) {
-        return <div className="p-6">Loading analytics...</div>;
-    }
-
     const subjectPerformance = studentPerformance?.subject_wise_performance || [];
     const topPerformers = studentPerformance?.top_performers || [];
 
@@ -201,6 +214,10 @@ const AdvancedAnalytics: React.FC = () => {
     const classDrilldownRows = useMemo(() => {
         return classDrilldown || [];
     }, [classDrilldown]);
+
+    if (loading) {
+        return <div className="p-6">Loading analytics...</div>;
+    }
 
     const exportData = filteredTopPerformers.map((student: any, index: number) => ({
         rank: index + 1,

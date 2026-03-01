@@ -51,6 +51,10 @@ CACHES = {
     }
 }
 
+# Cloud Run uses multiple stateless instances; per-instance locmem cache can
+# serve stale/inconsistent dashboard metrics across requests.
+DASHBOARD_ANALYTICS_CACHE_ENABLED = False
+
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # =============================================================================

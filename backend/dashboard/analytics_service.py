@@ -6,6 +6,7 @@ Provides tenant-level insights and metrics with Redis caching
 from django.db.models import Count, Sum, Avg, Q, F
 from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta
 from django.core.cache import cache
 from decimal import Decimal
@@ -24,6 +25,123 @@ class AnalyticsService:
     
     def __init__(self, tenant):
         self.tenant = tenant
+
+    def _is_dashboard_cache_enabled(self):
+        return getattr(settings, 'DASHBOARD_ANALYTICS_CACHE_ENABLED', True)
+
+    def _get_overview_stats_data(self):
+        stats = {
+            'total_students': 0,
+            'total_staff': 0,
+            'active_classes': 0,
+            'pending_fees': 0,
+            'today_attendance': 0.0,
+            'today_attendance_rate': 0.0,
+            'upcoming_exams': 0,
+            'recent_admissions': 0,
+            'storage_used_gb': 0.0,
+        }
+
+        today = timezone.now().date()
+        next_week = today + timedelta(days=7)
+        thirty_days_ago = today - timedelta(days=30)
+
+        current_year = None
+        try:
+            from tenants.models import AcademicYear
+            current_year = AcademicYear.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).first()
+        except Exception as exc:
+            logger.warning("Could not resolve active academic year for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from students.models import StudentEnrollment
+
+            student_qs = StudentEnrollment.objects.filter(
+                tenant=self.tenant,
+                status='ACTIVE'
+            )
+            if current_year:
+                student_qs = student_qs.filter(academic_year=current_year)
+            stats['total_students'] = student_qs.count()
+        except Exception as exc:
+            logger.exception("Failed to compute total students for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from staff.models import Staff
+
+            stats['total_staff'] = Staff.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).count()
+        except Exception as exc:
+            logger.exception("Failed to compute total staff for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from attendance.models import AttendanceRecord
+
+            attendance_today = AttendanceRecord.objects.filter(
+                tenant=self.tenant,
+                date=today,
+                record_type='STUDENT'
+            )
+            total_today = attendance_today.count()
+            present_today = attendance_today.filter(status__in=['PRESENT', 'LATE', 'HALF_DAY']).count()
+            attendance_rate = round(present_today / total_today * 100, 1) if total_today > 0 else 0
+            stats['today_attendance'] = attendance_rate
+            stats['today_attendance_rate'] = attendance_rate
+        except Exception as exc:
+            logger.exception("Failed to compute attendance for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from fees.models import FeeInvoice
+
+            pending_fees = FeeInvoice.objects.filter(
+                tenant=self.tenant,
+                balance_amount__gt=0
+            ).aggregate(total=Sum('balance_amount'))['total'] or Decimal('0')
+            stats['pending_fees'] = float(pending_fees)
+        except Exception as exc:
+            logger.exception("Failed to compute pending fees for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from tenants.models import Section
+
+            stats['active_classes'] = Section.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).count()
+        except Exception as exc:
+            logger.exception("Failed to compute active classes for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from exams.models import ExamSchedule
+
+            stats['upcoming_exams'] = ExamSchedule.objects.filter(
+                tenant=self.tenant,
+                exam_date__gte=today,
+                exam_date__lte=next_week
+            ).count()
+        except Exception as exc:
+            logger.warning("Failed to compute upcoming exams for tenant %s: %s", self.tenant.id, exc)
+
+        try:
+            from students.models import StudentEnrollment
+
+            admissions_qs = StudentEnrollment.objects.filter(
+                tenant=self.tenant,
+                enrollment_date__gte=thirty_days_ago,
+                status='ACTIVE'
+            )
+            if current_year:
+                admissions_qs = admissions_qs.filter(academic_year=current_year)
+            stats['recent_admissions'] = admissions_qs.count()
+        except Exception as exc:
+            logger.warning("Failed to compute recent admissions for tenant %s: %s", self.tenant.id, exc)
+
+        return stats
     
     def get_overview_stats(self):
         """
@@ -34,57 +152,14 @@ class AnalyticsService:
             dict: Overview statistics
         """
         cache_key = f"dashboard_stats_{self.tenant.id}"
-        stats = cache.get(cache_key)
+        use_cache = self._is_dashboard_cache_enabled()
+        stats = cache.get(cache_key) if use_cache else None
 
         if stats is None:
-            try:
-                from .services import WidgetDataService
-                from tenants.models import Section
-                from students.models import StudentEnrollment
-                from exams.models import ExamSchedule
+            stats = self._get_overview_stats_data()
 
-                widget_service = WidgetDataService(self.tenant)
-                overview = widget_service._get_overview_stats({})
-
-                today = timezone.now().date()
-                next_week = today + timedelta(days=7)
-                thirty_days_ago = today - timedelta(days=30)
-
-                attendance_rate = overview.get('attendance_rate', 0)
-                stats = {
-                    'total_students': overview.get('total_students', 0),
-                    'total_staff': overview.get('total_staff', 0),
-                    'active_classes': Section.objects.filter(tenant=self.tenant, is_active=True).count(),
-                    'pending_fees': overview.get('pending_fees', 0),
-                    'today_attendance': attendance_rate,
-                    'today_attendance_rate': attendance_rate,
-                    'upcoming_exams': ExamSchedule.objects.filter(
-                        tenant=self.tenant,
-                        exam_date__gte=today,
-                        exam_date__lte=next_week
-                    ).count(),
-                    'recent_admissions': StudentEnrollment.objects.filter(
-                        tenant=self.tenant,
-                        enrollment_date__gte=thirty_days_ago,
-                        status='ACTIVE'
-                    ).count(),
-                    'storage_used_gb': 0.0,
-                }
-            except Exception as e:
-                logger.exception("Failed to compute overview stats: %s", e)
-                stats = {
-                    'total_students': 0,
-                    'total_staff': 0,
-                    'active_classes': 0,
-                    'pending_fees': 0,
-                    'today_attendance': 0.0,
-                    'today_attendance_rate': 0.0,
-                    'upcoming_exams': 0,
-                    'recent_admissions': 0,
-                    'storage_used_gb': 0.0,
-                }
-
-            cache.set(cache_key, stats, self.CACHE_TIMEOUT)
+            if use_cache:
+                cache.set(cache_key, stats, self.CACHE_TIMEOUT)
 
         return stats
     
@@ -324,6 +399,9 @@ class AnalyticsService:
     
     def invalidate_cache(self):
         """Invalidate all cached analytics for this tenant."""
+        if not self._is_dashboard_cache_enabled():
+            return
+
         cache_keys = [
             f"dashboard_stats_{self.tenant.id}",
             f"academic_heatmap_{self.tenant.id}",

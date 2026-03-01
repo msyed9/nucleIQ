@@ -76,6 +76,29 @@ class DashboardViewSet(viewsets.ViewSet):
         analytics = AnalyticsService(request.user.tenant)
         analytics.invalidate_cache()
         return Response({'message': 'Cache invalidated successfully'})
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsPlatformAdmin], url_path='invalidate-cache-all')
+    def invalidate_cache_all(self, request):
+        """Invalidate analytics cache for all tenants or a specific tenant (Platform Admin only)."""
+        from tenants.models import Tenant
+
+        tenant_id = request.data.get('tenant_id') or request.query_params.get('tenant_id')
+
+        if tenant_id:
+            tenant = Tenant.objects.filter(id=tenant_id).first()
+            if not tenant:
+                return Response({'message': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            AnalyticsService(tenant).invalidate_cache()
+            return Response({'message': 'Cache invalidated successfully', 'tenants_cleared': 1})
+
+        tenants = Tenant.objects.all().only('id')
+        cleared = 0
+        for tenant in tenants:
+            AnalyticsService(tenant).invalidate_cache()
+            cleared += 1
+
+        return Response({'message': 'Cache invalidated successfully', 'tenants_cleared': cleared})
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def system_health(self, request):
