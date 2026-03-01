@@ -424,10 +424,47 @@ class PublicLeadViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     http_method_names = ['post']
     
+    def _resolve_tenant(self, request):
+        """
+        Resolve tenant for public (unauthenticated) requests.
+        
+        Strategy:
+        1. Check middleware tenant (set by X-Tenant-ID header or subdomain)
+        2. Check 'subdomain' field in request data
+        3. Fallback: if only one active tenant exists, use it (single-school setup)
+        """
+        from tenants.models import Tenant
+        
+        # Strategy 1: Middleware already resolved it
+        tenant = get_current_tenant()
+        if tenant:
+            return tenant
+        
+        # Strategy 2: subdomain passed in request body
+        subdomain = request.data.get('subdomain') or request.query_params.get('subdomain')
+        if subdomain:
+            try:
+                tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+                return tenant
+            except Tenant.DoesNotExist:
+                pass
+        
+        # Strategy 3: Single-tenant fallback
+        active_tenants = Tenant.objects.filter(is_active=True)
+        if active_tenants.count() == 1:
+            return active_tenants.first()
+        
+        return None
+    
     def create(self, request, *args, **kwargs):
         """Create lead from public web form."""
-        # Get tenant from domain or header
-        tenant = get_current_tenant()
+        tenant = self._resolve_tenant(request)
+        
+        if not tenant:
+            return Response(
+                {'detail': 'Unable to identify school. Please contact the school directly.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         data = request.data.copy()
         data['source'] = 'WEBSITE'
@@ -436,7 +473,20 @@ class PublicLeadViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         
-        lead = serializer.save(tenant=tenant)
+        # Set tenant context so TenantAwareModel.save() doesn't fail
+        from core.middleware import set_current_tenant
+        set_current_tenant(tenant)
+        
+        try:
+            lead = serializer.save(tenant=tenant)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to create lead: {str(e)}")
+            return Response(
+                {'detail': 'Unable to submit application right now. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         # Send confirmation email to parent
         try:
