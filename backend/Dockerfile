@@ -108,12 +108,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-# Copy pre-built wheels from builder and install them (no compilation in final image)
-COPY --from=builder /wheels /wheels
+
+# Install dependencies directly from requirements/prod.txt
+COPY requirements/prod.txt /app/backend/requirements-prod.txt
 RUN pip install --upgrade pip && \
-    pip install --no-index --find-links=/wheels -r /wheels/requirements-prod.txt && \
-    pip install gunicorn && \
-    pip install django-storages[azure]
+    pip install --no-cache-dir -r /app/backend/requirements-prod.txt && \
+    pip install django-storages azure-storage-blob azure-core && \
+    pip install gunicorn
 
 # Copy application code
 COPY . /app/backend/
