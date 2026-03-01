@@ -1,34 +1,36 @@
-from rest_framework.test import APIRequestFactory
-from students.views import StudentViewSet
+import os
+import django
+import sys
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
+django.setup()
+
+from students.models import Student
+from django.test import Client
+from rest_framework.authtoken.models import Token
 from users.models import User
-import json
 
-def run_test():
-    try:
-        user = User.objects.get(email='mohsinsd@gmail.com')
-        factory = APIRequestFactory()
-        request = factory.get('/api/students/students/', {'page': 1, 'page_size': 25, 'ordering': 'admission_number'})
-        request.user = user
-        request.tenant = user.tenant
-        
-        view = StudentViewSet.as_view({'get': 'list'})
-        response = view(request)
-        
-        print(f"Status: {response.status_code}")
-        if response.status_code == 200:
-            data = response.data
-            if isinstance(data, dict):
-                print(f"Count: {data.get('count')}")
-                results = data.get('results', [])
-                print(f"Results length: {len(results)}")
-                if results:
-                    print(f"First result keys: {results[0].keys()}")
-            else:
-                print(f"Data length: {len(data)}")
-        else:
-            print(f"Error data: {response.data}")
-    except Exception as e:
-        print(f"Exception: {str(e)}")
+s = Student.objects.first()
+if not s:
+    print("No student found.")
+    sys.exit()
 
-if __name__ == "__main__":
-    run_test()
+user = User.objects.filter(is_superuser=True).first()
+if not user:
+    print("No superuser found.")
+    sys.exit()
+
+client = Client()
+client.force_login(user)
+if hasattr(user, 'tenant_id'):
+    client.defaults['HTTP_X_TENANT_ID'] = str(user.tenant_id)
+
+response = client.get(f'/api/v1/students/{s.id}/profile_360/')
+print("Status:", response.status_code)
+if response.status_code == 200:
+    data = response.json()
+    print("KEYS:", list(data.keys()))
+    print("fee_details:", data.get('fee_details'))
+    print("financial_summary:", data.get('financial_summary'))
+else:
+    print("ERROR:", response.content)
