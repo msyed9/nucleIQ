@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Bell, User } from 'lucide-react';
+import { Bell, User, Menu } from 'lucide-react';
 import './Layout.css';
 
 interface Student {
@@ -18,7 +18,11 @@ interface Student {
     last_name: string;
 }
 
-const ParentHeader: React.FC = () => {
+interface ParentHeaderProps {
+    onMenuClick?: () => void;
+}
+
+const ParentHeader: React.FC<ParentHeaderProps> = ({ onMenuClick }) => {
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -37,6 +41,15 @@ const ParentHeader: React.FC = () => {
     return (
         <header className="header">
             <div className="header-left">
+                {onMenuClick && (
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={onMenuClick}
+                        aria-label="Toggle menu"
+                    >
+                        <Menu size={20} />
+                    </button>
+                )}
                 {students.length > 1 && (
                     <select
                         value={selectedStudent?.id || ''}
@@ -65,7 +78,7 @@ const ParentHeader: React.FC = () => {
                     </span>
                 )}
             </div>
-            
+
             <div className="header-right">
                 <button className="icon-button">
                     <Bell size={20} />

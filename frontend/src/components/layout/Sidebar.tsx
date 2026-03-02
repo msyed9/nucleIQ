@@ -298,7 +298,12 @@ const menuItems: MenuItem[] = [
     },
 ];
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     const location = useLocation();
     const { t } = useTranslation();
     const { branding, isModuleEnabled, getSmallLogoUrl } = useTenantBranding();
@@ -362,7 +367,7 @@ const Sidebar: React.FC = () => {
     const smallLogoUrl = getSmallLogoUrl();
 
     return (
-        <aside className="sidebar">
+        <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
             <div className="sidebar-header">
                 <h1 className="sidebar-logo">
                     {smallLogoUrl ? (
@@ -392,6 +397,7 @@ const Sidebar: React.FC = () => {
                                 key={item.labelKey}
                                 to={item.path}
                                 className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
+                                onClick={onClose}
                             >
                                 <Icon size={20} className="sidebar-icon" />
                                 <span className="sidebar-label">
@@ -428,6 +434,7 @@ const Sidebar: React.FC = () => {
                                                 key={child.path}
                                                 to={child.path}
                                                 className={`sidebar-subitem ${isActive(child.path) ? 'active' : ''}`}
+                                                onClick={onClose}
                                             >
                                                 <ChildIcon size={16} className="sidebar-icon" />
                                                 <span className="sidebar-label">

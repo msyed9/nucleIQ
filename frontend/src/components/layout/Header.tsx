@@ -6,9 +6,13 @@ import GlobalSearch from '../search/GlobalSearch';
 import './Layout.css';
 import { useTheme } from '../../contexts/ThemeContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSun, faMoon, faDesktop } from '@fortawesome/free-solid-svg-icons';
+import { faSun, faMoon, faDesktop, faBars } from '@fortawesome/free-solid-svg-icons';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+    onMenuClick?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const user = getUser();
@@ -46,6 +50,15 @@ const Header: React.FC = () => {
             <header className="header">
                 <div className="header-content">
                     <div className="header-left">
+                        {onMenuClick && (
+                            <button
+                                className="mobile-menu-btn"
+                                onClick={onMenuClick}
+                                aria-label="Toggle menu"
+                            >
+                                <FontAwesomeIcon icon={faBars} />
+                            </button>
+                        )}
                         <h2 className="header-title">{t('header.welcome', 'Welcome back, {{name}}!', { name: user?.first_name || '' })}</h2>
                     </div>
 

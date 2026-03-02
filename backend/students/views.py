@@ -576,7 +576,7 @@ class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = StudentHealthRecordSerializer(records, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated, IsTenantUser, HasModulePermission])
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated, IsTenantUser, IsNotParent])
     def history(self, request, pk=None):
         """
         Get complete change history for a student.
@@ -1491,8 +1491,7 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
     """
     ViewSet for student remarks (Universal Feed).
     """
-    permission_classes = [IsAuthenticated, IsTenantUser, HasModulePermission]
-    required_permission = ('student_module', 'read')
+    permission_classes = [IsAuthenticated, IsTenantUser, IsNotParent]
     
     def get_queryset(self):
         queryset = StudentRemark.objects.filter(
@@ -1564,8 +1563,7 @@ class StudentDocumentViewSet(viewsets.ModelViewSet):
     """
     ViewSet for student documents.
     """
-    permission_classes = [IsAuthenticated, IsTenantUser, HasModulePermission]
-    required_permission = ('student_module', 'read')
+    permission_classes = [IsAuthenticated, IsTenantUser, IsNotParent]
     serializer_class = StudentDocumentSerializer
     
     def get_queryset(self):
@@ -1615,8 +1613,7 @@ class StudentHealthRecordViewSet(viewsets.ModelViewSet):
     """
     ViewSet for student health records.
     """
-    permission_classes = [IsAuthenticated, IsTenantUser, HasModulePermission]
-    required_permission = ('student_module', 'read')
+    permission_classes = [IsAuthenticated, IsTenantUser, IsNotParent]
     serializer_class = StudentHealthRecordSerializer
     
     def get_queryset(self):
@@ -1659,8 +1656,7 @@ class StudentEnrollmentViewSet(viewsets.ModelViewSet):
     - GET /enrollments/pending/ - Get students without enrollments for current year
     - POST /enrollments/bulk_create/ - Bulk create enrollments
     """
-    permission_classes = [IsAuthenticated, IsTenantUser, HasModulePermission]
-    required_permission = ('student_module', 'read')
+    permission_classes = [IsAuthenticated, IsTenantUser, IsNotParent]
     serializer_class = StudentEnrollmentSerializer
     
     def get_queryset(self):
