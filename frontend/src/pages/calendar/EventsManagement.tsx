@@ -80,6 +80,8 @@ const EventsManagement: React.FC = () => {
             const payload = {
                 ...formData,
                 end_date: formData.end_date || formData.start_date,
+                start_time: formData.start_time || null,
+                end_time: formData.end_time || null,
             };
 
             if (editingEvent) {

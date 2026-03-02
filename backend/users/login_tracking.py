@@ -68,6 +68,25 @@ def get_location_metadata(request) -> dict:
     if lng:
         longitude = lng
 
+    ip = get_client_ip(request)
+    # If no headers and not localhost, leverage an IP API for the geo data
+    if ip and ip not in ['127.0.0.1', '::1', 'localhost'] and not city and not country:
+        try:
+            import urllib.request
+            import json
+            # Fast external check (geojs)
+            req = urllib.request.Request(f"https://get.geojs.io/v1/ip/geo/{ip}.json", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=1.5) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode())
+                    country = data.get('country', country)
+                    region = data.get('region', region)
+                    city = data.get('city', city)
+                    latitude = data.get('latitude', latitude)
+                    longitude = data.get('longitude', longitude)
+        except Exception as e:
+            pass
+
     return {
         'country': country,
         'region': region,

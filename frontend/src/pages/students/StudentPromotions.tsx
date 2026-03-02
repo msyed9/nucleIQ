@@ -113,7 +113,7 @@ const StudentPromotions: React.FC = () => {
         if (!selectedGrade) return;
 
         try {
-            let url = `/students/students/?current_class=${selectedGrade}`;
+            let url = `/students/students/?grade_level=${selectedGrade}&academic_year=${fromYear}`;
             if (selectedSection) {
                 url += `&section=${selectedSection}`;
             }

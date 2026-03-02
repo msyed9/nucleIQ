@@ -73,45 +73,33 @@ class StudentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Student.objects.filter(tenant=self.request.user.tenant)
         
-        # Filter by grade_level ID if provided
         grade_level = self.request.query_params.get('grade_level')
-        if grade_level:
-            # Get students enrolled in any section of this grade level
-            from .models import StudentEnrollment
-            student_ids = StudentEnrollment.objects.filter(
-                section__grade_level_id=grade_level,
-                status='ACTIVE'
-            ).values_list('student_id', flat=True)
-            queryset = queryset.filter(id__in=student_ids)
-        
-        # Filter by class_name (grade level name) if provided - used by attendance module
         class_name = self.request.query_params.get('class_name')
-        if class_name:
-            from .models import StudentEnrollment
-            student_ids = StudentEnrollment.objects.filter(
-                section__grade_level__name__iexact=class_name,
-                status='ACTIVE'
-            ).values_list('student_id', flat=True)
-            queryset = queryset.filter(id__in=student_ids)
-        
-        # Filter by section if provided (supports both ID and name)
         section = self.request.query_params.get('section')
-        if section:
+        academic_year = self.request.query_params.get('academic_year')
+        
+        if grade_level or class_name or section or academic_year:
             from .models import StudentEnrollment
-            # Try to filter by ID first, then by name
-            try:
-                import uuid
-                uuid.UUID(section)  # Check if it's a valid UUID
-                student_ids = StudentEnrollment.objects.filter(
-                    section_id=section,
-                    status='ACTIVE'
-                ).values_list('student_id', flat=True)
-            except (ValueError, AttributeError):
-                # Filter by section name instead
-                student_ids = StudentEnrollment.objects.filter(
-                    section__name__iexact=section,
-                    status='ACTIVE'
-                ).values_list('student_id', flat=True)
+            enrollments = StudentEnrollment.objects.filter(status='ACTIVE')
+            
+            if academic_year:
+                enrollments = enrollments.filter(academic_year_id=academic_year)
+            
+            if grade_level:
+                enrollments = enrollments.filter(section__grade_level_id=grade_level)
+                
+            if class_name:
+                enrollments = enrollments.filter(section__grade_level__name__iexact=class_name)
+                
+            if section:
+                try:
+                    import uuid
+                    uuid.UUID(section)
+                    enrollments = enrollments.filter(section_id=section)
+                except (ValueError, AttributeError):
+                    enrollments = enrollments.filter(section__name__iexact=section)
+                    
+            student_ids = enrollments.values_list('student_id', flat=True)
             queryset = queryset.filter(id__in=student_ids)
         
         # Default to active students unless specified otherwise

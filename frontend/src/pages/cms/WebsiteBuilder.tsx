@@ -114,10 +114,10 @@ const WebsiteBuilder: React.FC = () => {
         api.get('/cms/instances/')
       ]);
 
-      setTemplates(templatesRes.data);
-      setCategories(categoriesRes.data);
-      setSectionTypes(sectionTypesRes.data);
-      setInstances(instancesRes.data);
+      setTemplates(templatesRes.data.results || templatesRes.data);
+      setCategories(categoriesRes.data.results || categoriesRes.data);
+      setSectionTypes(sectionTypesRes.data.results || sectionTypesRes.data);
+      setInstances(instancesRes.data.results || instancesRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -145,7 +145,7 @@ const WebsiteBuilder: React.FC = () => {
 
       // Refresh instances list
       const instancesRes = await api.get('/cms/instances/');
-      setInstances(instancesRes.data);
+      setInstances(instancesRes.data.results || instancesRes.data);
     } catch (error) {
       console.error('Failed to fork template:', error);
       alert('Failed to create website from template');

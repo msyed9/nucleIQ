@@ -3,13 +3,14 @@
  * Modern sidebar with selectable icon libraries
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTenantBranding } from '../../contexts/TenantBrandingContext';
 import { useIconSet } from '../../contexts/IconSetContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { IconKey } from '../../config/iconSets';
+import api from '../../services/api';
 import './Layout.css';
 
 interface SubMenuItem {
@@ -310,6 +311,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     const { getIconComponent } = useIconSet();
     const { user } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+    const [activeYear, setActiveYear] = useState<string>('');
+
+    // Fetch active academic year
+    useEffect(() => {
+        const fetchYear = async () => {
+            try {
+                const res = await api.get('/tenants/years/');
+                const years = Array.isArray(res.data) ? res.data : res.data?.results || [];
+                const active = years.find((y: any) => y.is_active || y.is_current);
+                if (active) {
+                    setActiveYear(active.name);
+                }
+            } catch (err) {
+                console.error("Failed to load academic year", err);
+            }
+        };
+        fetchYear();
+    }, []);
 
     // Filter menu items based on enabled modules
     const filteredMenuItems = useMemo(() => {
@@ -382,6 +401,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
                     )}
                     <span>{branding?.tenant_name || 'NucleiQ'}</span>
                 </h1>
+                {activeYear && (
+                    <div style={{ marginTop: '0.5rem', textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                        <span style={{
+                            fontSize: '0.75rem',
+                            padding: '2px 8px',
+                            background: 'var(--color-primary-alpha, rgba(59, 130, 246, 0.1))',
+                            color: 'var(--color-primary, #3b82f6)',
+                            borderRadius: '12px',
+                            fontWeight: 600,
+                            border: '1px solid var(--color-primary, #3b82f6)'
+                        }}>
+                            Academic Year: {activeYear}
+                        </span>
+                    </div>
+                )}
             </div>
 
             <nav className="sidebar-nav">
