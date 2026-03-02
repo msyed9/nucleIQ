@@ -53,9 +53,25 @@ class FeeStructureViewSet(viewsets.ModelViewSet):
     filterset_fields = ['academic_year', 'class_level', 'category', 'frequency', 'is_active']
     
     def get_queryset(self):
-        return FeeStructure.objects.filter(
-            tenant=self.request.user.tenant
+        tenant = self.request.user.tenant
+        queryset = FeeStructure.objects.filter(
+            tenant=tenant
         ).select_related('category', 'academic_year')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
     
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
@@ -70,9 +86,25 @@ class FeeAllocationViewSet(viewsets.ModelViewSet):
     filterset_fields = ['student', 'fee_structure', 'is_scholarship', 'is_active']
     
     def get_queryset(self):
-        return FeeAllocation.objects.filter(
-            tenant=self.request.user.tenant
+        tenant = self.request.user.tenant
+        queryset = FeeAllocation.objects.filter(
+            tenant=tenant
         ).select_related('student', 'fee_structure', 'fee_structure__category')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(fee_structure__academic_year_id=academic_year)
+            
+        return queryset
     
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
@@ -114,9 +146,25 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
     filterset_fields = ['student', 'academic_year', 'status', 'is_sibling_consolidated']
     
     def get_queryset(self):
-        return FeeInvoice.objects.filter(
-            tenant=self.request.user.tenant
+        tenant = self.request.user.tenant
+        queryset = FeeInvoice.objects.filter(
+            tenant=tenant
         ).select_related('student', 'academic_year').prefetch_related('items')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
     
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)

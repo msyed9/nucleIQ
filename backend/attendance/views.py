@@ -45,8 +45,9 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
     filterset_fields = ['record_type', 'student', 'staff', 'date', 'status', 'method']
     
     def get_queryset(self):
+        tenant = self.request.user.tenant
         queryset = AttendanceRecord.objects.filter(
-            tenant=self.request.user.tenant
+            tenant=tenant
         ).select_related(
             'student', 'staff', 'academic_year'
         ).prefetch_related(
@@ -55,6 +56,19 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
             'student__enrollments__section__grade_level'
         )
         
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
         # Additional filtering by class and section
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
@@ -62,21 +76,27 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
         if class_name:
             # Filter by student's current enrollment class
             from students.models import StudentEnrollment
-            student_ids = StudentEnrollment.objects.filter(
-                tenant=self.request.user.tenant,
+            enrollments = StudentEnrollment.objects.filter(
+                tenant=tenant,
                 status='ACTIVE',
                 section__grade_level__name=class_name
-            ).values_list('student_id', flat=True)
+            )
+            if academic_year and academic_year != 'all':
+                enrollments = enrollments.filter(academic_year_id=academic_year)
+            student_ids = enrollments.values_list('student_id', flat=True)
             queryset = queryset.filter(student_id__in=student_ids)
         
         if section:
             # Filter by student's current enrollment section
             from students.models import StudentEnrollment
-            student_ids = StudentEnrollment.objects.filter(
-                tenant=self.request.user.tenant,
+            enrollments = StudentEnrollment.objects.filter(
+                tenant=tenant,
                 status='ACTIVE',
                 section__name=section
-            ).values_list('student_id', flat=True)
+            )
+            if academic_year and academic_year != 'all':
+                enrollments = enrollments.filter(academic_year_id=academic_year)
+            student_ids = enrollments.values_list('student_id', flat=True)
             queryset = queryset.filter(student_id__in=student_ids)
         
         return queryset
@@ -524,7 +544,23 @@ class AttendanceMonthlyAggregateViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = ['record_type', 'student', 'staff', 'month']
     
     def get_queryset(self):
-        return AttendanceMonthlyAggregate.objects.filter(tenant=self.request.user.tenant)
+        tenant = self.request.user.tenant
+        queryset = AttendanceMonthlyAggregate.objects.filter(tenant=tenant)
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
 
 
 class FaceEnrollmentViewSet(viewsets.ViewSet):

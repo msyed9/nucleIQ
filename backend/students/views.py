@@ -71,18 +71,29 @@ class StudentViewSet(viewsets.ModelViewSet):
     ordering = ['admission_number']
     
     def get_queryset(self):
-        queryset = Student.objects.filter(tenant=self.request.user.tenant)
+        tenant = self.request.user.tenant
+        queryset = Student.objects.filter(tenant=tenant)
         
         grade_level = self.request.query_params.get('grade_level')
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
         academic_year = self.request.query_params.get('academic_year')
         
-        if grade_level or class_name or section or academic_year:
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        # If 'all' is explicitly requested, we don't filter by academic year
+        filter_by_year = (academic_year and academic_year != 'all')
+
+        if grade_level or class_name or section or filter_by_year:
             from .models import StudentEnrollment
-            enrollments = StudentEnrollment.objects.filter(status='ACTIVE')
+            enrollments = StudentEnrollment.objects.filter(status='ACTIVE', tenant=tenant)
             
-            if academic_year:
+            if filter_by_year:
                 enrollments = enrollments.filter(academic_year_id=academic_year)
             
             if grade_level:
@@ -106,6 +117,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         is_active = self.request.query_params.get('is_active')
         if is_active is None:
             queryset = queryset.filter(is_active=True)
+        elif is_active.lower() == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active.lower() == 'false':
+            queryset = queryset.filter(is_active=False)
         
         return queryset
     
@@ -1648,13 +1663,22 @@ class StudentEnrollmentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentEnrollmentSerializer
     
     def get_queryset(self):
+        tenant = self.request.user.tenant
         queryset = StudentEnrollment.objects.filter(
-            tenant=self.request.user.tenant
+            tenant=tenant
         ).select_related('student', 'academic_year', 'section', 'section__grade_level')
         
         # Filter by academic year
         academic_year = self.request.query_params.get('academic_year')
-        if academic_year:
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
             queryset = queryset.filter(academic_year_id=academic_year)
         
         # Filter by section

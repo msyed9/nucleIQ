@@ -33,10 +33,25 @@ class ExamTermViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         tenant = get_current_tenant()
-        return ExamTerm.objects.filter(
+        queryset = ExamTerm.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('academic_year')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
 
 
 class ExamViewSet(viewsets.ModelViewSet):
@@ -52,10 +67,25 @@ class ExamViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         tenant = get_current_tenant()
-        return Exam.objects.filter(
+        queryset = Exam.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('exam_term', 'subject', 'grade_level').prefetch_related('sections')
+        
+        # Filter by academic year via term
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(exam_term__academic_year_id=academic_year)
+            
+        return queryset
 
 
 class ExamScheduleViewSet(viewsets.ModelViewSet):
@@ -71,10 +101,25 @@ class ExamScheduleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         tenant = get_current_tenant()
-        return ExamSchedule.objects.filter(
+        queryset = ExamSchedule.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('exam', 'section', 'invigilator')
+        
+        # Filter by academic year via term
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            from tenants.models import AcademicYear
+            active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+            if active_year:
+                academic_year = str(active_year.id)
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(exam__exam_term__academic_year_id=academic_year)
+            
+        return queryset
     
     @action(detail=False, methods=['post'])
     def check_conflicts(self, request):

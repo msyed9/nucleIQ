@@ -72,7 +72,7 @@ class TimetableSlotViewSet(viewsets.ModelViewSet):
         Filter queryset by tenant and include related objects.
         """
         tenant = get_current_tenant()
-        return TimetableSlot.objects.filter(
+        queryset = TimetableSlot.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related(
@@ -82,6 +82,24 @@ class TimetableSlotViewSet(viewsets.ModelViewSet):
             'subject',
             'teacher'
         )
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            try:
+                from tenants.models import AcademicYear
+                active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+                if active_year:
+                    academic_year = str(active_year.id)
+            except Exception:
+                pass
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
     
     def get_serializer_class(self):
         """
@@ -378,10 +396,28 @@ class TimetableTemplateViewSet(viewsets.ModelViewSet):
         Filter queryset by tenant.
         """
         tenant = get_current_tenant()
-        return TimetableTemplate.objects.filter(
+        queryset = TimetableTemplate.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('academic_year')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            try:
+                from tenants.models import AcademicYear
+                active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+                if active_year:
+                    academic_year = str(active_year.id)
+            except Exception:
+                pass
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
 
 
 class TimetablePeriodConfigViewSet(viewsets.ModelViewSet):
@@ -411,10 +447,28 @@ class TimetablePeriodConfigViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter queryset by tenant."""
         tenant = get_current_tenant()
-        return TimetablePeriodConfig.objects.filter(
+        queryset = TimetablePeriodConfig.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('academic_year')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            try:
+                from tenants.models import AcademicYear
+                active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+                if active_year:
+                    academic_year = str(active_year.id)
+            except Exception:
+                pass
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
     
     def perform_create(self, serializer):
         """Set tenant on create."""
@@ -477,10 +531,28 @@ class SubjectSectionLoadViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter queryset by tenant."""
         tenant = get_current_tenant()
-        return SubjectSectionLoad.objects.filter(
+        queryset = SubjectSectionLoad.objects.filter(
             tenant=tenant,
             is_deleted=False
         ).select_related('section', 'subject', 'preferred_teacher', 'academic_year')
+        
+        # Filter by academic year
+        academic_year = self.request.query_params.get('academic_year')
+        
+        # Default to active academic year if not explicitly provided or bypassed with 'all'
+        if not academic_year and academic_year != 'all':
+            try:
+                from tenants.models import AcademicYear
+                active_year = AcademicYear.objects.filter(tenant=tenant, is_active=True).first()
+                if active_year:
+                    academic_year = str(active_year.id)
+            except Exception:
+                pass
+                
+        if academic_year and academic_year != 'all':
+            queryset = queryset.filter(academic_year_id=academic_year)
+            
+        return queryset
     
     def get_serializer_class(self):
         """Use create serializer for create/update actions."""
