@@ -128,16 +128,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                 <div className="user-dropdown">
                                     <div className="dropdown-item">
                                         <span>👤</span>
-                                        <span>{t('header.profile')}</span>
+                                        <span>{t('header.profile', 'Profile')}</span>
                                     </div>
                                     <div className="dropdown-item">
                                         <span>⚙️</span>
-                                        <span>{t('header.settings')}</span>
+                                        <span>{t('header.settings', 'Settings')}</span>
                                     </div>
                                     <div className="dropdown-divider"></div>
                                     <div className="dropdown-item" onClick={handleLogout}>
                                         <span>🚪</span>
-                                        <span>{t('header.logout')}</span>
+                                        <span>{t('header.logout', 'Logout')}</span>
                                     </div>
                                 </div>
                             )}

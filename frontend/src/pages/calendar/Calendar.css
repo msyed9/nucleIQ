@@ -126,6 +126,14 @@
     background: rgba(239, 68, 68, 0.05);
 }
 
+.calendar-day.sunday {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.calendar-day.sunday .day-number {
+    color: #ef4444;
+}
+
 .calendar-day.has-holiday {
     background: rgba(239, 68, 68, 0.1);
 }

@@ -99,6 +99,7 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
             # Attendance Settings
             'attendance_marking_time', 'attendance_lock_days',
             'minimum_attendance_percentage', 'late_arrival_threshold_minutes',
+            'enable_auto_mark_absent', 'auto_mark_absent_time',
             # Exam Settings
             'result_publish_delay_days', 'allow_online_exams', 'exam_proctoring_enabled',
             # Student Admission Settings

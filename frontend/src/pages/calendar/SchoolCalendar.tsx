@@ -35,6 +35,7 @@ interface CalendarDay {
     isCurrentMonth: boolean;
     isToday: boolean;
     isWeekend: boolean;
+    isSunday: boolean;
     holidays: Holiday[];
     events: SchoolEvent[];
 }
@@ -131,18 +132,22 @@ const SchoolCalendar: React.FC = () => {
     };
 
     const createCalendarDay = (date: Date, isCurrentMonth: boolean, today: Date): CalendarDay => {
-        const dateStr = date.toISOString().split('T')[0];
+        const localDateStr = [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0')
+        ].join('-');
 
         const dayHolidays = holidays.filter(h => {
-            const start = new Date(h.start_date);
-            const end = new Date(h.end_date);
-            return date >= start && date <= end;
+            const startDateStr = h.start_date.split('T')[0];
+            const endDateStr = h.end_date ? h.end_date.split('T')[0] : startDateStr;
+            return localDateStr >= startDateStr && localDateStr <= endDateStr;
         });
 
         const dayEvents = events.filter(e => {
-            const start = new Date(e.start_date);
-            const end = e.end_date ? new Date(e.end_date) : start;
-            return date >= start && date <= end;
+            const startDateStr = e.start_date.split('T')[0];
+            const endDateStr = e.end_date ? e.end_date.split('T')[0] : startDateStr;
+            return localDateStr >= startDateStr && localDateStr <= endDateStr;
         });
 
         return {
@@ -150,6 +155,7 @@ const SchoolCalendar: React.FC = () => {
             isCurrentMonth,
             isToday: date.toDateString() === today.toDateString(),
             isWeekend: date.getDay() === 0 || date.getDay() === 6,
+            isSunday: date.getDay() === 0,
             holidays: dayHolidays,
             events: dayEvents,
         };
@@ -218,7 +224,7 @@ const SchoolCalendar: React.FC = () => {
                         {calendarDays.map((day, index) => (
                             <div
                                 key={index}
-                                className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${day.holidays.length > 0 ? 'has-holiday' : ''}`}
+                                className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${day.isSunday ? 'sunday' : ''} ${day.holidays.length > 0 ? 'has-holiday' : ''}`}
                                 onClick={() => setSelectedDay(day)}
                             >
                                 <span className="day-number">{day.date.getDate()}</span>

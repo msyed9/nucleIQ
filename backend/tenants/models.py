@@ -1434,6 +1434,16 @@ class TenantSettings(BaseModel):
         help_text="Minutes after which arrival is considered late"
     )
     
+    enable_auto_mark_absent = models.BooleanField(
+        default=False,
+        help_text="Automatically mark staff and students as absent if attendance is not marked"
+    )
+    
+    auto_mark_absent_time = models.TimeField(
+        default='10:00:00',
+        help_text="Time at which auto-absent marking runs"
+    )
+    
     # Student Admission Settings
     auto_generate_admission_number = models.BooleanField(
         default=False,

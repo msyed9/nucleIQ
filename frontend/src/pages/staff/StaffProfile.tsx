@@ -72,7 +72,7 @@ const StaffProfile: React.FC = () => {
                 </div>
                 <div className="profile-actions">
                     <Button variant="outline" onClick={() => navigate('/staff')}>Back</Button>
-                    <Button variant="primary">Edit Profile</Button>
+                    <Button variant="primary" onClick={() => alert('Edit Staff functionality is under development.')}>Edit Profile</Button>
                 </div>
             </div>
 

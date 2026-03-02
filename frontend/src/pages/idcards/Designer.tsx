@@ -271,6 +271,83 @@ const IDCardDesigner: React.FC = () => {
         setCodeEditorError(null);
     }, [design]);
 
+    // Undo / Redo State
+    const isUndoRedoRef = useRef(false);
+    const historyRef = useRef<Design[]>([]);
+    const historyIndexRef = useRef(-1);
+
+    // Initialize history with initial design
+    useEffect(() => {
+        if (historyRef.current.length === 0) {
+            historyRef.current = [JSON.parse(JSON.stringify(design))];
+            historyIndexRef.current = 0;
+        }
+    }, []);
+
+    // Track design changes
+    useEffect(() => {
+        if (isUndoRedoRef.current) {
+            isUndoRedoRef.current = false;
+            return;
+        }
+
+        const latestHistory = historyRef.current[historyIndexRef.current];
+        if (latestHistory && JSON.stringify(latestHistory) === JSON.stringify(design)) {
+            return; // No actual change
+        }
+
+        const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+        newHistory.push(JSON.parse(JSON.stringify(design)));
+
+        // Keep last 50 states
+        if (newHistory.length > 50) {
+            newHistory.shift();
+        } else {
+            historyIndexRef.current = newHistory.length - 1;
+        }
+        historyRef.current = newHistory;
+    }, [design]);
+
+    const handleUndo = () => {
+        if (historyIndexRef.current > 0) {
+            historyIndexRef.current -= 1;
+            isUndoRedoRef.current = true;
+            setDesign(JSON.parse(JSON.stringify(historyRef.current[historyIndexRef.current])));
+            setSelectedElement(null); // Clear selection on undo
+        }
+    };
+
+    const handleRedo = () => {
+        if (historyIndexRef.current < historyRef.current.length - 1) {
+            historyIndexRef.current += 1;
+            isUndoRedoRef.current = true;
+            setDesign(JSON.parse(JSON.stringify(historyRef.current[historyIndexRef.current])));
+            setSelectedElement(null);
+        }
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    handleRedo();
+                } else {
+                    handleUndo();
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+
     // Initialize Interact.js
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -620,7 +697,7 @@ const IDCardDesigner: React.FC = () => {
         const bgStyle = design.background.type === 'gradient'
             ? (design.background.gradient || design.background.value)
             : (design.background.type === 'image' && design.background.image_url)
-                ? `url(${design.background.image_url})`
+                ? `url("${design.background.image_url}")`
                 : (design.background.value || '#FFFFFF');
 
         let previewContent = `

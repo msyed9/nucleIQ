@@ -259,7 +259,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.corporatePortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
                 createImageElement('photo', 6, 30, 26, 32, '{{photo}}'),
@@ -281,7 +281,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.freshGreenPortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 12, 10, '#11998e', 'bold', 50, 7),
                 createImageElement('photo', 12, 26, 30, 36, '{{photo}}'),
@@ -350,7 +350,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createShapeElement('header', 0, 0, 54, 10, '#FFFFFF40'),
                 createTextElement('school-name', '{{school_name}}', 2, 2, 8, '#FFFFFF', 'bold', 50, 6),
@@ -373,7 +373,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.corporatePortrait },
             elements: [
                 createShapeElement('gold-bar-top', 0, 0, 54, 2, '#DAA520'),
                 createTextElement('school-name', '{{school_name}}', 2, 5, 9, '#DAA520', 'bold', 50, 6),
@@ -420,7 +420,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.freshGreenPortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createShapeElement('photo-frame', 10, 14, 34, 40, '#FFFFFF'),
@@ -442,7 +442,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.freshGreenPortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -463,7 +463,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_ocean.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.oceanPortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -486,7 +486,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createShapeElement('header', 0, 0, 54, 12, '#FFFFFF20'),
                 createTextElement('school-name', '{{school_name}}', 2, 2, 9, '#FFFFFF', 'bold', 50, 7),
@@ -509,7 +509,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_flower.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.freshGreenPortrait },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createShapeElement('photo-border', 11, 13, 32, 38, '#FFFFFF40'),
@@ -531,7 +531,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createShapeElement('header', 0, 0, 54, 14, '#1A237E'),
                 createTextElement('school-name', '{{school_name}}', 2, 3, 9, '#FFFFFF', 'bold', 50, 7),
@@ -554,7 +554,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#FFFFFF', 'bold', 50, 6),
                 createImageElement('photo', 12, 14, 30, 36, '{{photo}}'),
@@ -575,7 +575,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createTextElement('school-name', '{{school_name}}', 2, 4, 9, '#01579B', 'bold', 50, 6),
                 createShapeElement('photo-frame', 10, 12, 34, 40, '#FFFFFF'),
@@ -623,7 +623,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: PORTRAIT_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/illustrative_modern.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.corporatePortrait },
             elements: [
                 createTextElement('org-name', '{{school_name}}', 2, 6, 11, '#1A237E', 'bold', 50, 8),
                 createImageElement('photo', 6, 28, 24, 30, '{{photo}}'),
@@ -851,7 +851,7 @@ export const PREBUILT_TEMPLATES: PrebuiltTemplate[] = [
         dimensions: LANDSCAPE_DIMS,
         design: {
             version: '1.0',
-            background: { type: 'image', image_url: '/media/idcards/bgs/landscape_abstract.svg' },
+            background: { type: 'image', image_url: SVG_BACKGROUNDS.pinkBlossom },
             elements: [
                 createImageElement('photo', 6, 12, 24, 30, '{{photo}}'),
                 createTextElement('school-name', '{{school_name}}', 32, 6, 12, '#FFFFFF', 'bold', 50, 8),

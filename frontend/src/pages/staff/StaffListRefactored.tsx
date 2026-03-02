@@ -149,11 +149,11 @@ const StaffCard: React.FC<StaffCardProps> = ({ member, onView, onEdit }) => {
             </div>
 
             <div className="staff-actions">
-                <button className="btn-view" title={t('staff.view')} onClick={onView}>
-                    👁️ {t('staff.view')}
+                <button className="btn-view" title={t('staff.view', 'View')} onClick={onView}>
+                    👁️ {t('staff.view', 'View')}
                 </button>
-                <button className="btn-edit" title={t('staff.edit')} onClick={onEdit}>
-                    ✏️ {t('staff.edit')}
+                <button className="btn-edit" title={t('staff.edit', 'Edit')} onClick={onEdit}>
+                    ✏️ {t('staff.edit', 'Edit')}
                 </button>
             </div>
         </div>

@@ -11,18 +11,18 @@ from .services import AttendanceCalculationService
 
 @shared_task
 def auto_mark_absent_students():
-    """Auto-mark students as absent if no record by cutoff time."""
+    """Auto-mark students as absent if no record by cutoff time (from TenantSettings)."""
     from students.models import Student
-    from tenants.models import Tenant, AcademicYear
+    from tenants.models import Tenant, AcademicYear, TenantSettings
     
     today = date.today()
     
     for tenant in Tenant.objects.filter(is_active=True):
-        config = AttendanceConfiguration.objects.filter(tenant=tenant).first()
-        if not config:
+        settings = TenantSettings.objects.filter(tenant=tenant).first()
+        if not settings or not settings.enable_auto_mark_absent:
             continue
-        
-        cutoff_time = config.student_cutoff_time
+            
+        cutoff_time = settings.auto_mark_absent_time
         current_time = timezone.now().time()
         
         if current_time < cutoff_time:
@@ -50,18 +50,18 @@ def auto_mark_absent_students():
 
 @shared_task
 def auto_mark_absent_staff():
-    """Auto-mark staff as absent if no record by cutoff time."""
+    """Auto-mark staff as absent if no record by cutoff time (from TenantSettings)."""
     from staff.models import Staff
-    from tenants.models import Tenant, AcademicYear
+    from tenants.models import Tenant, AcademicYear, TenantSettings
     
     today = date.today()
     
     for tenant in Tenant.objects.filter(is_active=True):
-        config = AttendanceConfiguration.objects.filter(tenant=tenant).first()
-        if not config:
+        settings = TenantSettings.objects.filter(tenant=tenant).first()
+        if not settings or not settings.enable_auto_mark_absent:
             continue
-        
-        cutoff_time = config.staff_cutoff_time
+            
+        cutoff_time = settings.auto_mark_absent_time
         current_time = timezone.now().time()
         
         if current_time < cutoff_time:

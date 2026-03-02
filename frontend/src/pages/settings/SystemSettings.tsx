@@ -403,6 +403,36 @@ const SystemSettings: React.FC = () => {
                                         </Select>
                                     </FormControl>
                                 </Grid>
+                                <Grid item xs={12}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        Auto Attendance Configuration
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={settings.enable_auto_mark_absent || false}
+                                                onChange={(e) => handleChange('enable_auto_mark_absent', e.target.checked)}
+                                            />
+                                        }
+                                        label="Enable Auto Mark Absent"
+                                    />
+                                </Grid>
+                                {settings.enable_auto_mark_absent && (
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            fullWidth
+                                            type="time"
+                                            label="Auto Mark Absent Time"
+                                            value={settings.auto_mark_absent_time || '10:00:00'}
+                                            onChange={(e) => handleChange('auto_mark_absent_time', e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                            helperText="Time at which all unmarked staff and students will be marked absent"
+                                        />
+                                    </Grid>
+                                )}
                             </Grid>
                         </CardContent>
                     </Card>
