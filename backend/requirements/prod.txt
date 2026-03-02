@@ -59,8 +59,11 @@ openpyxl==3.1.2
 gunicorn==23.0.0
 
 # Azure Storage
-django-storages[azure]==1.14.2
+django-storages[azure,google]==1.14.2
 azure-storage-blob==12.19.0
+
+# Google Cloud Storage
+google-cloud-storage==2.14.0
 
 # Static file serving (for single container deployment)
 whitenoise==6.6.0

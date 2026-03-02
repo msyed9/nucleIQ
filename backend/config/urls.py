@@ -206,8 +206,16 @@ else:
     # In production without GCS, serve media via Django as fallback
     # (nginx will try local files first, then proxy to Django)
     if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT:
-        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    
+        from django.urls import re_path
+        from django.views.static import serve
+        
+        # Only add the fallback if MEDIA_URL is local (e.g. /media/)
+        if not settings.MEDIA_URL.startswith('http'):
+            media_url_path = settings.MEDIA_URL.lstrip('/').rstrip('/')
+            urlpatterns += [
+                re_path(rf'^{media_url_path}/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+            ]
+        
     # Debug toolbar
     if 'debug_toolbar' in settings.INSTALLED_APPS:
         import debug_toolbar
