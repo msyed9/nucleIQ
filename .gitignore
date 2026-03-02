@@ -27,3 +27,4 @@ Thumbs.db
 backup/
 *.backup
 node_modules
+scripts/dummy_data/

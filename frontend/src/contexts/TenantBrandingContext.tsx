@@ -122,8 +122,7 @@ export const TenantBrandingProvider: React.FC<{ children: React.ReactNode }> = (
 
         if (brandingData.sidebar_color) {
             root.style.setProperty('--sidebar-bg', brandingData.sidebar_color);
-            // Keep layout CSS variable in sync so components using --color-bg-primary update correctly
-            root.style.setProperty('--color-bg-primary', brandingData.sidebar_color);
+            root.style.setProperty('--sidebar-color', brandingData.sidebar_color);
         }
 
         if (brandingData.font_family) {

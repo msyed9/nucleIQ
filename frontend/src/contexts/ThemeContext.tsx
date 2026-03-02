@@ -95,8 +95,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         if (branding) {
             root.style.setProperty('--color-secondary', branding.secondary_color);
             root.style.setProperty('--color-sidebar', branding.sidebar_color);
-            // Ensure layout variable is set so sidebar CSS uses the branding color
-            root.style.setProperty('--color-bg-primary', branding.sidebar_color);
             if (branding.font_family) root.style.setProperty('--font-family', branding.font_family);
             if (branding.favicon_url) {
                 const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;

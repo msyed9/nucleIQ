@@ -732,7 +732,7 @@ class UnifiedLoginView(generics.GenericAPIView):
         """Handle unified login request."""
         from .serializers import UnifiedLoginSerializer
         
-        serializer = UnifiedLoginSerializer(data=request.data)
+        serializer = UnifiedLoginSerializer(data=request.data, context={'request': request})
         
         if serializer.is_valid():
             data = serializer.validated_data
