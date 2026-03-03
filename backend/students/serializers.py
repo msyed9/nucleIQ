@@ -25,6 +25,8 @@ class StudentBasicSerializer(serializers.ModelSerializer):
     fee_summary = serializers.SerializerMethodField()
     # Photo URL for frontend display
     photo_url = serializers.SerializerMethodField()
+    # Enrollment status for the filtered academic year (annotated by get_queryset)
+    enrollment_status = serializers.SerializerMethodField()
     
     class Meta:
         model = Student
@@ -33,9 +35,9 @@ class StudentBasicSerializer(serializers.ModelSerializer):
             'current_class', 'class_name', 'current_class_name', 'section', 'section_name', 
             'roll_number', 'photo', 'photo_url', 'age',
             'date_of_birth', 'blood_group', 'is_active', 'email', 'phone',
-            'fee_summary'
+            'fee_summary', 'enrollment_status'
         ]
-        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'class_name', 'current_class_name', 'section', 'section_name', 'roll_number', 'photo_url', 'fee_summary']
+        read_only_fields = ['id', 'full_name', 'age', 'current_class', 'class_name', 'current_class_name', 'section', 'section_name', 'roll_number', 'photo_url', 'fee_summary', 'enrollment_status']
     
     def get_photo_url(self, obj):
         """Return absolute URL for student photo."""
@@ -45,6 +47,14 @@ class StudentBasicSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.photo.url)
             return obj.photo.url
         return None
+    
+    def get_enrollment_status(self, obj):
+        """Return the enrollment status for the filtered academic year.
+        
+        This is annotated onto the queryset by get_queryset as _enrollment_status.
+        Returns ACTIVE, COMPLETED, PROMOTED, etc. or None if not annotated.
+        """
+        return getattr(obj, '_enrollment_status', None)
     
     def get_fee_summary(self, obj):
         """Get fee summary for the student including discount information."""

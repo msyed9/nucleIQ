@@ -79,6 +79,9 @@ class StudentViewSet(viewsets.ModelViewSet):
         section = self.request.query_params.get('section')
         academic_year = self.request.query_params.get('academic_year')
         
+        # Check if this request is for promotion (only show ACTIVE enrollments)
+        enrollment_status_filter = self.request.query_params.get('enrollment_status')
+        
         # Default to active academic year if not explicitly provided or bypassed with 'all'
         if not academic_year and academic_year != 'all':
             from tenants.models import AcademicYear
@@ -91,7 +94,20 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         if grade_level or class_name or section or filter_by_year:
             from .models import StudentEnrollment
-            enrollments = StudentEnrollment.objects.filter(status='ACTIVE', tenant=tenant)
+            
+            # Determine which enrollment statuses to include:
+            # - If enrollment_status is explicitly given (e.g. 'ACTIVE'), use that
+            # - Otherwise include ACTIVE, COMPLETED, and PROMOTED so historical
+            #   academic year views show all students who were part of that year
+            if enrollment_status_filter:
+                allowed_statuses = [s.strip() for s in enrollment_status_filter.split(',')]
+            else:
+                allowed_statuses = ['ACTIVE', 'COMPLETED', 'PROMOTED']
+            
+            enrollments = StudentEnrollment.objects.filter(
+                status__in=allowed_statuses,
+                tenant=tenant
+            )
             
             if filter_by_year:
                 enrollments = enrollments.filter(academic_year_id=academic_year)
@@ -109,9 +125,19 @@ class StudentViewSet(viewsets.ModelViewSet):
                     enrollments = enrollments.filter(section_id=section)
                 except (ValueError, AttributeError):
                     enrollments = enrollments.filter(section__name__iexact=section)
-                    
+            
             student_ids = enrollments.values_list('student_id', flat=True)
             queryset = queryset.filter(id__in=student_ids)
+            
+            # Annotate enrollment_status from the filtered enrollments so the
+            # serializer can expose it without an extra query per row.
+            from django.db.models import Subquery, OuterRef
+            enrollment_status_subquery = enrollments.filter(
+                student_id=OuterRef('pk')
+            ).order_by('-enrollment_date').values('status')[:1]
+            queryset = queryset.annotate(
+                _enrollment_status=Subquery(enrollment_status_subquery)
+            )
         
         # Default to active students unless specified otherwise
         is_active = self.request.query_params.get('is_active')

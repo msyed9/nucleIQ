@@ -1261,29 +1261,68 @@ const Student360: React.FC = () => {
                         header={<h3 style={{ margin: 0, fontSize: '1rem' }}>Family / Siblings</h3>}
                         padding="md"
                     >
-                        <p style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
-                            <strong>Family ID:</strong> {data.family_summary.family_id}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {data.siblings.map((s: any) => (
-                                <div
-                                    key={s.id}
-                                    onClick={() => navigate(`/students/${s.id}`)}
-                                    style={{
-                                        padding: '0.75rem',
-                                        background: 'var(--color-bg-secondary)',
-                                        borderRadius: 'var(--radius-base)',
-                                        cursor: 'pointer',
-                                        transition: 'background var(--transition-fast)',
-                                        fontSize: '0.875rem'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
-                                >
-                                    <Users size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                                    {s.name} ({s.class})
-                                </div>
-                            ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {data.siblings && data.siblings.length > 0 ? (
+                                data.siblings.map((s: any) => (
+                                    <div
+                                        key={s.id}
+                                        onClick={() => navigate(`/students/${s.id}`)}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--color-bg-secondary)',
+                                            borderRadius: 'var(--radius-base)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            borderLeft: '3px solid var(--color-primary-400)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'var(--color-primary-50)';
+                                            e.currentTarget.style.borderLeftColor = 'var(--color-primary-600)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                                            e.currentTarget.style.borderLeftColor = 'var(--color-primary-400)';
+                                        }}
+                                    >
+                                        <Users size={16} color="var(--color-primary-500)" />
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{
+                                                fontWeight: 600,
+                                                fontSize: '0.875rem',
+                                                color: 'var(--color-primary-700)',
+                                                marginBottom: '0.125rem',
+                                            }}>
+                                                {s.name}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                color: 'var(--color-text-tertiary)',
+                                            }}>
+                                                {s.class} • {s.admission_number}
+                                            </div>
+                                        </div>
+                                        <span style={{
+                                            fontSize: '0.75rem',
+                                            color: 'var(--color-primary-500)',
+                                            fontWeight: 500,
+                                        }}>
+                                            View →
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p style={{
+                                    fontSize: '0.875rem',
+                                    color: 'var(--color-text-tertiary)',
+                                    textAlign: 'center',
+                                    margin: '0.5rem 0',
+                                }}>
+                                    No siblings found
+                                </p>
+                            )}
                         </div>
                     </Card>
                 </div>

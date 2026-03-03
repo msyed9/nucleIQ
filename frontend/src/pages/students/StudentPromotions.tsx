@@ -113,7 +113,9 @@ const StudentPromotions: React.FC = () => {
         if (!selectedGrade) return;
 
         try {
-            let url = `/students/students/?grade_level=${selectedGrade}&academic_year=${fromYear}`;
+            // Explicitly request only ACTIVE enrollment students for promotion
+            // Students with COMPLETED enrollments have already been promoted
+            let url = `/students/students/?grade_level=${selectedGrade}&academic_year=${fromYear}&enrollment_status=ACTIVE`;
             if (selectedSection) {
                 url += `&section=${selectedSection}`;
             }

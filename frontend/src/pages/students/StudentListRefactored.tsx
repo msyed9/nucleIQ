@@ -207,6 +207,37 @@ const StudentListRefactored: React.FC = () => {
         { key: 'current_class_name', title: 'Class', render: (s) => s.current_class_name || '-' },
         { key: 'section_name', title: 'Section', render: (s) => s.section_name || '-' },
         {
+            key: 'enrollment_status',
+            title: 'Enrollment',
+            render: (student: StudentListItem) => {
+                const status = (student as any).enrollment_status;
+                if (!status) return <span style={{ color: '#888' }}>-</span>;
+                const statusMap: Record<string, { label: string; variant: string; color: string }> = {
+                    'ACTIVE': { label: 'Active', variant: 'success', color: '#16a34a' },
+                    'COMPLETED': { label: 'Completed', variant: 'info', color: '#2563eb' },
+                    'PROMOTED': { label: 'Promoted', variant: 'info', color: '#7c3aed' },
+                    'DETAINED': { label: 'Detained', variant: 'warning', color: '#d97706' },
+                    'SUSPENDED': { label: 'Suspended', variant: 'error', color: '#dc2626' },
+                    'LEFT': { label: 'Left', variant: 'default', color: '#6b7280' },
+                    'TRANSFERRED': { label: 'Transferred', variant: 'default', color: '#6b7280' },
+                };
+                const info = statusMap[status] || { label: status, variant: 'default', color: '#6b7280' };
+                return (
+                    <span style={{
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#fff',
+                        backgroundColor: info.color,
+                    }}>
+                        {info.label}
+                    </span>
+                );
+            }
+        },
+        {
             key: 'status',
             title: 'Status',
             render: (student: StudentListItem) => (
