@@ -455,60 +455,6 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = Student360Serializer(profile_data)
         return Response(serializer.data)
 
-
-class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
-    """Admin endpoints to view parent credentials and reset passwords."""
-    permission_classes = [IsAuthenticated, IsTenantAdmin]
-    serializer_class = ParentCredentialsSerializer
-
-    def get_queryset(self):
-        return ParentUser.objects.filter(
-            tenant=self.request.user.tenant,
-            portal_access_enabled=True
-        ).select_related('user').prefetch_related('students')
-
-    @action(detail=True, methods=['post'], url_path='reset-password')
-    def reset_password(self, request, pk=None):
-        parent_profile = self.get_object()
-        user = parent_profile.user
-
-        temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        user.set_password(temp_password)
-        user.is_active = True
-        user.save(update_fields=['password', 'is_active'])
-
-        return Response({
-            'parent_id': str(parent_profile.id),
-            'user_email': user.email,
-            'user_phone': user.phone_number,
-            'user_name': user.get_full_name(),
-            'password': temp_password
-        })
-    
-    @action(detail=True, methods=['patch'], url_path='toggle-access')
-    def toggle_access(self, request, pk=None):
-        """Enable or disable portal access for a parent account."""
-        parent_profile = self.get_object()
-        
-        # Get the new value from request data or toggle current value
-        new_value = request.data.get('portal_access_enabled')
-        if new_value is None:
-            new_value = not parent_profile.portal_access_enabled
-        
-        parent_profile.portal_access_enabled = new_value
-        parent_profile.save(update_fields=['portal_access_enabled', 'updated_at'])
-        
-        # Also update the user's is_active status
-        parent_profile.user.is_active = new_value
-        parent_profile.user.save(update_fields=['is_active'])
-        
-        return Response({
-            'parent_id': str(parent_profile.id),
-            'portal_access_enabled': parent_profile.portal_access_enabled,
-            'user_name': parent_profile.user.get_full_name(),
-            'message': f"Portal access {'enabled' if new_value else 'disabled'} for {parent_profile.user.get_full_name()}"
-        })
-
     @action(detail=True, methods=['get'])
     def siblings(self, request, pk=None):
         """Get student's siblings."""
@@ -1854,3 +1800,57 @@ class StudentEnrollmentViewSet(viewsets.ModelViewSet):
             'errors': errors,
             'message': f'Successfully enrolled {created_count} students'
         }, status=status.HTTP_201_CREATED if created_count > 0 else status.HTTP_200_OK)
+
+
+class ParentCredentialsViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin endpoints to view parent credentials and reset passwords."""
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
+    serializer_class = ParentCredentialsSerializer
+
+    def get_queryset(self):
+        return ParentUser.objects.filter(
+            tenant=self.request.user.tenant,
+            portal_access_enabled=True
+        ).select_related('user').prefetch_related('students')
+
+    @action(detail=True, methods=['post'], url_path='reset-password')
+    def reset_password(self, request, pk=None):
+        parent_profile = self.get_object()
+        user = parent_profile.user
+
+        temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        user.set_password(temp_password)
+        user.is_active = True
+        user.save(update_fields=['password', 'is_active'])
+
+        return Response({
+            'parent_id': str(parent_profile.id),
+            'user_email': user.email,
+            'user_phone': user.phone_number,
+            'user_name': user.get_full_name(),
+            'password': temp_password
+        })
+    
+    @action(detail=True, methods=['patch'], url_path='toggle-access')
+    def toggle_access(self, request, pk=None):
+        """Enable or disable portal access for a parent account."""
+        parent_profile = self.get_object()
+        
+        # Get the new value from request data or toggle current value
+        new_value = request.data.get('portal_access_enabled')
+        if new_value is None:
+            new_value = not parent_profile.portal_access_enabled
+        
+        parent_profile.portal_access_enabled = new_value
+        parent_profile.save(update_fields=['portal_access_enabled', 'updated_at'])
+        
+        # Also update the user's is_active status
+        parent_profile.user.is_active = new_value
+        parent_profile.user.save(update_fields=['is_active'])
+        
+        return Response({
+            'parent_id': str(parent_profile.id),
+            'portal_access_enabled': parent_profile.portal_access_enabled,
+            'user_name': parent_profile.user.get_full_name(),
+            'message': f"Portal access {'enabled' if new_value else 'disabled'} for {parent_profile.user.get_full_name()}"
+        })
