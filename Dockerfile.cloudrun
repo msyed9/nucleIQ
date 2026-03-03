@@ -78,6 +78,7 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'echo "=========================================="' >> /entrypoint.sh && \
     echo 'cd /app/backend' >> /entrypoint.sh && \
     echo 'python manage.py migrate --noinput' >> /entrypoint.sh && \
+    echo 'python manage.py seed_website_templates' >> /entrypoint.sh && \
     echo 'exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
