@@ -212,11 +212,18 @@ class TenantWebsiteInstanceViewSet(viewsets.ModelViewSet):
     def publish(self, request, pk=None):
         """Publish the website instance"""
         instance = self.get_object()
+        
+        if not instance.subdomain:
+            import re
+            import uuid
+            base_subdomain = re.sub(r'[^a-z0-9]', '', instance.name.lower()[:20])
+            instance.subdomain = f"{base_subdomain}-{uuid.uuid4().hex[:4]}"
+            
         instance.is_published = True
         instance.status = 'published'
         instance.published_at = timezone.now()
         instance.save()
-        return Response({'status': 'published', 'published_at': instance.published_at})
+        return Response(TenantWebsiteInstanceSerializer(instance).data)
     
     @action(detail=True, methods=['post'])
     def unpublish(self, request, pk=None):
@@ -225,7 +232,7 @@ class TenantWebsiteInstanceViewSet(viewsets.ModelViewSet):
         instance.is_published = False
         instance.status = 'draft'
         instance.save()
-        return Response({'status': 'unpublished'})
+        return Response(TenantWebsiteInstanceSerializer(instance).data)
     
     @action(detail=True, methods=['patch'])
     def update_theme(self, request, pk=None):

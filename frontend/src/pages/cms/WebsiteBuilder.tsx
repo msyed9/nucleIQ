@@ -323,7 +323,14 @@ const WebsiteBuilder: React.FC = () => {
     try {
       const endpoint = currentInstance.is_published ? 'unpublish' : 'publish';
       const response = await api.post(`/cms/instances/${currentInstance.id}/${endpoint}/`);
-      setCurrentInstance({ ...currentInstance, is_published: !currentInstance.is_published });
+
+      const updatedInstance = response.data;
+      setCurrentInstance(updatedInstance);
+
+      // Update instances array so the gallery view shows the correct state
+      setInstances(prev => prev.map(inst =>
+        inst.id === currentInstance.id ? updatedInstance : inst
+      ));
     } catch (error) {
       console.error('Failed to publish:', error);
     } finally {
