@@ -1,0 +1,9 @@
+class_name,section_name,room_number,capacity,academic_year
+Nursery,A,101,40,2025-26
+LKG,A,102,40,2025-26
+UKG,A,103,40,2025-26
+Grade 1,A,104,40,2025-26
+Grade 2,A,105,40,2025-26
+Grade 3,A,106,40,2025-26
+Grade 4,A,107,40,2025-26
+Grade 5,A,108,40,2025-26

@@ -1,0 +1,59 @@
+subject_name,subject_code,class_name,credit_hours,is_elective,max_marks
+English,ENGNursery,Nursery,6,false,100
+Mathematics,MATHNursery,Nursery,5,false,100
+EVS,EVSNursery,Nursery,4,false,100
+Hindi,HINNursery,Nursery,4,false,100
+Urdu,URDNursery,Nursery,4,false,100
+Art & Craft,ARTNursery,Nursery,2,false,50
+English,ENGLKG,LKG,6,false,100
+Mathematics,MATHLKG,LKG,5,false,100
+EVS,EVSLKG,LKG,4,false,100
+Hindi,HINLKG,LKG,4,false,100
+Urdu,URDLKG,LKG,4,false,100
+Art & Craft,ARTLKG,LKG,2,false,50
+English,ENGUKG,UKG,6,false,100
+Mathematics,MATHUKG,UKG,5,false,100
+EVS,EVSUKG,UKG,4,false,100
+Hindi,HINUKG,UKG,4,false,100
+Urdu,URDUKG,UKG,4,false,100
+Art & Craft,ARTUKG,UKG,2,false,50
+English,ENG1,Grade 1,6,false,100
+Mathematics,MATH1,Grade 1,6,false,100
+Science,SCI1,Grade 1,5,false,100
+Social Studies,SST1,Grade 1,5,false,100
+Hindi,HIN1,Grade 1,4,false,100
+Urdu,URD1,Grade 1,4,false,100
+Computer Science,CS1,Grade 1,2,false,50
+Physical Education,PE1,Grade 1,2,false,50
+English,ENG2,Grade 2,6,false,100
+Mathematics,MATH2,Grade 2,6,false,100
+Science,SCI2,Grade 2,5,false,100
+Social Studies,SST2,Grade 2,5,false,100
+Hindi,HIN2,Grade 2,4,false,100
+Urdu,URD2,Grade 2,4,false,100
+Computer Science,CS2,Grade 2,2,false,50
+Physical Education,PE2,Grade 2,2,false,50
+English,ENG3,Grade 3,6,false,100
+Mathematics,MATH3,Grade 3,6,false,100
+Science,SCI3,Grade 3,5,false,100
+Social Studies,SST3,Grade 3,5,false,100
+Hindi,HIN3,Grade 3,4,false,100
+Urdu,URD3,Grade 3,4,false,100
+Computer Science,CS3,Grade 3,2,false,50
+Physical Education,PE3,Grade 3,2,false,50
+English,ENG4,Grade 4,6,false,100
+Mathematics,MATH4,Grade 4,6,false,100
+Science,SCI4,Grade 4,5,false,100
+Social Studies,SST4,Grade 4,5,false,100
+Hindi,HIN4,Grade 4,4,false,100
+Urdu,URD4,Grade 4,4,false,100
+Computer Science,CS4,Grade 4,2,false,50
+Physical Education,PE4,Grade 4,2,false,50
+English,ENG5,Grade 5,6,false,100
+Mathematics,MATH5,Grade 5,6,false,100
+Science,SCI5,Grade 5,5,false,100
+Social Studies,SST5,Grade 5,5,false,100
+Hindi,HIN5,Grade 5,4,false,100
+Urdu,URD5,Grade 5,4,false,100
+Computer Science,CS5,Grade 5,2,false,50
+Physical Education,PE5,Grade 5,2,false,50
