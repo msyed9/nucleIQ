@@ -65,12 +65,18 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
 # =============================================================================
+# MIDDLEWARE - inject WhiteNoise for static file serving (no nginx in Cloud Run)
+# =============================================================================
+
+_sec_idx = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
+MIDDLEWARE.insert(_sec_idx + 1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+
+# =============================================================================
 # STATIC & MEDIA FILES
 # =============================================================================
 
-# Static files - served by nginx directly (no WhiteNoise needed)
-# nginx handles /static/ -> /app/backend/staticfiles/
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_MAX_AGE = 86400  # 1 day browser cache for static assets
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'

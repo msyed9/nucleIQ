@@ -1,0 +1,77 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: nucleiq-backend
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero at night; Cloud Scheduler will warm it each morning
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "5"
+        # Cloud SQL Unix socket connection
+        run.googleapis.com/cloudsql-instances: YOUR_PROJECT:asia-south1:nucleiq-db
+        # Keep CPU allocated during request processing (avoids throttled cold starts)
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      serviceAccountName: nucleiq-sa@YOUR_PROJECT.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: asia-south1-docker.pkg.dev/YOUR_PROJECT/nucleiq/backend:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DJANGO_SETTINGS_MODULE
+              value: config.settings.cloudrun
+            - name: GCS_BUCKET_NAME
+              value: YOUR_PROJECT-nucleiq-media
+            - name: GUNICORN_WORKERS
+              value: "2"
+            - name: GUNICORN_THREADS
+              value: "4"
+          # Secrets injected from Google Secret Manager
+          envFrom: []
+          volumeMounts: []
+          # Secrets as individual env vars
+          env:
+            - name: DJANGO_SETTINGS_MODULE
+              value: config.settings.cloudrun
+            - name: GCS_BUCKET_NAME
+              value: YOUR_PROJECT-nucleiq-media
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nucleiq-secret-key
+                  key: latest
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nucleiq-database-url
+                  key: latest
+            - name: SCHEDULER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nucleiq-scheduler-secret
+                  key: latest
+          resources:
+            limits:
+              memory: 1Gi
+              cpu: "1"
+          startupProbe:
+            httpGet:
+              path: /api/health/
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/health/
+              port: 8000
+            periodSeconds: 30
+  traffic:
+    - percent: 100
+      latestRevision: true

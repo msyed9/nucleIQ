@@ -1,0 +1,31 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: nucleiq-frontend
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      containerConcurrency: 200
+      timeoutSeconds: 30
+      containers:
+        - image: asia-south1-docker.pkg.dev/YOUR_PROJECT/nucleiq/frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            periodSeconds: 30
+  traffic:
+    - percent: 100
+      latestRevision: true

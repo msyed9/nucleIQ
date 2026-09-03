@@ -13,7 +13,7 @@ djangorestframework-simplejwt==5.3.1
 django-allauth==65.3.0
 argon2-cffi==23.1.0
 cryptography==42.0.5
-setuptools  # Required for razorpay
+setuptools==80.9.0  # Required for razorpay
 
 # Celery & Background Tasks
 celery==5.4.0
@@ -44,7 +44,7 @@ weasyprint==67.0  # Advanced PDF generation with CSS support
 cairocffi==1.4.0
 
 # Payment Gateways
-razorpay==1.4.2
+razorpay>=2.0.1
 stripe==7.11.0
 
 # Communication
@@ -66,3 +66,4 @@ dlib==19.24.4
 numpy==1.26.4
 pyzbar==0.1.9
 
+django-storages==1.14.4

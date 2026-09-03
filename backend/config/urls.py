@@ -20,6 +20,9 @@ from drf_spectacular.views import (
 )
 
 
+from django.views.decorators.csrf import csrf_exempt
+
+
 def health_check(request):
     """
     Health check endpoint for container orchestration and load balancers.
@@ -62,6 +65,33 @@ def media_download(request, file_path):
 
     file_handle = default_storage.open(normalized_path, 'rb')
     return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(normalized_path))
+
+
+@csrf_exempt
+def scheduler_trigger(request, task_name):
+    """
+    Cloud Scheduler trigger endpoint. Secured by X-Scheduler-Token header.
+    Cloud Run IAM (OIDC) is the outer gate; this is a defence-in-depth check.
+    """
+    secret = os.environ.get('SCHEDULER_SECRET', '')
+    if secret and request.headers.get('X-Scheduler-Token') != secret:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    _tasks = {
+        'analytics-daily':   'analytics.tasks.aggregate_daily_metrics',
+        'analytics-churn':   'analytics.tasks.predict_churn_daily',
+        'idcards-cleanup':   'idcards.tasks.cleanup_expired_qr_codes',
+    }
+
+    if task_name not in _tasks:
+        return JsonResponse({'error': f'Unknown task: {task_name}'}, status=404)
+
+    from celery import current_app
+    current_app.send_task(_tasks[task_name])
+    return JsonResponse({'status': 'triggered', 'task': task_name})
 
 # API v1 Patterns
 v1_patterns = [
@@ -147,6 +177,9 @@ v2_schema_urlpatterns = v2_patterns
 urlpatterns = [
     # Health check (no authentication required)
     path('api/health/', health_check, name='health-check'),
+
+    # Cloud Scheduler trigger (no auth middleware - secured by SCHEDULER_SECRET header)
+    path('api/scheduler/<str:task_name>/', scheduler_trigger, name='scheduler-trigger'),
     
     # Root URL - Redirect to frontend (not admin)
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
