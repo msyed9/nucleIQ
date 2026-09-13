@@ -29,6 +29,28 @@ from .serializers import (
 from .services import FeeCalculationService
 
 
+def _normalize_id_list(request, key):
+    """
+    Extract a list of IDs from request data regardless of content type.
+
+    JSON bodies already deliver a list, but form-encoded requests deliver a
+    scalar (or repeated fields), and passing a bare string into a ``__in``
+    lookup makes Django iterate it character-by-character. Always return a
+    clean list of non-empty values.
+    """
+    data = request.data
+    if hasattr(data, 'getlist'):
+        values = data.getlist(key)
+    else:
+        values = data.get(key)
+
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)) or not isinstance(values, (list, tuple)):
+        values = [values]
+    return [v for v in values if v not in (None, '', b'')]
+
+
 class FeeCategoryViewSet(viewsets.ModelViewSet):
     """ViewSet for Fee Categories."""
     
@@ -171,7 +193,14 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def generate_monthly(self, request):
-        """Generate invoices for current period (monthly or term-based)."""
+        """
+        Generate invoices for current period (monthly or term-based).
+
+        Supports:
+        - dry_run: bool - preview eligible students/amounts without creating invoices
+        - grade_level_ids / section_ids: list of UUIDs - restrict generation to specific classes/sections
+        - student_ids: list of UUIDs - restrict generation to specific students
+        """
         from datetime import date
         from tenants.models import AcademicYear
         
@@ -190,20 +219,33 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
         today = date.today()
         req_month = request.data.get('month') or request.query_params.get('month')
         req_year = request.data.get('year') or request.query_params.get('year')
+        dry_run = str(request.data.get('dry_run', False)).lower() in ('1', 'true', 'yes')
+        grade_level_ids = _normalize_id_list(request, 'grade_level_ids')
+        section_ids = _normalize_id_list(request, 'section_ids')
+        student_ids = _normalize_id_list(request, 'student_ids')
+        scope_kwargs = {
+            'dry_run': dry_run,
+            'grade_level_ids': grade_level_ids or None,
+            'section_ids': section_ids or None,
+            'student_ids': student_ids or None,
+        }
 
         if frequency:
             frequency = str(frequency).upper()
 
         if frequency and frequency != 'MONTHLY':
-            count = FeeCalculationService.generate_term_invoices(
+            count, preview = FeeCalculationService.generate_term_invoices(
                 request.user.tenant,
                 academic_year,
                 today,
-                frequencies=[frequency] if frequency else None
+                frequencies=[frequency] if frequency else None,
+                **scope_kwargs
             )
             return Response({
-                'message': f'Generated {count} invoices for {frequency}',
-                'count': count
+                'message': f'{"Would generate" if dry_run else "Generated"} {count} invoices for {frequency}',
+                'count': count,
+                'dry_run': dry_run,
+                'preview': preview
             })
 
         # Auto-detect if term-based structures exist without monthly
@@ -258,40 +300,50 @@ class FeeInvoiceViewSet(viewsets.ModelViewSet):
                 year_for_month = academic_year.start_date.year if earliest >= academic_year.start_date.month else academic_year.end_date.year
                 target_date = date(year_for_month, earliest, 1)
 
-            count = FeeCalculationService.generate_term_invoices(
+            count, preview = FeeCalculationService.generate_term_invoices(
                 request.user.tenant,
                 academic_year,
                 target_date,
-                frequencies=term_frequencies
+                frequencies=term_frequencies,
+                **scope_kwargs
             )
             if count == 0:
                 return Response({
                     'message': 'No eligible term-based invoices found for the selected period',
                     'count': 0,
+                    'dry_run': dry_run,
+                    'preview': [],
                     'configured_months': sorted(list(configured_months))
                 }, status=status.HTTP_400_BAD_REQUEST)
             return Response({
-                'message': f'Generated {count} term-based invoices',
+                'message': f'{"Would generate" if dry_run else "Generated"} {count} term-based invoices',
                 'count': count,
+                'dry_run': dry_run,
+                'preview': preview,
                 'target_month': target_date.month,
                 'target_year': target_date.year
             })
 
-        count = FeeCalculationService.generate_monthly_invoices(
+        count, preview = FeeCalculationService.generate_monthly_invoices(
             request.user.tenant,
             academic_year,
-            today
+            today,
+            **scope_kwargs
         )
         
         if count == 0:
             return Response({
                 'message': 'No eligible monthly invoices found for the current month',
-                'count': 0
+                'count': 0,
+                'dry_run': dry_run,
+                'preview': []
             }, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
-            'message': f'Generated {count} invoices',
-            'count': count
+            'message': f'{"Would generate" if dry_run else "Generated"} {count} invoices',
+            'count': count,
+            'dry_run': dry_run,
+            'preview': preview
         })
     
     @action(detail=False, methods=['get'])

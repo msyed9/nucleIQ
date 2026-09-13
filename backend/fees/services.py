@@ -76,13 +76,46 @@ class FeeCalculationService:
         return f"{prefix}{new_number:04d}"
     
     @staticmethod
-    def generate_monthly_invoices(tenant, academic_year, month_date):
-        """Generate monthly invoices for all students."""
+    def _filter_students_for_generation(tenant, academic_year, grade_level_ids=None, section_ids=None, student_ids=None):
+        """Shared student scoping for invoice generation (used by dry-run preview and actual generation)."""
         from students.models import Student
-        
+
         students = Student.objects.filter(tenant=tenant, is_active=True)
+
+        if student_ids:
+            students = students.filter(id__in=student_ids)
+
+        if section_ids or grade_level_ids:
+            students = students.filter(
+                enrollments__tenant=tenant,
+                enrollments__academic_year=academic_year,
+                enrollments__status='ACTIVE'
+            )
+            if section_ids:
+                students = students.filter(enrollments__section_id__in=section_ids)
+            if grade_level_ids:
+                students = students.filter(enrollments__section__grade_level_id__in=grade_level_ids)
+            students = students.distinct()
+
+        return students
+
+    @staticmethod
+    def generate_monthly_invoices(
+        tenant, academic_year, month_date,
+        dry_run=False, grade_level_ids=None, section_ids=None, student_ids=None
+    ):
+        """
+        Generate (or preview) monthly invoices for all eligible students.
+
+        Returns a tuple: (count, preview_rows). `preview_rows` is only populated
+        when dry_run=True and contains one entry per student that would be invoiced.
+        """
+        students = FeeCalculationService._filter_students_for_generation(
+            tenant, academic_year, grade_level_ids, section_ids, student_ids
+        )
         invoices_created = 0
-        
+        preview_rows = []
+
         for student in students:
             allocations = FeeAllocation.objects.filter(
                 tenant=tenant,
@@ -118,6 +151,23 @@ class FeeCalculationService:
                     'description': f"{allocation.fee_structure.category.name}",
                     'amount': amount
                 })
+
+            if dry_run:
+                enrollment = student.get_current_enrollment() if hasattr(student, 'get_current_enrollment') else None
+                preview_rows.append({
+                    'student_id': str(student.id),
+                    'admission_number': student.admission_number,
+                    'name': student.get_full_name(),
+                    'class': enrollment.section.grade_level.name if enrollment and enrollment.section and enrollment.section.grade_level else None,
+                    'section': enrollment.section.name if enrollment and enrollment.section else None,
+                    'amount': float(total_amount),
+                    'items': [
+                        {'description': item['description'], 'amount': float(item['amount'])}
+                        for item in items_data
+                    ]
+                })
+                invoices_created += 1
+                continue
             
             # Create invoice
             invoice = FeeInvoice.objects.create(
@@ -142,18 +192,23 @@ class FeeCalculationService:
             
             invoices_created += 1
         
-        return invoices_created
+        return invoices_created, preview_rows
 
     @staticmethod
-    def generate_term_invoices(tenant, academic_year, month_date, frequencies=None):
-        """Generate term/period invoices based on fee structure term_months."""
-        from students.models import Student
+    def generate_term_invoices(
+        tenant, academic_year, month_date, frequencies=None,
+        dry_run=False, grade_level_ids=None, section_ids=None, student_ids=None
+    ):
+        """Generate (or preview) term/period invoices based on fee structure term_months."""
 
         if frequencies is None:
             frequencies = ['TERM', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY', 'ONE_TIME']
 
-        students = Student.objects.filter(tenant=tenant, is_active=True)
+        students = FeeCalculationService._filter_students_for_generation(
+            tenant, academic_year, grade_level_ids, section_ids, student_ids
+        )
         invoices_created = 0
+        preview_rows = []
 
         for student in students:
             allocations = FeeAllocation.objects.filter(
@@ -225,6 +280,23 @@ class FeeCalculationService:
             if not items_data:
                 continue
 
+            if dry_run:
+                enrollment = student.get_current_enrollment() if hasattr(student, 'get_current_enrollment') else None
+                preview_rows.append({
+                    'student_id': str(student.id),
+                    'admission_number': student.admission_number,
+                    'name': student.get_full_name(),
+                    'class': enrollment.section.grade_level.name if enrollment and enrollment.section and enrollment.section.grade_level else None,
+                    'section': enrollment.section.name if enrollment and enrollment.section else None,
+                    'amount': float(total_amount),
+                    'items': [
+                        {'description': item['description'], 'amount': float(item['amount'])}
+                        for item in items_data
+                    ]
+                })
+                invoices_created += 1
+                continue
+
             invoice = FeeInvoice.objects.create(
                 tenant=tenant,
                 student=student,
@@ -246,7 +318,7 @@ class FeeCalculationService:
 
             invoices_created += 1
 
-        return invoices_created
+        return invoices_created, preview_rows
     
     @staticmethod
     def _generate_transaction_number(tenant):

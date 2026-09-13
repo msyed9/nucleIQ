@@ -60,9 +60,15 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - DATABASE_URL=postgresql://nucleiq_user:nucleiq_pass_dev_only@db:5432/nucleiq
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=nucleiq
+      - DB_USER=nucleiq_user
+      - DB_PASSWORD=nucleiq_pass_dev_only
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
     depends_on:
       db:
         condition: service_healthy
@@ -112,6 +118,11 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - DATABASE_URL=postgresql://nucleiq_user:nucleiq_pass_dev_only@db:5432/nucleiq
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=nucleiq
+      - DB_USER=nucleiq_user
+      - DB_PASSWORD=nucleiq_pass_dev_only
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
@@ -137,6 +148,11 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - DATABASE_URL=postgresql://nucleiq_user:nucleiq_pass_dev_only@db:5432/nucleiq
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=nucleiq
+      - DB_USER=nucleiq_user
+      - DB_PASSWORD=nucleiq_pass_dev_only
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:

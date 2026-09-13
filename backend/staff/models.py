@@ -195,6 +195,17 @@ class Staff(BaseModel):
     # Remarks
     remarks = models.TextField(blank=True)
     
+    # Manually assigned / external QR code (alternate identity for scanning).
+    # Nullable + unique: only one student/staff may hold a given external QR value.
+    manual_qr_code = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text="Manually assigned/external QR code text. Resolves to this staff member in addition to the system-generated QR."
+    )
+    
     class Meta:
         db_table = 'staff'
         verbose_name = 'Staff Member'

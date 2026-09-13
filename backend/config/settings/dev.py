@@ -4,6 +4,7 @@ Extends base settings with development-specific configurations.
 """
 
 from .base import *
+import os
 
 # Debug mode
 DEBUG = True
@@ -44,3 +45,8 @@ LOGGING['root']['level'] = 'DEBUG'
 # Celery - Run tasks synchronously in development (no Redis needed)
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+ALLOWED_HOSTS = os.getenv(
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1"
+).split(",")

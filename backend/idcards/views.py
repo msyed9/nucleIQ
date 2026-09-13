@@ -34,6 +34,7 @@ from .utils import (
     validate_qr_code,
     create_qr_code_record
 )
+from .qr_resolution import resolve_qr_identity, QRResolutionError
 from .tasks import generate_bulk_id_cards
 from students.models import Student
 from staff.models import Staff
@@ -443,7 +444,12 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def scan(self, request):
-        """Process QR code scan for attendance"""
+        """Process QR code scan for attendance.
+
+        Resolves the scanned text via the unified QR resolution service, so
+        system-generated ID card QR codes and manually assigned/external QR
+        codes are handled identically.
+        """
         serializer = QRScanSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -451,21 +457,35 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
         tenant = request.user.tenant
         
         try:
-            # Validate QR code
-            payload, qr_code = validate_qr_code(data['qr_data'], tenant)
-            
-            # Update scan count
-            qr_code.scan_count += 1
-            qr_code.last_scanned = timezone.now()
-            qr_code.save()
-            
-            # Check for duplicate scan today
+            identity = resolve_qr_identity(tenant, data['qr_data'])
+            qr_code = identity.qr_code
+
+            if qr_code:
+                # Update scan count (only applies to system-generated QR)
+                qr_code.scan_count += 1
+                qr_code.last_scanned = timezone.now()
+                qr_code.save()
+
+            if identity.entity_type == 'student':
+                student = identity.entity
+                staff = None
+                entity_name = student.get_full_name()
+                entity_photo = student.photo.url if student.photo else None
+                identifier = student.admission_number
+            else:
+                staff = identity.entity
+                student = None
+                entity_name = staff.get_full_name()
+                entity_photo = staff.photo.url if staff.photo else None
+                identifier = staff.employee_id
+
+            # Check for duplicate scan today (based on the resolved entity,
+            # not the QR record, so manual/generated QR share dedup logic)
             today = timezone.now().date()
-            existing_scan = QRAttendance.objects.filter(
-                qr_code=qr_code,
-                scan_timestamp__date=today
-            ).first()
-            
+            existing_scan_qs = QRAttendance.objects.filter(scan_timestamp__date=today)
+            existing_scan_qs = existing_scan_qs.filter(student=student) if student else existing_scan_qs.filter(staff=staff)
+            existing_scan = existing_scan_qs.first()
+
             is_duplicate = existing_scan is not None
             
             # Determine attendance status
@@ -475,18 +495,6 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
             # Late threshold: 9:00 AM
             if scan_time.hour > 9 or (scan_time.hour == 9 and scan_time.minute > 0):
                 attendance_status = 'late'
-            
-            # Get entity
-            if payload['type'] == 'student':
-                student = Student.objects.get(id=payload['id'], tenant=tenant)
-                staff = None
-                entity_name = student.get_full_name()
-                entity_photo = student.photo.url if student.photo else None
-            else:
-                staff = Staff.objects.get(id=payload['id'], tenant=tenant)
-                student = None
-                entity_name = staff.get_full_name()
-                entity_photo = staff.photo.url if staff.photo else None
             
             # Create attendance record
             attendance = QRAttendance.objects.create(
@@ -500,7 +508,8 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
                 scan_type=data.get('scan_type', 'entry'),
                 attendance_status=attendance_status,
                 is_duplicate=is_duplicate,
-                is_valid_scan=True
+                is_valid_scan=True,
+                resolution_source=identity.source
             )
             
             # Link with main attendance system: create/update AttendanceRecord
@@ -571,20 +580,25 @@ class QRAttendanceViewSet(viewsets.ModelViewSet):
             
             return Response({
                 'success': True,
-                'student' if payload['type'] == 'student' else 'staff': {
-                    'id': payload['id'],
+                identity.entity_type: {
+                    'id': str(identity.entity.id),
                     'name': entity_name,
-                    'admission_no' if payload['type'] == 'student' else 'employee_id': payload.get('admission_no') or payload.get('employee_id'),
-                    'class': payload.get('class', ''),
+                    'admission_no' if identity.entity_type == 'student' else 'employee_id': identifier,
                     'photo_url': entity_photo
                 },
                 'attendance_marked': not is_duplicate,
                 'attendance_id': str(attendance.id),
                 'status': attendance_status,
                 'timestamp': attendance.scan_timestamp,
+                'qr_source': identity.source,
                 'message': 'Duplicate scan' if is_duplicate else 'Attendance marked successfully'
             })
             
+        except QRResolutionError as e:
+            return Response(
+                {'success': False, 'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except ValueError as e:
             return Response(
                 {'success': False, 'error': str(e)},

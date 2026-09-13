@@ -582,6 +582,73 @@ class StudentViewSet(viewsets.ModelViewSet):
             'results': serializer.data
         })
     
+    @action(
+        detail=True, methods=['put', 'delete'], url_path='manual-qr',
+        permission_classes=[IsAuthenticated, IsTenantAdmin]
+    )
+    def manual_qr(self, request, pk=None):
+        """
+        Set/replace (PUT) or remove (DELETE) the manually assigned/external QR
+        code for this student. Accepts either raw QR text (`qr_text`) or an
+        uploaded QR image (`qr_image`), which is decoded server-side.
+        """
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from idcards.qr_resolution import (
+            normalize_manual_qr_value,
+            validate_manual_qr_uniqueness,
+            decode_qr_image_to_text,
+            QRResolutionError,
+        )
+        from core.audit import log_action
+
+        student = self.get_object()
+        tenant = request.user.tenant
+
+        if request.method == 'DELETE':
+            old_value = student.manual_qr_code
+            student.manual_qr_code = None
+            student.save(update_fields=['manual_qr_code'])
+            log_action(
+                tenant=tenant, user=request.user, action='UPDATE', module='students',
+                resource='Student', resource_id=str(student.id),
+                changes={'manual_qr_code': {'old': old_value, 'new': None}},
+                request=request
+            )
+            return Response({'manual_qr_code': None})
+
+        qr_text = request.data.get('qr_text')
+        if not qr_text and 'qr_image' in request.FILES:
+            try:
+                qr_text = decode_qr_image_to_text(request.FILES['qr_image'])
+            except QRResolutionError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        normalized = normalize_manual_qr_value(qr_text)
+        if not normalized:
+            return Response(
+                {'error': 'qr_text or qr_image is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            validate_manual_qr_uniqueness(normalized, tenant, exclude_student_id=student.id)
+        except DjangoValidationError as e:
+            message = e.message if hasattr(e, 'message') else str(e)
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+        old_value = student.manual_qr_code
+        student.manual_qr_code = normalized
+        student.save(update_fields=['manual_qr_code'])
+
+        log_action(
+            tenant=tenant, user=request.user, action='UPDATE', module='students',
+            resource='Student', resource_id=str(student.id),
+            changes={'manual_qr_code': {'old': old_value, 'new': normalized}},
+            request=request
+        )
+
+        return Response({'manual_qr_code': student.manual_qr_code})
+    
     @action(detail=False, methods=['get'])
     def by_family(self, request):
         """Get all students in a family."""
@@ -626,10 +693,24 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = StudentBasicSerializer(students, many=True)
         return Response(serializer.data)
     
+    def _analytics_base_queryset(self, request):
+        """Active students for this tenant, optionally scoped to an admission-date range."""
+        queryset = Student.objects.filter(tenant=request.user.tenant, is_active=True)
+
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            queryset = queryset.filter(admission_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(admission_date__lte=date_to)
+
+        return queryset
+
     @action(detail=False, methods=['get'], url_path='analytics/by-gender')
     def analytics_by_gender(self, request):
         """
-        Get student count grouped by gender.
+        Get student count grouped by gender. Supports optional `date_from`/`date_to`
+        (admission date range) query params.
         
         Returns:
             {
@@ -640,10 +721,9 @@ class StudentViewSet(viewsets.ModelViewSet):
         """
         from django.db.models import Count
         
-        gender_stats = Student.objects.filter(
-            tenant=request.user.tenant,
-            is_active=True
-        ).values('gender').annotate(count=Count('id')).order_by('gender')
+        gender_stats = self._analytics_base_queryset(request).values('gender').annotate(
+            count=Count('id')
+        ).order_by('gender')
         
         # Convert to dict format
         result = {item['gender']: item['count'] for item in gender_stats}
@@ -664,11 +744,20 @@ class StudentViewSet(viewsets.ModelViewSet):
         """
         from django.db.models import Count
         
-        class_stats = StudentEnrollment.objects.filter(
+        enrollment_qs = StudentEnrollment.objects.filter(
             student__tenant=request.user.tenant,
             student__is_active=True,
             status='ACTIVE'
-        ).values(
+        )
+
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            enrollment_qs = enrollment_qs.filter(student__admission_date__gte=date_from)
+        if date_to:
+            enrollment_qs = enrollment_qs.filter(student__admission_date__lte=date_to)
+
+        class_stats = enrollment_qs.values(
             class_name=models.F('section__grade_level__name')
         ).annotate(count=Count('student', distinct=True)).order_by('class_name')
         
@@ -692,13 +781,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         from django.db.models.functions import ExtractYear
         from datetime import date
         
-        # Get all active students with their ages
+        # Get all active students (optionally scoped by admission date) with their ages
         current_year = date.today().year
         
-        students = Student.objects.filter(
-            tenant=request.user.tenant,
-            is_active=True
-        ).annotate(
+        students = self._analytics_base_queryset(request).annotate(
             age=current_year - ExtractYear('date_of_birth')
         )
         
@@ -712,6 +798,68 @@ class StudentViewSet(viewsets.ModelViewSet):
         ]
         
         return Response(age_ranges)
+
+    @action(detail=False, methods=['get'], url_path='analytics/students')
+    def analytics_students(self, request):
+        """
+        Drill-down: list students matching a specific analytics chart segment.
+
+        Query params:
+            - dimension: 'gender' | 'class' | 'age' (required)
+            - value: the segment value, e.g. 'M', 'Class 5', '11-13' (required)
+            - date_from / date_to: same admission-date range used by the summary charts
+        """
+        dimension = request.query_params.get('dimension')
+        value = request.query_params.get('value')
+
+        if not dimension or not value:
+            return Response(
+                {'error': 'dimension and value query params are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        queryset = self._analytics_base_queryset(request)
+
+        if dimension == 'gender':
+            queryset = queryset.filter(gender=value)
+        elif dimension == 'class':
+            queryset = queryset.filter(
+                enrollments__status='ACTIVE',
+                enrollments__section__grade_level__name=value
+            ).distinct()
+        elif dimension == 'age':
+            from datetime import date
+            from django.db.models.functions import ExtractYear
+
+            current_year = date.today().year
+            queryset = queryset.annotate(age=current_year - ExtractYear('date_of_birth'))
+
+            age_bounds = {
+                '5-7': (5, 7),
+                '8-10': (8, 10),
+                '11-13': (11, 13),
+                '14-16': (14, 16),
+                '17+': (17, None),
+            }
+            if value not in age_bounds:
+                return Response(
+                    {'error': 'Invalid age range value'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            low, high = age_bounds[value]
+            queryset = queryset.filter(age__gte=low)
+            if high is not None:
+                queryset = queryset.filter(age__lte=high)
+        else:
+            return Response(
+                {'error': 'Invalid dimension. Use gender, class, or age.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = StudentBasicSerializer(
+            queryset.order_by('admission_number'), many=True, context={'request': request}
+        )
+        return Response(serializer.data)
     
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):

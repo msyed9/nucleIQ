@@ -10,6 +10,7 @@ from .models import (
     TrainingProgram, TrainingEnrollment, TrainingFeedback,
     AppraisalCycle, StaffAppraisal, StaffGoal
 )
+from idcards.qr_resolution import normalize_manual_qr_value, validate_manual_qr_uniqueness
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -38,10 +39,31 @@ class StaffSerializer(serializers.ModelSerializer):
             'blood_group', 'photo',
             'aadhar_number', 'pan_number',
             'subjects_taught', 'remarks',
+            'manual_qr_code',
             'user_email',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'age', 'tenure_years']
+
+    def validate_manual_qr_code(self, value):
+        """Normalize and enforce uniqueness of the manually assigned/external QR code."""
+        normalized = normalize_manual_qr_value(value)
+        if not normalized:
+            return None
+
+        request = self.context.get('request')
+        tenant = getattr(getattr(request, 'user', None), 'tenant', None)
+        if tenant:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                validate_manual_qr_uniqueness(
+                    normalized, tenant,
+                    exclude_staff_id=self.instance.id if self.instance else None
+                )
+            except DjangoValidationError as e:
+                raise serializers.ValidationError(e.message if hasattr(e, 'message') else str(e))
+
+        return normalized
 
 
 class StaffListSerializer(serializers.ModelSerializer):

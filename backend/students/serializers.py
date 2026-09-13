@@ -7,6 +7,7 @@ from .models import Student, StudentRemark, StudentDocument, StudentHealthRecord
 from .utils import generate_admission_number, validate_admission_number_unique
 from core.utils import mask_aadhar
 from core.permissions import check_permission
+from idcards.qr_resolution import normalize_manual_qr_value, validate_manual_qr_uniqueness
 
 
 class StudentBasicSerializer(serializers.ModelSerializer):
@@ -173,6 +174,26 @@ class StudentDetailSerializer(serializers.ModelSerializer):
             )
         
         return value
+    
+    def validate_manual_qr_code(self, value):
+        """Normalize and enforce uniqueness of the manually assigned/external QR code."""
+        normalized = normalize_manual_qr_value(value)
+        if not normalized:
+            return None
+
+        request = self.context.get('request')
+        tenant = getattr(request, 'tenant', None) or getattr(getattr(request, 'user', None), 'tenant', None)
+        if tenant:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                validate_manual_qr_uniqueness(
+                    normalized, tenant,
+                    exclude_student_id=self.instance.id if self.instance else None
+                )
+            except DjangoValidationError as e:
+                raise serializers.ValidationError(e.message if hasattr(e, 'message') else str(e))
+
+        return normalized
     
     def create(self, validated_data):
         """Auto-generate admission number if enabled and not provided."""

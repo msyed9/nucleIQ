@@ -133,14 +133,72 @@ class StaffViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(staff)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsTenantAdmin], url_path='reset-password')
-    def reset_password(self, request, pk=None):
-        """Tenant admin can reset a staff user's password and receive a temporary password."""
-        staff = self.get_object()
-        if not hasattr(staff, 'user') or staff.user is None:
-            return Response({'error': 'Staff member has no linked user account'}, status=400)
+    @action(
+        detail=True, methods=['put', 'delete'], url_path='manual-qr',
+        permission_classes=[IsAuthenticated, IsTenantAdmin]
+    )
+    def manual_qr(self, request, pk=None):
+        """
+        Set/replace (PUT) or remove (DELETE) the manually assigned/external QR
+        code for this staff member. Accepts either raw QR text (`qr_text`) or
+        an uploaded QR image (`qr_image`), which is decoded server-side.
+        """
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from idcards.qr_resolution import (
+            normalize_manual_qr_value,
+            validate_manual_qr_uniqueness,
+            decode_qr_image_to_text,
+            QRResolutionError,
+        )
+        from core.audit import log_action
 
-        user = staff.user
+        staff = self.get_object()
+        tenant = request.user.tenant
+
+        if request.method == 'DELETE':
+            old_value = staff.manual_qr_code
+            staff.manual_qr_code = None
+            staff.save(update_fields=['manual_qr_code'])
+            log_action(
+                tenant=tenant, user=request.user, action='UPDATE', module='staff',
+                resource='Staff', resource_id=str(staff.id),
+                changes={'manual_qr_code': {'old': old_value, 'new': None}},
+                request=request
+            )
+            return Response({'manual_qr_code': None})
+
+        qr_text = request.data.get('qr_text')
+        if not qr_text and 'qr_image' in request.FILES:
+            try:
+                qr_text = decode_qr_image_to_text(request.FILES['qr_image'])
+            except QRResolutionError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        normalized = normalize_manual_qr_value(qr_text)
+        if not normalized:
+            return Response(
+                {'error': 'qr_text or qr_image is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            validate_manual_qr_uniqueness(normalized, tenant, exclude_staff_id=staff.id)
+        except DjangoValidationError as e:
+            message = e.message if hasattr(e, 'message') else str(e)
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+        old_value = staff.manual_qr_code
+        staff.manual_qr_code = normalized
+        staff.save(update_fields=['manual_qr_code'])
+
+        log_action(
+            tenant=tenant, user=request.user, action='UPDATE', module='staff',
+            resource='Staff', resource_id=str(staff.id),
+            changes={'manual_qr_code': {'old': old_value, 'new': normalized}},
+            request=request
+        )
+
+        return Response({'manual_qr_code': staff.manual_qr_code})
         import random, string
 
         temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))

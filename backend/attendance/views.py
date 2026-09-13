@@ -242,80 +242,112 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def scan_idcard(self, request):
         """
-        Mark attendance via ID card QR code scan.
-        The QR code on the ID card contains the student's admission number.
-        
+        Mark attendance via ID card QR code scan (student or staff).
+
+        Resolves the scanned text through the unified QR resolution service,
+        so system-generated QR, manually assigned/external QR, and (for
+        backward compatibility) a plain admission number all work the same.
+
         POST /api/attendance/records/scan_idcard/
         {
-            "admission_number": "ADM2024001",
-            "location": "Main Gate"  // optional
+            "qr_data": "<scanned QR text>",   // preferred
+            "admission_number": "ADM2024001", // legacy, still supported
+            "location": "Main Gate"           // optional
         }
         """
-        admission_number = request.data.get('admission_number')
+        from idcards.qr_resolution import resolve_qr_identity, QRResolutionError
+
+        qr_data = request.data.get('qr_data') or request.data.get('admission_number')
         location = request.data.get('location', '')
-        
-        if not admission_number:
+
+        if not qr_data:
             return Response(
-                {'error': 'Admission number is required'},
+                {'error': 'qr_data (or admission_number) is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Find student by admission number
-        from students.models import Student
+
         try:
-            student = Student.objects.get(
-                tenant=request.user.tenant,
-                admission_number=admission_number,
-                is_active=True
-            )
-        except Student.DoesNotExist:
+            identity = resolve_qr_identity(request.user.tenant, qr_data)
+        except QRResolutionError as e:
             return Response(
-                {'error': f'Student with admission number {admission_number} not found'},
+                {'error': str(e)},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
+        student = identity.entity if identity.entity_type == 'student' else None
+        staff = identity.entity if identity.entity_type == 'staff' else None
+
         # Get academic year
         from tenants.models import AcademicYear
         academic_year = AcademicYear.objects.filter(
             tenant=request.user.tenant,
             is_active=True
         ).first()
-        
+
         if not academic_year:
             return Response(
                 {'error': 'No active academic year found'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Determine status based on time
         check_in_time = timezone.now().time()
         attendance_status = self._determine_status(check_in_time)
-        
-        # Mark attendance (create or update for today)
+
+        record_defaults = {
+            'status': attendance_status,
+            'method': 'QR_CODE',
+            'academic_year': academic_year,
+            'check_in_time': check_in_time,
+            'marked_by': request.user,
+            'remarks': f'ID Card scan at {location}' if location else 'ID Card QR scan'
+        }
+
+        if student:
+            record, created = AttendanceRecord.objects.update_or_create(
+                tenant=request.user.tenant,
+                student=student,
+                date=date.today(),
+                defaults={**record_defaults, 'record_type': 'STUDENT'}
+            )
+
+            enrollment = student.get_current_enrollment()
+            class_name = None
+            section_name = None
+            if enrollment and enrollment.section:
+                section_name = enrollment.section.name
+                if enrollment.section.grade_level:
+                    class_name = enrollment.section.grade_level.name
+
+            return Response({
+                'success': True,
+                'attendance': {
+                    'id': str(record.id),
+                    'date': str(record.date),
+                    'status': record.status,
+                    'check_in_time': check_in_time.strftime('%H:%M:%S'),
+                    'created': created
+                },
+                'student': {
+                    'id': str(student.id),
+                    'admission_number': student.admission_number,
+                    'full_name': student.get_full_name(),
+                    'class': class_name,
+                    'section': section_name,
+                    'photo': student.photo.url if student.photo else None
+                },
+                'qr_source': identity.source,
+                'message': f'Attendance marked as {attendance_status} for {student.get_full_name()}'
+            })
+
+        # Staff
         record, created = AttendanceRecord.objects.update_or_create(
             tenant=request.user.tenant,
-            student=student,
+            staff=staff,
             date=date.today(),
-            defaults={
-                'status': attendance_status,
-                'method': 'QR_CODE',
-                'record_type': 'STUDENT',
-                'academic_year': academic_year,
-                'check_in_time': check_in_time,
-                'marked_by': request.user,
-                'notes': f'ID Card scan at {location}' if location else 'ID Card QR scan'
-            }
+            defaults={**record_defaults, 'record_type': 'STAFF'}
         )
-        
-        # Get student's current enrollment info
-        enrollment = student.get_current_enrollment()
-        class_name = None
-        section_name = None
-        if enrollment and enrollment.section:
-            section_name = enrollment.section.name
-            if enrollment.section.grade_level:
-                class_name = enrollment.section.grade_level.name
-        
+
         return Response({
             'success': True,
             'attendance': {
@@ -325,15 +357,15 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
                 'check_in_time': check_in_time.strftime('%H:%M:%S'),
                 'created': created
             },
-            'student': {
-                'id': str(student.id),
-                'admission_number': student.admission_number,
-                'full_name': student.get_full_name(),
-                'class': class_name,
-                'section': section_name,
-                'photo': student.photo.url if student.photo else None
+            'staff': {
+                'id': str(staff.id),
+                'employee_id': staff.employee_id,
+                'full_name': staff.get_full_name(),
+                'designation': staff.designation,
+                'photo': staff.photo.url if staff.photo else None
             },
-            'message': f'Attendance marked as {attendance_status} for {student.get_full_name()}'
+            'qr_source': identity.source,
+            'message': f'Attendance marked as {attendance_status} for {staff.get_full_name()}'
         })
     
     @action(detail=False, methods=['post'])

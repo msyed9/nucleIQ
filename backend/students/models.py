@@ -170,6 +170,17 @@ class Student(BaseModel):
     # Status
     is_active = models.BooleanField(default=True)
     
+    # Manually assigned / external QR code (alternate identity for scanning).
+    # Nullable + unique: only one student/staff may hold a given external QR value.
+    manual_qr_code = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=_('Manually assigned/external QR code text. Resolves to this student in addition to the system-generated QR.')
+    )
+    
     # Metadata
     notes = models.TextField(blank=True, help_text=_('Internal notes'))
     
@@ -187,6 +198,7 @@ class Student(BaseModel):
         indexes = [
             models.Index(fields=['tenant', 'admission_number']),
             models.Index(fields=['family_id']),
+            models.Index(fields=['manual_qr_code']),
         ]
     
     # Audit trail - tracks all changes to student records

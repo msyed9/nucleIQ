@@ -28,7 +28,7 @@ def generate_monthly_invoices_task():
         if not academic_year:
             continue
         
-        count = FeeCalculationService.generate_monthly_invoices(
+        count, _preview = FeeCalculationService.generate_monthly_invoices(
             tenant, academic_year, today
         )
         

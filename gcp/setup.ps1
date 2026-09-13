@@ -95,7 +95,7 @@ gcloud sql users create nucleiq_user `
     --password=$DbPassword `
     --project=$ProjectId
 
-$DatabaseUrl = "postgresql://nucleiq_user:$DbPassword@/nucleiq?host=/cloudsql/$ProjectId`:$Region`:nucleiq-db"
+$DatabaseUrl = "postgresql://nucleiq_user:" + $DbPassword + "@/nucleiq?host=/cloudsql/" + $ProjectId + ":" + $Region + ":nucleiq-db"
 
 # ── Cloud Storage (media bucket) ──────────────────────────────────────────────
 Write-Host "`n[5/9] Creating Cloud Storage bucket for media files..." -ForegroundColor Yellow
@@ -150,4 +150,4 @@ Write-Host " DB Password:      $DbPassword"
 Write-Host " Secret Key:       $SecretKey"
 Write-Host " Scheduler Secret: $SchedulerSecret"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`nNext: run .\gcp\deploy.ps1 -ProjectId $ProjectId" -ForegroundColor Green
+Write-Host "`nNext: run .\gcp\deploy.ps1 -ProjectId $($ProjectId)" -ForegroundColor Green

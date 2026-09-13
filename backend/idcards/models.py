@@ -407,8 +407,11 @@ class QRAttendance(BaseModel):
     )
     
     # QR Code reference
+    # Nullable: manual/external QR resolutions have no IDCardQRCode row.
     qr_code = models.ForeignKey(
         IDCardQRCode,
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name='attendance_records'
     )
@@ -444,6 +447,16 @@ class QRAttendance(BaseModel):
         max_length=20,
         choices=STATUS_CHOICES,
         default='present'
+    )
+    
+    # How the scanned text was resolved to an entity (audit/debug aid).
+    # 'generated' = encrypted system QR, 'manual' = admin-assigned external QR,
+    # 'legacy_id' = raw admission/employee number fallback.
+    resolution_source = models.CharField(
+        max_length=20,
+        default='generated',
+        blank=True,
+        help_text=_('How the scanned QR text was resolved to an entity')
     )
     
     # Integration with main attendance system
