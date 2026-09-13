@@ -339,6 +339,14 @@ class Student360Serializer(serializers.Serializer):
     health_summary = serializers.DictField()
     attendance_details = serializers.DictField(required=False, allow_null=True)
     fee_details = serializers.DictField(required=False, allow_null=True)
+    # Sections aggregated from other modules (complaints, academics, exams).
+    # Each is a dict with a `summary`/`trend` block plus an `items` list.
+    complaints = serializers.DictField(required=False, allow_null=True)
+    homework = serializers.DictField(required=False, allow_null=True)
+    exam_results = serializers.DictField(required=False, allow_null=True)
+    # Teacher daily observations (staffwork): recent items + 30-day flag summary
+    # + at-risk indicator.
+    teacher_remarks = serializers.DictField(required=False, allow_null=True)
 
 
 class SiblingSerializer(serializers.ModelSerializer):

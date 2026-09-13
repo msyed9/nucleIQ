@@ -71,6 +71,8 @@ INSTALLED_APPS = [
     'security',
     'placement',
     'helpdesk',
+    'complaints',
+    'staffwork',
     'reports',
     'data_management',
     # 'notifications',  # Using communication app instead

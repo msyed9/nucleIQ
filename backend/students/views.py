@@ -26,7 +26,9 @@ from .serializers import (
     StudentEnrollmentSerializer,
     ParentCredentialsSerializer
 )
-from .services import Student360Service, create_system_remark
+from .services import Student360Service, create_system_remark, SiblingLinkingService
+from .permissions import CanViewStudentProfile
+from django.core.cache import cache
 from .bulk_import import BulkStudentImportService
 from .promotion_service import PromotionService
 from .notifications import StudentNotificationService
@@ -157,14 +159,13 @@ class StudentViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         student = serializer.save(tenant=self.request.user.tenant)
-        
-        # Handle family linking for siblings
+
+        # Sibling linking: if no family_id was explicitly provided, try to
+        # match this student to existing students sharing a father/mother
+        # phone number before falling back to a fresh standalone family_id.
         if not student.family_id:
-            # Generate a unique family ID if not provided
-            import uuid
-            student.family_id = f"FAM-{uuid.uuid4().hex[:8].upper()}"
-            student.save()
-        
+            SiblingLinkingService.link_new_student(student)
+
         # Create parent login if requested
         create_parent_login = self.request.data.get('create_parent_login', False)
         if create_parent_login:
@@ -446,15 +447,58 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = StudentHealthRecordSerializer(records, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    # Sections whose row count can be tuned via query params, and the param name
+    # used for each. `attendance_days` is accepted for forward-compat but the
+    # attendance section is currently summarised over the whole academic year.
+    PROFILE_360_LIMIT_PARAMS = {
+        'recent_activity': 'activity_limit',
+        'complaints': 'complaints_limit',
+        'homework': 'homework_limit',
+        'exam_results': 'exams_limit',
+        'teacher_remarks': 'remarks_limit',
+    }
+    PROFILE_360_CACHE_TTL = 300  # seconds (5 minutes)
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[IsAuthenticated, IsTenantUser, IsNotParent, CanViewStudentProfile],
+    )
     def profile_360(self, request, pk=None):
         """
-        Get complete 360° profile for a student.
+        Get complete 360° profile for a student, aggregated from all modules.
 
-        Returns comprehensive data from all modules.
+        Access (beyond tenant membership): principals/supervisors/admins may view
+        any student; teachers only students they teach. Parents use the parent
+        portal 360 endpoint. See students.permissions.CanViewStudentProfile.
+
+        Optional query params (each clamped to 50):
+            ?activity_limit=  ?complaints_limit=  ?homework_limit=  ?exams_limit=  ?limit=
+        `limit` applies to every list-like section as a fallback.
+
+        The composite response is cached per (tenant, student, params) for 5
+        minutes to cut load when staff browse many profiles. The RBAC check runs
+        on every request (before the cache read via get_object()), so caching
+        never widens who can see a profile.
         """
+        # get_object() runs check_object_permissions -> CanViewStudentProfile.
         student = self.get_object()
-        service = Student360Service(student)
+
+        # Resolve per-section limits from query params, with a global `limit`
+        # fallback. Invalid values are ignored and defaults apply in the service.
+        default_limit = request.query_params.get('limit')
+        options = {}
+        for section, param in self.PROFILE_360_LIMIT_PARAMS.items():
+            value = request.query_params.get(param, default_limit)
+            if value is not None:
+                options[section] = value
+
+        cache_key = self._profile_360_cache_key(student, options)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        service = Student360Service(student, options=options)
         profile_data = service.get_360_profile()
 
         def _make_absolute(url):
@@ -479,7 +523,51 @@ class StudentViewSet(viewsets.ModelViewSet):
                         sib['photo_url'] = _make_absolute(sib.get('photo_url'))
 
         serializer = Student360Serializer(profile_data)
-        return Response(serializer.data)
+        data = serializer.data
+        cache.set(cache_key, data, self.PROFILE_360_CACHE_TTL)
+        return Response(data)
+
+    @staticmethod
+    def _profile_360_cache_key(student, options):
+        """Cache key scoped to tenant + student + resolved section limits."""
+        parts = ':'.join(f'{k}={options[k]}' for k in sorted(options))
+        return f'student360:{student.tenant_id}:{student.id}:{parts}'
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='daily-remarks',
+        permission_classes=[IsAuthenticated, IsTenantUser, IsNotParent, CanViewStudentProfile],
+    )
+    def daily_remarks(self, request, pk=None):
+        """
+        Teacher daily observations for a student (staffwork StudentDailyRemark),
+        newest first. Same RBAC as the 360 profile: full-access staff for any
+        student, teachers only for students they teach.
+
+        GET /api/v1/students/students/{id}/daily-remarks/?limit=20
+        """
+        student = self.get_object()
+        limit = request.query_params.get('limit')
+        service = Student360Service(student, options={'teacher_remarks': limit} if limit else None)
+        return Response(service._get_teacher_remarks(service._limit('teacher_remarks')))
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='remarks-summary',
+        permission_classes=[IsAuthenticated, IsTenantUser, IsNotParent, CanViewStudentProfile],
+    )
+    def remarks_summary(self, request, pk=None):
+        """
+        30-day flag summary + at-risk indicator for a student's teacher remarks.
+
+        GET /api/v1/students/students/{id}/remarks-summary/
+        """
+        student = self.get_object()
+        service = Student360Service(student)
+        data = service._get_teacher_remarks(service._limit('teacher_remarks'))
+        return Response({'summary': data['summary'], 'at_risk': data['at_risk']})
 
     @action(detail=True, methods=['get'])
     def siblings(self, request, pk=None):
@@ -692,7 +780,31 @@ class StudentViewSet(viewsets.ModelViewSet):
         
         serializer = StudentBasicSerializer(students, many=True)
         return Response(serializer.data)
-    
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsTenantAdmin])
+    def sync_siblings(self, request):
+        """
+        Manually trigger a mass sibling-matching sync for the tenant.
+
+        Groups every active student by shared father/mother phone number and
+        backfills/merges `family_id` across each group. Runs synchronously by
+        default (small/medium tenants); pass ?async=true to queue it as a
+        background Celery task instead and get a task_id back immediately.
+
+        Idempotent - students already correctly grouped are left untouched.
+        """
+        tenant = request.user.tenant
+
+        if request.query_params.get('async', 'false').lower() == 'true':
+            task = tasks.sync_siblings_task.delay(tenant_id=tenant.id)
+            return Response(
+                {'message': 'Sibling sync queued', 'task_id': task.id},
+                status=status.HTTP_202_ACCEPTED
+            )
+
+        stats = SiblingLinkingService.sync_tenant(tenant)
+        return Response(stats)
+
     def _analytics_base_queryset(self, request):
         """Active students for this tenant, optionally scoped to an admission-date range."""
         queryset = Student.objects.filter(tenant=request.user.tenant, is_active=True)

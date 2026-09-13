@@ -128,6 +128,8 @@ v1_patterns = [
     path('security/', include('security.api.v1.urls')),
     path('placement/', include('placement.api.v1.urls')),
     path('helpdesk/', include('helpdesk.api.v1.urls')),
+    path('complaints/', include('complaints.api.v1.urls')),
+    path('staffwork/', include('staffwork.api.v1.urls')),
     path('reports/', include('reports.api.v1.urls')),
     path('data-management/', include('data_management.api.v1.urls')),
 ]
@@ -167,6 +169,8 @@ v2_patterns = [
     path('security/', include('security.api.v2.urls')),
     path('placement/', include('placement.api.v2.urls')),
     path('helpdesk/', include('helpdesk.api.v2.urls')),
+    path('complaints/', include('complaints.api.v2.urls')),
+    path('staffwork/', include('staffwork.api.v2.urls')),
     path('reports/', include('reports.api.v2.urls')),
     path('data-management/', include('data_management.api.v2.urls')),
 ]

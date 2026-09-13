@@ -184,6 +184,7 @@ import ParentLayout from './components/layout/ParentLayout';
 import AuditLogs from './pages/admin/AuditLogs';
 import RecycleBin from './pages/admin/RecycleBin';
 import ParentPortalManagement from './pages/admin/ParentPortalManagement';
+import SiblingSync from './pages/admin/SiblingSync';
 
 // New pages added
 import TransportAllocations from './pages/transport/TransportAllocations';
@@ -203,6 +204,11 @@ import PettyCash from './pages/finance/PettyCash';
 import MessManagement from './pages/hostel/MessManagement';
 import HostelComplaints from './pages/hostel/Complaints';
 import ComplaintAnalytics from './pages/hostel/ComplaintAnalytics';
+import LessonPlans from './pages/staffwork/LessonPlans';
+import DailyUpdatesList from './pages/staffwork/DailyUpdatesList';
+import DailyUpdateForm from './pages/staffwork/DailyUpdateForm';
+import MyTasks from './pages/staffwork/MyTasks';
+import ConsolidatedDashboard from './pages/staffwork/ConsolidatedDashboard';
 import LibraryCirculation from './pages/library/LibraryCirculation';
 import VisitorLog from './pages/security/VisitorLog';
 import GatePasses from './pages/security/GatePasses';
@@ -358,6 +364,7 @@ function App() {
                                                     <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
                                                     <Route path="/admin/recycle-bin" element={<Layout><RecycleBin /></Layout>} />
                                                     <Route path="/admin/parent-portal" element={<Layout><ParentPortalManagement /></Layout>} />
+                                                    <Route path="/admin/sibling-sync" element={<Layout><SiblingSync /></Layout>} />
                                                     {/* Timetable routes */}
                                                     <Route path="/timetable/builder" element={<Layout><TimetableBuilder /></Layout>} />
                                                     <Route path="/timetable/config" element={<Layout><TimetableConfig /></Layout>} />
@@ -418,6 +425,11 @@ function App() {
                                                     <Route path="/hostel/rooms" element={<Layout><RoomAllocation /></Layout>} />
                                                     <Route path="/hostel/allocations" element={<Layout><RoomAllocation /></Layout>} /> {/* Sidebar Alias */}
                                                     <Route path="/hostel/mess" element={<Layout><MessManagement /></Layout>} />
+                                                    <Route path="/staffwork/lesson-plans" element={<Layout><LessonPlans /></Layout>} />
+                                                    <Route path="/staffwork/daily-updates" element={<Layout><DailyUpdatesList /></Layout>} />
+                                                    <Route path="/staffwork/daily-updates/new" element={<Layout><DailyUpdateForm /></Layout>} />
+                                                    <Route path="/staffwork/my-tasks" element={<Layout><MyTasks /></Layout>} />
+                                                    <Route path="/staffwork/consolidated" element={<Layout><ConsolidatedDashboard /></Layout>} />
                                                     <Route path="/hostel/complaints" element={<Layout><HostelComplaints /></Layout>} />
                                                     <Route path="/hostel/complaints/analytics" element={<Layout><ComplaintAnalytics /></Layout>} />
                                                     <Route path="/hostel/fees" element={<Layout><HostelFees /></Layout>} />

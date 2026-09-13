@@ -96,6 +96,33 @@ def validate_indian_phone(value):
         )
 
 
+def normalize_phone_number(value):
+    """
+    Normalize a phone number to a bare 10-digit string for comparison purposes
+    (e.g. matching parent mobile numbers for sibling linking).
+
+    Strips whitespace/dashes/parentheses and any '+91', '91', or leading '0'
+    country/trunk prefix, so '+91 98765-43210', '919876543210', '09876543210'
+    and '9876543210' all normalize to the same value.
+
+    Args:
+        value (str): Raw phone number
+
+    Returns:
+        str: 10-digit normalized number, or '' if not a plausible 10-digit
+            Indian mobile number.
+    """
+    if not value:
+        return ''
+
+    cleaned = re.sub(r'[\s\-\(\)]', '', str(value))
+    cleaned = re.sub(r'^(\+?91|0)(?=\d{10}$)', '', cleaned)
+
+    if re.match(r'^[6-9]\d{9}$', cleaned):
+        return cleaned
+    return ''
+
+
 def validate_email_enhanced(value):
     """
     Enhanced email validator that rejects disposable email domains.

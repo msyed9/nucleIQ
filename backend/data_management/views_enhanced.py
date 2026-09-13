@@ -789,7 +789,19 @@ class ImportDataView(APIView):
         
         # Store created IDs for potential rollback
         import_job.created_record_ids = created_ids
-        
+
+        # Auto-run sibling sync so students imported/updated through this
+        # pipeline get matched (and merged) with each other and with
+        # pre-existing students sharing a parent phone number. Best-effort:
+        # rows are already committed, so a queueing failure here shouldn't
+        # turn a successful import into a failed one.
+        if module == 'students' and (success > 0 or updated > 0):
+            try:
+                from students.tasks import sync_siblings_task
+                sync_siblings_task.delay(tenant_id=tenant.id)
+            except Exception as e:
+                logger.warning(f"Failed to queue sibling sync after import: {e}")
+
         return {
             'success': success,
             'failed': failed,
@@ -2279,11 +2291,12 @@ class ImportDataView(APIView):
         """Create or link parent portal accounts for a student based on parent fields."""
         from users.models import User
         from students.models import ParentUser
+        from students.services import SiblingLinkingService
 
-        # Ensure family_id exists for linking siblings
+        # Match this student to existing siblings by father/mother phone
+        # number, falling back to a fresh standalone family_id if no match.
         if not student.family_id:
-            student.family_id = f"FAM-{uuid.uuid4().hex[:8].upper()}"
-            student.save(update_fields=['family_id'])
+            SiblingLinkingService.link_new_student(student)
 
         # Link existing parent accounts by family_id if present
         existing_parents = ParentUser.objects.filter(

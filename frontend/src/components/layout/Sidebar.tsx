@@ -19,7 +19,13 @@ interface SubMenuItem {
     labelKey: string;
     label?: string;
     moduleKey?: string; // Maps to tenant enabled_modules
+    roles?: string[]; // If set, item is hidden unless the user holds one of these role codes
 }
+
+// Role codes treated as "Tenant Admin" - kept in sync with IsTenantAdmin.admin_role_codes
+// on the backend (backend/core/permissions.py). UI-side hiding only; the API enforces
+// this independently and is the real access boundary.
+const TENANT_ADMIN_ROLES = ['admin', 'super_admin', 'tenant_admin', 'school_admin', 'principal', 'administrator'];
 
 interface MenuItem {
     path?: string;
@@ -63,6 +69,18 @@ const menuItems: MenuItem[] = [
             { path: '/staff/health', iconKey: 'award', labelKey: 'nav.health_records', label: 'Health Records' },
             { path: '/staff/training', iconKey: 'bookOpen', labelKey: 'nav.training', label: 'Training' },
             { path: '/staff/appraisal', iconKey: 'barChart', labelKey: 'nav.appraisal', label: 'Appraisal' },
+        ]
+    },
+    {
+        iconKey: 'clipboardCheck',
+        labelKey: 'nav.staffwork',
+        label: 'Staff Work',
+        moduleKey: 'staffwork',
+        children: [
+            { path: '/staffwork/lesson-plans', iconKey: 'bookOpen', labelKey: 'nav.lesson_plans', label: 'Lesson Plans' },
+            { path: '/staffwork/daily-updates', iconKey: 'messageSquare', labelKey: 'nav.daily_updates', label: 'Daily Updates' },
+            { path: '/staffwork/my-tasks', iconKey: 'list', labelKey: 'nav.my_tasks', label: 'My Tasks' },
+            { path: '/staffwork/consolidated', iconKey: 'barChart', labelKey: 'nav.consolidated_updates', label: 'Consolidated Dashboard' },
         ]
     },
     {
@@ -294,6 +312,7 @@ const menuItems: MenuItem[] = [
             { path: '/admin/parent-portal', iconKey: 'users', labelKey: 'nav.parent_portal', label: 'Parent Portal' },
             { path: '/admin/audit-logs', iconKey: 'fileText', labelKey: 'nav.audit_logs', label: 'Audit Logs' },
             { path: '/admin/recycle-bin', iconKey: 'folderOpen', labelKey: 'nav.recycle_bin', label: 'Recycle Bin' },
+            { path: '/admin/sibling-sync', iconKey: 'activity', labelKey: 'nav.sibling_sync', label: 'Sibling Sync', roles: TENANT_ADMIN_ROLES },
             { path: '/users/manage', iconKey: 'users', labelKey: 'nav.user_management', label: 'User Management', moduleKey: 'users' },
         ]
     },
@@ -309,7 +328,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     const { t } = useTranslation();
     const { branding, isModuleEnabled, getSmallLogoUrl } = useTenantBranding();
     const { getIconComponent } = useIconSet();
-    const { user } = useAuth();
+    const { user, isRole } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
     const [activeYear, setActiveYear] = useState<string>('');
 
@@ -349,6 +368,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
                     if (child.moduleKey && !isModuleEnabled(child.moduleKey)) {
                         return false;
                     }
+                    if (child.roles && child.roles.length > 0) {
+                        const allowed = Boolean(user?.is_platform_admin) || child.roles.some(role => isRole(role));
+                        if (!allowed) return false;
+                    }
                     return true;
                 });
                 // Only include parent if it has visible children or no children defined
@@ -359,7 +382,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
             }
             return item;
         }).filter(Boolean) as MenuItem[];
-    }, [isModuleEnabled]);
+    }, [isModuleEnabled, isRole, user]);
 
     const toggleMenu = (labelKey: string) => {
         setExpandedMenus(prev =>

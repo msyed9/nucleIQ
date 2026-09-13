@@ -24,7 +24,9 @@ import {
     Calendar,
     Phone,
     Mail,
-    MapPin
+    MapPin,
+    AlertCircle,
+    ClipboardList
 } from 'lucide-react';
 import { Button, Card } from '@/design-system';
 import api from '../../services/api';
@@ -43,9 +45,13 @@ interface StudentProfileData {
     health_summary: any;
     attendance_details: any;
     fee_details: any;
+    complaints?: { summary: any; items: any[] };
+    homework?: { summary: any; items: any[] };
+    exam_results?: { items: any[]; trend: any[]; average_percentage: number | null };
+    teacher_remarks?: { summary: any; at_risk: boolean; items: any[] };
 }
 
-type TabType = 'academic' | 'financial' | 'health' | 'documents' | 'attendance' | 'remarks';
+type TabType = 'academic' | 'financial' | 'health' | 'documents' | 'attendance' | 'remarks' | 'complaints' | 'homework' | 'teacher_remarks';
 
 const Student360: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -53,6 +59,7 @@ const Student360: React.FC = () => {
     const { t } = useTranslation();
     const [data, setData] = useState<StudentProfileData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [forbidden, setForbidden] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('attendance');
     const [documents, setDocuments] = useState<any[]>([]);
     const [documentsLoading, setDocumentsLoading] = useState(false);
@@ -67,8 +74,11 @@ const Student360: React.FC = () => {
         try {
             const response = await api.get(`/students/students/${id}/profile_360/`);
             setData(response.data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching student profile:', error);
+            if (error?.response?.status === 403) {
+                setForbidden(true);
+            }
         } finally {
             setLoading(false);
         }
@@ -115,6 +125,31 @@ const Student360: React.FC = () => {
         return <Loading fullScreen text={t('loading.profile', { defaultValue: 'Loading 360° Profile...' })} />;
     }
 
+    if (forbidden) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '400px',
+                gap: '1rem',
+                textAlign: 'center'
+            }}>
+                <AlertCircle size={48} color="var(--color-danger)" />
+                <h2 style={{ color: 'var(--color-text-primary)', margin: 0 }}>
+                    {t('errors.forbidden_title', { defaultValue: '403 — Access Denied' })}
+                </h2>
+                <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px' }}>
+                    {t('students.no_access', { defaultValue: "You don't have permission to view this student's profile. Teachers can view only the students they teach." })}
+                </p>
+                <Button onClick={() => navigate('/students')} iconLeft={ArrowLeft}>
+                    {t('common.back_to_list', { defaultValue: 'Back to List' })}
+                </Button>
+            </div>
+        );
+    }
+
     if (!data) {
         return (
             <div style={{
@@ -135,12 +170,15 @@ const Student360: React.FC = () => {
         );
     }
 
-    const { student, kpis, recent_activity, health_summary, attendance_details, fee_details, academic_summary, financial_summary } = data;
+    const { student, kpis, recent_activity, health_summary, attendance_details, fee_details, academic_summary, financial_summary, complaints, homework, exam_results, teacher_remarks } = data;
 
     const tabs = [
         { id: 'attendance' as TabType, label: t('student.attendance', { defaultValue: 'Attendance' }), icon: CheckCircle },
         { id: 'financial' as TabType, label: t('student.financial', { defaultValue: 'Financial' }), icon: CreditCard },
         { id: 'academic' as TabType, label: t('student.academic', { defaultValue: 'Academic' }), icon: BookOpen },
+        { id: 'homework' as TabType, label: t('student.homework', { defaultValue: 'Homework' }), icon: ClipboardList },
+        { id: 'complaints' as TabType, label: t('student.complaints', { defaultValue: 'Complaints' }), icon: AlertCircle },
+        { id: 'teacher_remarks' as TabType, label: t('student.teacherRemarks', { defaultValue: 'Teacher Remarks' }), icon: MessageSquare },
         { id: 'remarks' as TabType, label: t('student.remarks', { defaultValue: 'Remarks' }), icon: MessageSquare },
         { id: 'health' as TabType, label: t('student.health', { defaultValue: 'Health' }), icon: Heart },
         { id: 'documents' as TabType, label: t('student.documents', { defaultValue: 'Documents' }), icon: FileText },
@@ -945,6 +983,64 @@ const Student360: React.FC = () => {
                                             </p>
                                         </div>
                                     )}
+
+                                    {/* Recent Exam Results */}
+                                    <div>
+                                        <h4 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>
+                                            Recent Exam Results
+                                            {exam_results?.average_percentage != null && (
+                                                <span style={{
+                                                    marginLeft: '0.5rem',
+                                                    fontSize: '0.8125rem',
+                                                    fontWeight: 500,
+                                                    color: 'var(--color-text-secondary)'
+                                                }}>
+                                                    (avg {exam_results.average_percentage}%)
+                                                </span>
+                                            )}
+                                        </h4>
+                                        {exam_results && exam_results.items.length > 0 ? (
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                                                    <thead>
+                                                        <tr style={{ textAlign: 'left', color: 'var(--color-text-secondary)' }}>
+                                                            <th style={{ padding: '0.5rem' }}>Exam</th>
+                                                            <th style={{ padding: '0.5rem' }}>Subject</th>
+                                                            <th style={{ padding: '0.5rem' }}>Marks</th>
+                                                            <th style={{ padding: '0.5rem' }}>%</th>
+                                                            <th style={{ padding: '0.5rem' }}>Grade</th>
+                                                            <th style={{ padding: '0.5rem' }}>Result</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {exam_results.items.map((r: any) => (
+                                                            <tr key={r.id} style={{ borderTop: '1px solid var(--color-border-light)' }}>
+                                                                <td style={{ padding: '0.5rem' }}>{r.exam || '—'}</td>
+                                                                <td style={{ padding: '0.5rem' }}>{r.subject || '—'}</td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    {r.is_absent ? 'Absent' : `${r.marks_obtained ?? '—'} / ${r.total_marks ?? '—'}`}
+                                                                </td>
+                                                                <td style={{ padding: '0.5rem' }}>{r.percentage != null ? `${r.percentage}%` : '—'}</td>
+                                                                <td style={{ padding: '0.5rem' }}>{r.grade || '—'}</td>
+                                                                <td style={{ padding: '0.5rem' }}>
+                                                                    <span style={{
+                                                                        fontWeight: 600,
+                                                                        color: r.is_pass ? 'var(--color-success)' : 'var(--color-danger)'
+                                                                    }}>
+                                                                        {r.is_absent ? '—' : (r.is_pass ? 'Pass' : 'Fail')}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                                                No published exam results yet.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
                                 <p style={{ color: 'var(--color-text-secondary)' }}>
@@ -1191,6 +1287,202 @@ const Student360: React.FC = () => {
                             ) : (
                                 <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
                                     No remarks found for this student.
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
+                    {activeTab === 'homework' && (
+                        <Card
+                            header={<h3 style={{ margin: 0 }}>Homework</h3>}
+                            padding="lg"
+                        >
+                            {/* Summary chips */}
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(76, 175, 80, 0.12)', color: 'var(--color-success)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    Completed: {homework?.summary?.completed ?? 0}
+                                </span>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(255, 193, 7, 0.15)', color: 'var(--color-warning)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    Pending: {homework?.summary?.pending ?? 0}
+                                </span>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(244, 67, 54, 0.12)', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    Overdue: {homework?.summary?.overdue ?? 0}
+                                </span>
+                            </div>
+                            {homework && homework.items.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {homework.items.map((hw: any) => {
+                                        const statusColor = hw.status === 'COMPLETED' ? 'var(--color-success)'
+                                            : hw.status === 'OVERDUE' ? 'var(--color-danger)' : 'var(--color-warning)';
+                                        return (
+                                            <div key={hw.id} style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-bg-secondary)',
+                                                borderRadius: 'var(--radius-md)',
+                                                borderLeft: `4px solid ${statusColor}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontWeight: 600 }}>{hw.title}</span>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.75rem', color: statusColor, textTransform: 'capitalize' }}>
+                                                        {hw.status?.toLowerCase()}
+                                                    </span>
+                                                </div>
+                                                <div style={{ marginTop: '0.375rem', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    {hw.subject && <span>📘 {hw.subject}</span>}
+                                                    {hw.due_date && <span>📅 Due {formatDate(hw.due_date)}</span>}
+                                                    {hw.teacher && <span>👤 {hw.teacher}</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    No homework assigned for this student.
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
+                    {activeTab === 'complaints' && (
+                        <Card
+                            header={<h3 style={{ margin: 0 }}>Complaints / Issues / Queries</h3>}
+                            padding="lg"
+                        >
+                            {/* Summary chips */}
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(244, 67, 54, 0.12)', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    Open: {complaints?.summary?.open ?? 0}
+                                </span>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(33, 150, 243, 0.12)', color: 'var(--color-info)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    In Progress: {complaints?.summary?.in_progress ?? 0}
+                                </span>
+                                <span style={{ padding: '0.375rem 0.75rem', borderRadius: '999px', background: 'rgba(76, 175, 80, 0.12)', color: 'var(--color-success)', fontWeight: 600, fontSize: '0.8125rem' }}>
+                                    Resolved: {complaints?.summary?.resolved ?? 0}
+                                </span>
+                            </div>
+                            {complaints && complaints.items.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {complaints.items.map((c: any) => {
+                                        const priorityColor = c.priority === 'URGENT' || c.priority === 'HIGH' ? 'var(--color-danger)'
+                                            : c.priority === 'MEDIUM' ? 'var(--color-warning)' : 'var(--color-text-secondary)';
+                                        const resolved = c.status === 'RESOLVED' || c.status === 'CLOSED';
+                                        return (
+                                            <div key={c.id} style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-bg-secondary)',
+                                                borderRadius: 'var(--radius-md)',
+                                                borderLeft: `4px solid ${resolved ? 'var(--color-success)' : priorityColor}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontWeight: 600 }}>{c.title}</span>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.75rem', color: resolved ? 'var(--color-success)' : priorityColor, textTransform: 'capitalize' }}>
+                                                        {c.status?.replace('_', ' ').toLowerCase()}
+                                                    </span>
+                                                </div>
+                                                {c.description && (
+                                                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                                        {c.description}
+                                                    </p>
+                                                )}
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>
+                                                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(158, 158, 158, 0.15)', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>{c.type?.toLowerCase()}</span>
+                                                    {c.category && <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(158, 158, 158, 0.15)', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>{c.category?.toLowerCase()}</span>}
+                                                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(158, 158, 158, 0.15)', color: priorityColor, textTransform: 'capitalize' }}>{c.priority?.toLowerCase()}</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <span>Raised by: {c.raised_by}</span>
+                                                    {c.assigned_to && <span>Assigned to: {c.assigned_to}</span>}
+                                                    <span>{formatDate(c.created_at)}</span>
+                                                </div>
+                                                {resolved && c.resolution_notes && (
+                                                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.8125rem', color: 'var(--color-success)' }}>
+                                                        ✅ {c.resolution_notes}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    No complaints, issues or queries logged for this student.
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
+                    {activeTab === 'teacher_remarks' && (
+                        <Card
+                            header={
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <h3 style={{ margin: 0 }}>Teacher Daily Observations</h3>
+                                    {teacher_remarks?.at_risk && (
+                                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', background: 'rgba(244, 67, 54, 0.15)', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.75rem' }}>
+                                            At Risk
+                                        </span>
+                                    )}
+                                </div>
+                            }
+                            padding="lg"
+                        >
+                            {/* 30-day flag summary cards */}
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                                {[
+                                    { label: 'No Homework', value: teacher_remarks?.summary?.did_not_do_homework ?? 0, color: 'var(--color-danger)' },
+                                    { label: 'Incomplete Classwork', value: teacher_remarks?.summary?.did_not_complete_classwork ?? 0, color: 'var(--color-warning)' },
+                                    { label: 'Disruptive', value: teacher_remarks?.summary?.was_disruptive ?? 0, color: 'var(--color-danger)' },
+                                    { label: 'Absent', value: teacher_remarks?.summary?.was_absent ?? 0, color: 'var(--color-text-secondary)' },
+                                    { label: 'Participated Well', value: teacher_remarks?.summary?.participated_well ?? 0, color: 'var(--color-success)' },
+                                ].map((s) => (
+                                    <div key={s.label} style={{ padding: '0.625rem 0.875rem', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-secondary)', minWidth: '110px' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: s.color }}>{s.value}</div>
+                                        <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)' }}>{s.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: 0, marginBottom: '1rem' }}>
+                                Flag counts over the last {teacher_remarks?.summary?.window_days ?? 30} days.
+                            </p>
+
+                            {teacher_remarks && teacher_remarks.items.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {teacher_remarks.items.map((r: any) => {
+                                        const flags: string[] = [];
+                                        if (r.did_not_do_homework) flags.push('No homework');
+                                        if (r.did_not_complete_classwork) flags.push('Incomplete classwork');
+                                        if (r.was_disruptive) flags.push('Disruptive');
+                                        if (r.was_absent) flags.push('Absent');
+                                        if (r.participated_well) flags.push('Participated well');
+                                        return (
+                                            <div key={r.id} style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-bg-secondary)',
+                                                borderRadius: 'var(--radius-md)',
+                                                borderLeft: `4px solid ${r.has_negative_flag ? 'var(--color-danger)' : 'var(--color-success)'}`
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontWeight: 600 }}>{r.teacher || 'Teacher'}</span>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{r.date ? formatDate(r.date) : ''}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', margin: '0.5rem 0' }}>
+                                                    {flags.map((f) => (
+                                                        <span key={f} style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(158, 158, 158, 0.15)', color: 'var(--color-text-secondary)', fontSize: '0.6875rem' }}>{f}</span>
+                                                    ))}
+                                                    {r.severity && (
+                                                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(244, 67, 54, 0.12)', color: 'var(--color-danger)', fontSize: '0.6875rem', textTransform: 'capitalize' }}>{r.severity.toLowerCase()}</span>
+                                                    )}
+                                                </div>
+                                                {r.remark && (
+                                                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{r.remark}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem' }}>
+                                    No teacher observations recorded for this student.
                                 </p>
                             )}
                         </Card>

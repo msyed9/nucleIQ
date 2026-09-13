@@ -11,6 +11,38 @@ from .notifications import StudentNotificationService
 
 
 @shared_task(bind=True, max_retries=3)
+def sync_siblings_task(self, tenant_id):
+    """
+    Mass sibling-matching job: reconciles Student.family_id across a whole
+    tenant by grouping students that share a father/mother mobile number.
+
+    Triggered automatically after a bulk import (see
+    BulkStudentImportService.import_students) and available on-demand via
+    StudentViewSet.sync_siblings (POST .../students/sync_siblings/).
+
+    Idempotent - groups already sharing one family_id are skipped, so
+    running this repeatedly (e.g. after every import) does no redundant work.
+
+    Args:
+        tenant_id: Tenant primary key
+    """
+    try:
+        from tenants.models import Tenant
+        from .services import SiblingLinkingService
+
+        tenant = Tenant.objects.get(id=tenant_id)
+        stats = SiblingLinkingService.sync_tenant(tenant)
+
+        return {
+            'success': True,
+            'tenant_id': str(tenant_id),
+            **stats
+        }
+    except Exception as e:
+        raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
+
+
+@shared_task(bind=True, max_retries=3)
 def send_admission_confirmation_task(self, student_id: int, tenant_id: int):
     """
     Send admission confirmation notification in background.

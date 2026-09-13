@@ -3,9 +3,11 @@ Student 360° Aggregation Service
 Collects data from all modules for comprehensive profile
 """
 
+import uuid
 from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 from datetime import timedelta
+from core.utils import normalize_phone_number
 from .models import Student, StudentRemark
 
 
@@ -14,28 +16,48 @@ class Student360Service:
     Service to aggregate student data from all modules.
     """
     
-    def __init__(self, student):
+    # Default row limits for the list-like sections. Callers (the view) may
+    # override any of these via query params, clamped to MAX_LIMIT.
+    DEFAULT_LIMITS = {
+        'recent_activity': 10,
+        'complaints': 10,
+        'homework': 10,
+        'exam_results': 5,
+        'teacher_remarks': 15,
+    }
+    MAX_LIMIT = 50
+
+    def __init__(self, student, options=None):
         self.student = student
-    
+        # `options` carries per-section limits resolved from request query params.
+        self.options = options or {}
+        # Resolve current enrollment once - most sections need it, and it is the
+        # single most repeated query in the aggregation.
+        self.enrollment = student.get_current_enrollment()
+        self.academic_year = self.enrollment.academic_year if self.enrollment else None
+
+    def _limit(self, key):
+        """Resolve the effective row limit for a section, clamped to MAX_LIMIT."""
+        raw = self.options.get(key, self.DEFAULT_LIMITS.get(key))
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = self.DEFAULT_LIMITS.get(key)
+        return max(1, min(value, self.MAX_LIMIT))
+
     def get_360_profile(self):
         """
         Get complete 360° profile data.
-        
-        Returns:
-            {
-                'student': {...},
-                'kpis': {...},
-                'recent_activity': [...],
-                'siblings': [...],
-                'family_summary': {...},
-                'attendance_details': {...},
-                'fee_details': {...}
-            }
+
+        Returns a composite dict with one key per module section:
+            student, kpis, recent_activity, siblings, family_summary,
+            academic_summary, financial_summary, health_summary,
+            attendance_details, fee_details, complaints, homework, exam_results
         """
         return {
             'student': self._get_student_basic(),
             'kpis': self._get_kpis(),
-            'recent_activity': self._get_recent_activity(),
+            'recent_activity': self._get_recent_activity(self._limit('recent_activity')),
             'siblings': self._get_siblings_data(),
             'family_summary': self._get_family_summary(),
             'academic_summary': self._get_academic_summary(),
@@ -43,6 +65,10 @@ class Student360Service:
             'health_summary': self._get_health_summary(),
             'attendance_details': self._get_attendance_details(),
             'fee_details': self._get_fee_details(),
+            'complaints': self._get_complaints(self._limit('complaints')),
+            'homework': self._get_homework(self._limit('homework')),
+            'exam_results': self._get_exam_results(self._limit('exam_results')),
+            'teacher_remarks': self._get_teacher_remarks(self._limit('teacher_remarks')),
         }
     
     def _get_student_basic(self):
@@ -94,6 +120,7 @@ class Student360Service:
             'upcoming_exams': self._get_upcoming_exams_count(),
             'library_books_issued': self._get_library_books_count(),
             'pending_assignments': self._get_pending_assignments_count(),
+            'open_complaints': self._get_open_complaints_count(),
             'total_remarks': remarks_qs.count(),
             'positive_remarks': remarks_qs.filter(remark_type='POSITIVE').count(),
             'negative_remarks': remarks_qs.filter(remark_type='NEGATIVE').count(),
@@ -497,9 +524,480 @@ class Student360Service:
         return 2  # Placeholder
     
     def _get_pending_assignments_count(self):
-        """Get count of pending assignments."""
-        # from academics.models import Assignment
-        return 4  # Placeholder
+        """Count homework assigned to the student's section that is not yet completed."""
+        return self._get_homework().get('summary', {}).get('pending', 0)
+
+    def _get_open_complaints_count(self):
+        """Count complaints for this student that are still OPEN or IN_PROGRESS."""
+        try:
+            from complaints.models import Complaint
+            return Complaint.objects.filter(
+                tenant=self.student.tenant,
+                student=self.student,
+                status__in=['OPEN', 'IN_PROGRESS'],
+            ).count()
+        except Exception:  # complaints app optional / not migrated
+            return 0
+
+    # ------------------------------------------------------------------
+    # Complaints / Issues / Queries (complaints app)
+    # ------------------------------------------------------------------
+    def _get_complaints(self, limit=10):
+        """
+        Recent complaints/issues/queries about this student, plus a status
+        summary. Reads from the complaints app; degrades to an empty section
+        if that app is unavailable.
+        """
+        empty = {
+            'summary': {'total': 0, 'open': 0, 'in_progress': 0, 'resolved': 0, 'closed': 0},
+            'items': [],
+        }
+        try:
+            from complaints.models import Complaint
+        except Exception:
+            return empty
+
+        try:
+            qs = (
+                Complaint.objects.filter(tenant=self.student.tenant, student=self.student)
+                .select_related('created_by', 'assigned_to', 'teacher')
+                .order_by('-created_at')
+            )
+
+            # Status counts over the full set (not just the recent page).
+            counts = {row['status']: row['n'] for row in qs.values('status').annotate(n=Count('id'))}
+            summary = {
+                'total': sum(counts.values()),
+                'open': counts.get('OPEN', 0),
+                'in_progress': counts.get('IN_PROGRESS', 0),
+                'resolved': counts.get('RESOLVED', 0),
+                'closed': counts.get('CLOSED', 0),
+            }
+
+            items = [
+                {
+                    'id': str(c.id),
+                    'title': c.title,
+                    'description': c.description,
+                    'type': c.type,
+                    'category': c.category,
+                    'priority': c.priority,
+                    'status': c.status,
+                    'raised_by': c.created_by.get_full_name() if c.created_by else 'System',
+                    'assigned_to': c.assigned_to.get_full_name() if c.assigned_to else None,
+                    'teacher': c.teacher.get_full_name() if c.teacher else None,
+                    'resolution_notes': c.resolution_notes,
+                    'resolved_at': c.resolved_at.isoformat() if c.resolved_at else None,
+                    'created_at': c.created_at.isoformat(),
+                }
+                for c in qs[:limit]
+            ]
+            return {'summary': summary, 'items': items}
+        except Exception as e:
+            print(f"Error getting complaints: {e}")
+            return empty
+
+    # ------------------------------------------------------------------
+    # Homework (academics app)
+    # ------------------------------------------------------------------
+    def _get_homework(self, limit=10):
+        """
+        Recent homework assigned to the student's current section, each tagged
+        with a derived submission status (COMPLETED / PENDING / OVERDUE), plus a
+        completed-vs-pending summary. Homework is assigned per-section; the
+        per-student completion state lives in HomeworkCompletion.
+        """
+        from datetime import date
+
+        empty = {
+            'summary': {'total': 0, 'completed': 0, 'pending': 0, 'overdue': 0},
+            'items': [],
+        }
+        if not self.enrollment:
+            return empty
+        try:
+            from academics.models import Homework, HomeworkCompletion
+        except Exception:
+            return empty
+
+        try:
+            section = self.enrollment.section
+            hw_qs = (
+                Homework.objects.filter(section=section)
+                .select_related('subject', 'teacher')
+                .order_by('-assigned_date')
+            )
+            if self.academic_year:
+                hw_qs = hw_qs.filter(academic_year=self.academic_year)
+
+            # One query for this student's completion flags, keyed by homework id.
+            completed_ids = set(
+                HomeworkCompletion.objects.filter(
+                    student=self.student, homework__section=section, is_completed=True
+                ).values_list('homework_id', flat=True)
+            )
+
+            today = date.today()
+
+            def derive_status(hw):
+                if hw.id in completed_ids:
+                    return 'COMPLETED'
+                if hw.due_date and hw.due_date < today:
+                    return 'OVERDUE'
+                return 'PENDING'
+
+            summary = {'total': 0, 'completed': 0, 'pending': 0, 'overdue': 0}
+            items = []
+            for hw in hw_qs:
+                st = derive_status(hw)
+                summary['total'] += 1
+                summary[st.lower()] += 1
+                if len(items) < limit:
+                    items.append({
+                        'id': str(hw.id),
+                        'title': hw.title,
+                        'subject': hw.subject.name if hw.subject_id else None,
+                        'teacher': hw.teacher.get_full_name() if hw.teacher_id else None,
+                        'assigned_date': hw.assigned_date.isoformat() if hw.assigned_date else None,
+                        'due_date': hw.due_date.isoformat() if hw.due_date else None,
+                        'priority': getattr(hw, 'priority', None),
+                        'status': st,
+                    })
+            return {'summary': summary, 'items': items}
+        except Exception as e:
+            print(f"Error getting homework: {e}")
+            return empty
+
+    # ------------------------------------------------------------------
+    # Exam results / marks (exams app)
+    # ------------------------------------------------------------------
+    def _get_exam_results(self, limit=5):
+        """
+        Most recent published exam results with subject-wise marks and grade,
+        plus a simple chronological percentage trend and an overall average.
+        """
+        empty = {'items': [], 'trend': [], 'average_percentage': None}
+        try:
+            from exams.models import ExamResult
+        except Exception:
+            return empty
+
+        try:
+            qs = (
+                ExamResult.objects.filter(student=self.student, status='PUBLISHED')
+                .select_related('exam', 'exam__subject', 'exam__exam_term')
+                .order_by('-created_at')
+            )
+
+            recent = list(qs[:limit])
+            items = []
+            for r in recent:
+                exam = r.exam
+                term = getattr(exam, 'exam_term', None) if exam else None
+                items.append({
+                    'id': str(r.id),
+                    'exam': getattr(exam, 'name', None),
+                    'subject': exam.subject.name if exam and exam.subject_id else None,
+                    'term': getattr(term, 'name', None),
+                    'marks_obtained': float(r.marks_obtained) if r.marks_obtained is not None else None,
+                    'total_marks': float(exam.total_marks) if exam and exam.total_marks is not None else None,
+                    'percentage': float(r.percentage) if r.percentage is not None else None,
+                    'grade': r.grade,
+                    'is_pass': r.is_pass,
+                    'is_absent': r.is_absent,
+                })
+
+            # Chronological trend (oldest -> newest) for a simple line chart.
+            trend = [
+                {'exam': i['exam'], 'subject': i['subject'], 'percentage': i['percentage']}
+                for i in reversed(items)
+                if i['percentage'] is not None
+            ]
+            percentages = [i['percentage'] for i in items if i['percentage'] is not None]
+            average = round(sum(percentages) / len(percentages), 2) if percentages else None
+
+            return {'items': items, 'trend': trend, 'average_percentage': average}
+        except Exception as e:
+            print(f"Error getting exam results: {e}")
+            return empty
+
+    # ------------------------------------------------------------------
+    # Teacher daily remarks (staffwork app)
+    # ------------------------------------------------------------------
+    def _get_teacher_remarks(self, limit=15):
+        """
+        Recent per-student daily observations recorded by teachers (staffwork
+        StudentDailyRemark), a 30-day summary of flag counts, and a simple
+        at-risk indicator. Degrades to an empty section if staffwork is
+        unavailable.
+
+        The at-risk flag trips when negative flags in the last 30 days cross a
+        threshold, so the UI can surface a watchlist badge.
+        """
+        from datetime import timedelta
+
+        empty = {
+            'summary': {
+                'window_days': 30, 'total': 0,
+                'did_not_do_homework': 0, 'did_not_complete_classwork': 0,
+                'was_disruptive': 0, 'was_absent': 0, 'participated_well': 0,
+                'negative_total': 0,
+            },
+            'at_risk': False,
+            'items': [],
+        }
+        try:
+            from staffwork.models import StudentDailyRemark
+        except Exception:
+            return empty
+
+        try:
+            qs = (
+                StudentDailyRemark.objects.filter(
+                    tenant=self.student.tenant, student=self.student, is_deleted=False
+                )
+                .select_related('daily_update', 'daily_update__user')
+                .order_by('-daily_update__date', '-created_at')
+            )
+
+            # 30-day summary over the full set (not just the recent page).
+            window_start = timezone.now().date() - timedelta(days=30)
+            window_qs = qs.filter(daily_update__date__gte=window_start)
+            summary = {
+                'window_days': 30,
+                'total': window_qs.count(),
+                'did_not_do_homework': window_qs.filter(did_not_do_homework=True).count(),
+                'did_not_complete_classwork': window_qs.filter(did_not_complete_classwork=True).count(),
+                'was_disruptive': window_qs.filter(was_disruptive=True).count(),
+                'was_absent': window_qs.filter(was_absent=True).count(),
+                'participated_well': window_qs.filter(participated_well=True).count(),
+            }
+            summary['negative_total'] = (
+                summary['did_not_do_homework']
+                + summary['did_not_complete_classwork']
+                + summary['was_disruptive']
+            )
+            # At-risk if 3+ negative flags in the trailing 30 days.
+            at_risk = summary['negative_total'] >= 3
+
+            items = [
+                {
+                    'id': str(r.id),
+                    'date': r.daily_update.date.isoformat() if r.daily_update_id else None,
+                    'teacher': r.daily_update.user.get_full_name() if r.daily_update_id and r.daily_update.user_id else None,
+                    'did_not_do_homework': r.did_not_do_homework,
+                    'did_not_complete_classwork': r.did_not_complete_classwork,
+                    'was_disruptive': r.was_disruptive,
+                    'was_absent': r.was_absent,
+                    'participated_well': r.participated_well,
+                    'remark': r.remark,
+                    'severity': r.severity,
+                    'has_negative_flag': r.has_negative_flag,
+                }
+                for r in qs[:limit]
+            ]
+            return {'summary': summary, 'at_risk': at_risk, 'items': items}
+        except Exception as e:
+            print(f"Error getting teacher remarks: {e}")
+            return empty
+
+
+class SiblingLinkingService:
+    """
+    Links students into the same `family_id` group when they share a
+    father's or mother's mobile number, so `Student.get_siblings()` and the
+    Student 360 family summary pick them up automatically.
+
+    Two entry points:
+    - `link_new_student`: cheap, single-record check run right after a
+      student is created (admission form, or a row inside a bulk import).
+    - `sync_tenant`: full reconciliation pass over every active student in
+      a tenant, used for mass/backfill matching (post-bulk-import or via the
+      manual "sync siblings" endpoint). Idempotent - groups that already
+      share one `family_id` are left untouched.
+    """
+
+    PHONE_FIELDS = ['father_phone', 'mother_phone']
+
+    @classmethod
+    def _student_phones(cls, student):
+        """Normalized, de-duplicated, non-empty parent phone numbers for a student."""
+        phones = set()
+        for field in cls.PHONE_FIELDS:
+            normalized = normalize_phone_number(getattr(student, field, ''))
+            if normalized:
+                phones.add(normalized)
+        return phones
+
+    @staticmethod
+    def _raw_variants(normalized_phone):
+        """Raw string forms a normalized 10-digit phone may be stored as in the DB."""
+        return {
+            normalized_phone,
+            f'+91{normalized_phone}',
+            f'91{normalized_phone}',
+            f'0{normalized_phone}',
+        }
+
+    @staticmethod
+    def _generate_family_id():
+        return f"FAM-{uuid.uuid4().hex[:8].upper()}"
+
+    @classmethod
+    def link_new_student(cls, student):
+        """
+        Single-student fallback: call right after a new Student is saved.
+
+        Looks up existing students in the same tenant whose father/mother
+        phone matches this student's, and joins that family group - adopting
+        an existing `family_id` if one of the matches already has one
+        (merging multiple pre-existing family_ids together if needed), or
+        minting a fresh `family_id` shared by the new student and its
+        matches. Falls back to a fresh standalone `family_id` when there is
+        no match, preserving today's behaviour for only-children.
+
+        Returns:
+            dict describing the outcome, e.g.
+            {'linked': True, 'family_id': 'FAM-ABC123',
+             'matched_student_ids': [...], 'merged_family_ids': [...]}
+        """
+        phones = cls._student_phones(student)
+
+        if not phones:
+            if not student.family_id:
+                student.family_id = cls._generate_family_id()
+                student.save(update_fields=['family_id'])
+            return {'linked': False, 'reason': 'no_parent_phone', 'family_id': student.family_id}
+
+        variants = set()
+        for phone in phones:
+            variants |= cls._raw_variants(phone)
+
+        matches = list(
+            Student.objects.filter(tenant=student.tenant)
+            .filter(Q(father_phone__in=variants) | Q(mother_phone__in=variants))
+            .exclude(id=student.id)
+        )
+
+        if not matches:
+            if not student.family_id:
+                student.family_id = cls._generate_family_id()
+                student.save(update_fields=['family_id'])
+            return {'linked': False, 'reason': 'no_match', 'family_id': student.family_id}
+
+        existing_family_ids = sorted({m.family_id for m in matches if m.family_id})
+        merged_family_ids = []
+
+        if existing_family_ids:
+            canonical = existing_family_ids[0]
+            merged_family_ids = existing_family_ids[1:]
+            if merged_family_ids:
+                Student.objects.filter(
+                    tenant=student.tenant, family_id__in=merged_family_ids
+                ).update(family_id=canonical)
+        else:
+            canonical = cls._generate_family_id()
+            Student.objects.filter(id__in=[m.id for m in matches]).update(family_id=canonical)
+
+        if student.family_id != canonical:
+            student.family_id = canonical
+            student.save(update_fields=['family_id'])
+
+        return {
+            'linked': True,
+            'family_id': canonical,
+            'matched_student_ids': [str(m.id) for m in matches],
+            'merged_family_ids': merged_family_ids,
+        }
+
+    @classmethod
+    def sync_tenant(cls, tenant):
+        """
+        Bulk sync: scans every active student in the tenant, groups them by
+        shared father/mother phone number - transitively, so if A matches B
+        and B matches C on a different number, all three land in one family
+        - and backfills/merges `family_id` across each resulting group.
+
+        Idempotent: a group that already shares exactly one non-blank
+        `family_id` requires no writes and is counted as skipped, so
+        re-running this after every import is cheap and safe.
+
+        Returns:
+            dict: {
+                'processed': int,               # active students scanned
+                'groups_found': int,            # sibling groups with 2+ members
+                'linked': int,                  # student rows whose family_id changed
+                'skipped_already_linked': int,  # groups that needed no change
+                'standalone_assigned': int,      # solo students backfilled with a fresh family_id
+            }
+        """
+        students = list(
+            Student.objects.filter(tenant=tenant, is_active=True)
+            .only('id', 'family_id', 'father_phone', 'mother_phone')
+        )
+
+        # Union-find grouping: students sharing any normalized phone number
+        # end up in the same connected component, even if the shared number
+        # is on different sides (father/mother) or chains through a third student.
+        parent = {s.id: s.id for s in students}
+
+        def find(sid):
+            root = sid
+            while parent[root] != root:
+                root = parent[root]
+            while parent[sid] != root:
+                parent[sid], sid = root, parent[sid]
+            return root
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[ra] = rb
+
+        phone_to_first_student = {}
+        for s in students:
+            for phone in cls._student_phones(s):
+                if phone in phone_to_first_student:
+                    union(s.id, phone_to_first_student[phone])
+                else:
+                    phone_to_first_student[phone] = s.id
+
+        groups = {}
+        for s in students:
+            groups.setdefault(find(s.id), []).append(s)
+
+        stats = {
+            'processed': len(students),
+            'groups_found': 0,
+            'linked': 0,
+            'skipped_already_linked': 0,
+            'standalone_assigned': 0,
+        }
+
+        for members in groups.values():
+            if len(members) == 1:
+                student = members[0]
+                if not student.family_id:
+                    student.family_id = cls._generate_family_id()
+                    student.save(update_fields=['family_id'])
+                    stats['standalone_assigned'] += 1
+                continue
+
+            stats['groups_found'] += 1
+            existing_family_ids = sorted({m.family_id for m in members if m.family_id})
+
+            if len(existing_family_ids) == 1 and all(m.family_id == existing_family_ids[0] for m in members):
+                # Already correctly linked - skip to avoid redundant writes.
+                stats['skipped_already_linked'] += 1
+                continue
+
+            canonical = existing_family_ids[0] if existing_family_ids else cls._generate_family_id()
+            to_update_ids = [m.id for m in members if m.family_id != canonical]
+            if to_update_ids:
+                Student.objects.filter(id__in=to_update_ids).update(family_id=canonical)
+                stats['linked'] += len(to_update_ids)
+
+        return stats
 
 
 def create_system_remark(student, title, description, category, source_module, source_reference=None, remark_type='SYSTEM'):

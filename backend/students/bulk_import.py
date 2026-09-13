@@ -3,12 +3,15 @@ Bulk Student Import Service
 Handles Excel/CSV import with validation and error reporting
 """
 
+import logging
 import pandas as pd
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from datetime import datetime
 from .models import Student
 from .services import generate_admission_number
+
+logger = logging.getLogger(__name__)
 
 
 class BulkStudentImportService:
@@ -322,7 +325,19 @@ class BulkStudentImportService:
                 'skipped': 0,
                 'errors': [f'Transaction failed: {str(e)}']
             }
-        
+
+        # Auto-run sibling sync now that the import transaction has committed,
+        # so newly-imported students get matched to each other and to any
+        # pre-existing students sharing a parent phone number. Best-effort:
+        # the import itself already succeeded, so a queueing failure here
+        # shouldn't turn a successful import into an error response.
+        if self.imported_count > 0:
+            try:
+                from .tasks import sync_siblings_task
+                sync_siblings_task.delay(tenant_id=self.tenant.id)
+            except Exception as e:
+                logger.warning(f"Failed to queue sibling sync after bulk import: {e}")
+
         return {
             'success': True,
             'imported': self.imported_count,
